@@ -3,7 +3,7 @@
 This is a fork of Oltp bench that is used to run the TPCC benchmark. All the other benchmarks have been removed.
 
 
-Just like the original bencmark this is a multi-threaded load generator. The framework is designed to be able to produce variable rate,
+Just like the original benchmark this is a multi-threaded load generator. The framework is designed to be able to produce variable rate,
 variable mixture load against any JDBC-enabled relational database. The framework also provides data collection
 features, e.g., per-transaction-type latency and throughput logs.
 
@@ -27,18 +27,21 @@ features, e.g., per-transaction-type latency and throughput logs.
   ```
 
 ## Setup of the Database
-If you start from scratch, you should create an empty database (e.g., for TPC-C you can create a db named <b>tpcc</b>) and provide login credential to the benchmark, by modifying  <b>the workload descriptor file</b>. The ./config directory provides several examples, we now use the sample_tpcc_config.xml. You should edit the following portion:
+The DB connection details should be as follows:
 
 ````xml
 <!-- config/sample_tpcc_config.xml -->
     <!-- Connection details -->
-    <dbtype>mysql</dbtype>
-    <driver>com.mysql.jdbc.Driver</driver>
-    <DBUrl>jdbc:mysql://localhost:3306/tpcc</DBUrl>
-    <username>root</username>
-    <password>mysecretpassword</password>
+    <dbtype>postgres</dbtype>
+    <driver>org.postgresql.Driver</driver>
+    <DBUrl>jdbc:postgresql://<ip>:5433/yugabyte</DBUrl>
+    <username>yugabyte</username>
+    <password></password>
     <isolation>TRANSACTION_READ_COMMITTED</isolation>
 ````
+
+The details of the workloads has already been populated in the sample config present in /config.
+The workload descriptor works the same way as it is in the upstream branch and details can be found in the [on-line documentation](https://github.com/oltpbenchmark/oltpbench/wiki).
 
 ## Running the Benchmark
 A utility script (./tpccbenchmark) is provided for running the benchmark. The options are
@@ -60,23 +63,20 @@ A utility script (./tpccbenchmark) is provided for running the benchmark. The op
 ```
 
 ## Example
-The following command for example initiate a tpcc database (--create=true --load=true) and a then run a workload as described in config/sample_tpcc_config.xml file. The results (latency, throughput) are summarized into 5seconds buckets (-s 5) and the output is written into two file: outputfile.res (aggregated) and outputfile.raw (detailed):
+The following command for example initiate a tpcc database (--create=true --load=true) and a then run a workload as described in config/workload_1.xml file. The results (latency, throughput) are summarized into 5 seconds buckets (-s 5) and the output is written into two file: outputfile.res (aggregated) and outputfile.raw (detailed):
 
 ```
-./tpccbenchmark -c config/sample_tpcc_config.xml --create=true --load=true --execute=true -s 5 -o outputfile
+./tpccbenchmark -c config/workload_1.xml --create=true --load=true --execute=true -s 5 -o outputfile
 ```
 
 Since data loading can be a lengthy process, one would first create a and populate a database which can be reused for multiple experiments:
 
 ```
-./tpccbenchmark -c config/sample_tpcc_config.xml --create=true --load=true
+./tpccbenchmark -c config/workload_1.xml --create=true --load=true
 ```
 
 Then running an experiment could be simply done with the following command on a fresh or used database.
 
 ```
-./tpccbenchmark -c config/sample_tpcc_config.xml --execute=true -s 5 -o outputfile
+./tpccbenchmark -c config/workload_1.xml --execute=true -s 5 -o outputfile
 ```
-
-## Workload Descriptor
-The workload descriptor works the same way as it is in the upstream branch and details can be found in the [on-line documentation](https://github.com/oltpbenchmark/oltpbench/wiki).

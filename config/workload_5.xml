@@ -5,7 +5,7 @@
     <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
     <username>yugabyte</username>
     <password></password>
-    <isolation>TRANSACTION_READ_COMMITTED</isolation>
+    <isolation>TRANSACTION_REPEATABLE_READ</isolation>
     <loaderThreads>2</loaderThreads>
 
    	<transactiontypes>
@@ -33,7 +33,7 @@
           <time>30</time>
           <rate>10000</rate>
           <ratelimited bench="tpcc">true</ratelimited>
-          <weights>100,0,0,0,0</weights>
+          <weights>0,0,0,0,100</weights>
         </work>
 	</works>
 		

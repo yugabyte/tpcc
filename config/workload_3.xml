@@ -5,7 +5,7 @@
     <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
     <username>yugabyte</username>
     <password></password>
-    <isolation>TRANSACTION_READ_COMMITTED</isolation>
+    <isolation>TRANSACTION_REPEATABLE_READ</isolation>
     <loaderThreads>2</loaderThreads>
 
    	<transactiontypes>

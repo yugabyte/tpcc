@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<parameters>
+    <dbtype>postgres</dbtype>
+    <driver>org.postgresql.Driver</driver>
+    <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
+    <username>yugabyte</username>
+    <password></password>
+    <isolation>TRANSACTION_REPEATABLE_READ</isolation>
+    <loaderThreads>2</loaderThreads>
+
+   	<transactiontypes>
+    	<transactiontype>
+    		<name>NewOrder</name>
+    	</transactiontype>
+    	<transactiontype>
+    		<name>Payment</name>
+    	</transactiontype>
+    	<transactiontype>
+    		<name>OrderStatus</name>
+    	</transactiontype>
+    	<transactiontype>
+    		<name>Delivery</name>
+    	</transactiontype>
+    	<transactiontype>
+    		<name>StockLevel</name>
+    	</transactiontype>
+   	</transactiontypes>
+
+    <terminals>2</terminals>
+    <scalefactor>2</scalefactor>
+    <works>
+        <work>
+          <time>30</time>
+          <rate>10000</rate>
+          <ratelimited bench="tpcc">true</ratelimited>
+          <weights>0,100,0,0,0</weights>
+        </work>
+	</works>
+		
+</parameters>

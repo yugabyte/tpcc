@@ -43,6 +43,7 @@ The DB connection details should be as follows:
 The details of the workloads have already been populated in the sample config present in /config.
 The workload descriptor works the same way as it does in the upstream branch and details can be found in the [on-line documentation](https://github.com/oltpbenchmark/oltpbench/wiki).
 
+
 ## Running the Benchmark
 A utility script (./tpccbenchmark) is provided for running the benchmark. The options are
 

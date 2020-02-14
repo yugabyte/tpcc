@@ -111,10 +111,10 @@ public abstract class BenchmarkModule {
      * @throws SQLException
      */
     public final Connection makeConnection() throws SQLException {
-      java.util.Properties props = new java.util.Properties();
-       props.put("user", workConf.getDBUsername());
-       props.put("password", workConf.getDBPassword());
-       props.put("reWriteBatchedInserts", "true");
+        java.util.Properties props = new java.util.Properties();
+        props.put("user", workConf.getDBUsername());
+        props.put("password", workConf.getDBPassword());
+        props.put("reWriteBatchedInserts", "true");
 
         Connection conn = DriverManager.getConnection(
                 workConf.getDBConnection(), props);

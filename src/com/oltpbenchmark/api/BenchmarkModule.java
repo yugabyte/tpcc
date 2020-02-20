@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.api.Loader.LoaderThread;
+import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.catalog.Catalog;
 import com.oltpbenchmark.catalog.Table;
 import com.oltpbenchmark.types.DatabaseType;
@@ -116,8 +117,10 @@ public abstract class BenchmarkModule {
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
 
-        Connection conn = DriverManager.getConnection(
-                workConf.getDBConnection(), props);
+        String[] dbConnections = workConf.getDBConnection().split(";");
+        int r = (int)TPCCUtil.randomNumber(0, dbConnections.length - 1, rng);
+
+        Connection conn = DriverManager.getConnection(dbConnections[r], props);
         Catalog.setSeparator(conn);
         return (conn);
     }

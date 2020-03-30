@@ -133,7 +133,7 @@ public class TPCCBenchmark extends BenchmarkModule {
 			ret.add(w);
 		return ret;
 	}
-	
+
    /**
      * Hack to support postgres-specific timestamps
      * @param time
@@ -141,7 +141,7 @@ public class TPCCBenchmark extends BenchmarkModule {
      */
     public Timestamp getTimestamp(long time) {
         Timestamp timestamp;
-        
+
         // HACK: NoisePage doesn't support JDBC timestamps.
         // We have to use the postgres-specific type
         if (this.workConf.getDBType() == DatabaseType.NOISEPAGE) {

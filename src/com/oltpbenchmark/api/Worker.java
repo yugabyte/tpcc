@@ -80,8 +80,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         try {
             this.conn = this.benchmarkModule.makeConnection();
             this.conn.setAutoCommit(false);
-            
-            // 2018-01-11: Since we want to support NoSQL systems 
+
+            // 2018-01-11: Since we want to support NoSQL systems
             // that do not support txns, we will not invoke certain JDBC functions
             // that may cause an error in them.
             if (this.wrkld.getDBType().shouldUseTransactions()) {
@@ -122,7 +122,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         return String.format("%s<%03d>",
                              this.getClass().getSimpleName(), this.getId());
     }
-    
+
     /**
      * Get the the total number of workers in this benchmark invocation
      */
@@ -196,6 +196,51 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         this.currStatement = s;
     }
 
+    private long getKeyingTime(TransactionType type) {
+      if (type.getName().equals("NewOrder")) {
+        return 18000;
+      }
+      if (type.getName().equals("Payment")) {
+        return 3000;
+      }
+      if (type.getName().equals("OrderStatus")) {
+        return 2000;
+      }
+      if (type.getName().equals("Delivery")) {
+        return 2000;
+      }
+      if (type.getName().equals("StockLevel")) {
+        return 2000;
+      }
+      LOG.error("returning -1 " + type.getName());
+      return -1;
+    }
+
+    private long getThinkTime(TransactionType type) {
+      long mean = -1;;
+      if (type.getName().equals("NewOrder")) {
+        mean = 12000;
+      } else if (type.getName().equals("Payment")) {
+        mean = 12000;
+      } else if (type.getName().equals("OrderStatus")) {
+        mean = 10000;
+      } else if (type.getName().equals("Delivery")) {
+        mean = 5000;
+      } else if (type.getName().equals("StockLevel")) {
+        mean = 5000;
+      } else {
+        LOG.error("returning -1 " + type.getName());
+        return -1;
+      }
+
+      float c = this.benchmarkModule.rng().nextFloat();
+      long thinkTime = (long)(-1 * Math.log(c) * mean);
+      if (thinkTime > 10 * mean) {
+        thinkTime = 10 * mean;
+      }
+      return thinkTime;
+    }
+
     /**
      * Stop executing the current statement.
      */
@@ -262,8 +307,10 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             if (phase == null)
                 continue work;
 
+
             // Grab some work and update the state, in case it changed while we
             // waited.
+
             pieceOfWork = wrkldState.fetchWork(this.id);
             preState = wrkldState.getGlobalState();
 
@@ -282,6 +329,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // Do nothing
             }
 
+
             // PART 3: Execute work
 
             // TODO: Measuring latency when not rate limited is ... a little
@@ -289,7 +337,20 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             // increase latency (queue delay) but we do this anyway since it is
             // useful sometimes
 
-            long start = pieceOfWork.getStartTime();
+            if (this.wrkld.getUseKeyingTime()) {
+                // Wait for the keying time which is a fixed number for every type of transaction.
+                long keying_time_msecs = getKeyingTime(transactionTypes.getType(pieceOfWork.getType()));
+                try {
+                    long start_sleep = System.nanoTime();
+                    Thread.sleep(keying_time_msecs);
+                    LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                        " Keying time " + (System.nanoTime() - start_sleep) / 1000 / 1000 / 1000);
+                } catch (InterruptedException e) {
+                    LOG.error("Thread sleep interrupted");
+                }
+            }
+
+            long start = System.nanoTime();
 
             TransactionType type = invalidTT;
             try {
@@ -346,6 +407,18 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // Do nothing
             }
 
+            if (this.wrkld.getUseThinkTime()) {
+                // Sleep for the think time duration.
+                long think_time_msecs = getThinkTime(transactionTypes.getType(pieceOfWork.getType()));
+                try {
+                    long start_sleep = System.nanoTime();
+                    Thread.sleep(think_time_msecs);
+                    LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                        " Think time " + (System.nanoTime() - start_sleep) / 1000 / 1000 / 1000);
+                } catch (InterruptedException e) {
+                    LOG.error("Thread sleep interrupted");
+                }
+            }
             wrkldState.finishedWork();
         }
 
@@ -356,7 +429,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * Called in a loop in the thread to exercise the system under test. Each
      * implementing worker should return the TransactionType handle that was
      * executed.
-     * 
+     *
      * @param llr
      */
     protected final TransactionType doWork(boolean measure, SubmittedProcedure pieceOfWork) {
@@ -406,7 +479,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     } else {
                         this.conn.rollback();
                     }
-                    
+
                     status = TransactionStatus.USER_ABORTED;
                     break;
 
@@ -415,7 +488,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // TODO: Handle acceptable error codes for every DBMS
                      if (LOG.isDebugEnabled())
                         LOG.warn(String.format("%s thrown when executing '%s' on '%s' " +
-                                               "[Message='%s', ErrorCode='%d', SQLState='%s']", 
+                                               "[Message='%s', ErrorCode='%d', SQLState='%s']",
                                                ex.getClass().getSimpleName(), next, this.toString(),
                                                ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
@@ -440,14 +513,14 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     } else if (ex.getErrorCode() == 1205 && ex.getSQLState().equals("41000")) {
                         // MySQL Lock timeout
                         continue;
-                        
+
                     // ------------------
                     // SQL SERVER
                     // ------------------
                     } else if (ex.getErrorCode() == 1205 && ex.getSQLState().equals("40001")) {
                         // SQLServerException Deadlock
                         continue;
-                    
+
                     // ------------------
                     // POSTGRES
                     // ------------------
@@ -460,14 +533,14 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("XX000")) {
                         // Postgres no pinned buffers available
                         throw ex;
-                        
+
                     // ------------------
                     // ORACLE
                     // ------------------
                     } else if (ex.getErrorCode() == 8177 && ex.getSQLState().equals("72000")) {
                         // ORA-08177: Oracle Serialization
                         continue;
-                        
+
                     // ------------------
                     // DB2
                     // ------------------
@@ -505,11 +578,11 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 } catch (Exception ex) {
                     LOG.error("Fatal error when invoking " + next, ex);
                     throw new RuntimeException(ex);
-                    
+
                 } finally {
                      if (LOG.isDebugEnabled())
                         LOG.debug(String.format("%s %s Result: %s", this, next, status));
-                    
+
                     switch (status) {
                         case SUCCESS:
                             this.txnSuccess.put(next);
@@ -558,7 +631,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     /**
      * Invoke a single transaction for the given TransactionType
-     * 
+     *
      * @param txnType
      * @return TODO
      * @throws UserAbortException
@@ -570,7 +643,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     /**
      * Called at the end of the test to do any clean up that may be required.
-     * 
+     *
      * @param error
      *            TODO
      */

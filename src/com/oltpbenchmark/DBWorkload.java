@@ -230,6 +230,13 @@ public class DBWorkload {
                 // Nothing to do here !
             }
 
+            try {
+              wrkld.setUseKeyingTime(xmlConfig.getBoolean("useKeyingTime"));
+              wrkld.setUseThinkTime(xmlConfig.getBoolean("useThinkTime"));
+            } catch(NoSuchElementException nse) {
+                // Nothing to do here !
+            }
+
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
             // ----------------------------------------------------------------

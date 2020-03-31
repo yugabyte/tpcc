@@ -27,7 +27,7 @@
    	</transactiontypes>
 
     <scalefactor>2</scalefactor>
-	<!-- The number of terminals can be a max of 10 per warehouse -->
+	<!-- TPC-C 4.2.2: The number of terminals should be 10 per warehouse -->
     <terminals>20</terminals>
     <useKeyingTime>true</useKeyingTime>
     <useThinkTime>true</useThinkTime>

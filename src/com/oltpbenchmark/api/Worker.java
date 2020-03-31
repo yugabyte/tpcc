@@ -196,49 +196,51 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         this.currStatement = s;
     }
 
-    private long getKeyingTime(TransactionType type) {
-      if (type.getName().equals("NewOrder")) {
-        return 18000;
-      }
-      if (type.getName().equals("Payment")) {
-        return 3000;
-      }
-      if (type.getName().equals("OrderStatus")) {
-        return 2000;
-      }
-      if (type.getName().equals("Delivery")) {
-        return 2000;
-      }
-      if (type.getName().equals("StockLevel")) {
-        return 2000;
-      }
-      LOG.error("returning -1 " + type.getName());
-      return -1;
-    }
-
-    private long getThinkTime(TransactionType type) {
-      long mean = -1;;
-      if (type.getName().equals("NewOrder")) {
-        mean = 12000;
-      } else if (type.getName().equals("Payment")) {
-        mean = 12000;
-      } else if (type.getName().equals("OrderStatus")) {
-        mean = 10000;
-      } else if (type.getName().equals("Delivery")) {
-        mean = 5000;
-      } else if (type.getName().equals("StockLevel")) {
-        mean = 5000;
-      } else {
+    private long getKeyingTimeInMillis(TransactionType type) {
+        // TPC-C 5.2.5.2: For keying times for each type of transaction.
+        if (type.getName().equals("NewOrder")) {
+          return 18000;
+        }
+        if (type.getName().equals("Payment")) {
+          return 3000;
+        }
+        if (type.getName().equals("OrderStatus")) {
+          return 2000;
+        }
+        if (type.getName().equals("Delivery")) {
+          return 2000;
+        }
+        if (type.getName().equals("StockLevel")) {
+          return 2000;
+        }
         LOG.error("returning -1 " + type.getName());
         return -1;
-      }
+    }
 
-      float c = this.benchmarkModule.rng().nextFloat();
-      long thinkTime = (long)(-1 * Math.log(c) * mean);
-      if (thinkTime > 10 * mean) {
-        thinkTime = 10 * mean;
-      }
-      return thinkTime;
+    private long getThinkTimeInMillis(TransactionType type) {
+        // TPC-C 5.2.5.4: For think times for each type of transaction.
+        long mean = -1;;
+        if (type.getName().equals("NewOrder")) {
+          mean = 12000;
+        } else if (type.getName().equals("Payment")) {
+          mean = 12000;
+        } else if (type.getName().equals("OrderStatus")) {
+          mean = 10000;
+        } else if (type.getName().equals("Delivery")) {
+          mean = 5000;
+        } else if (type.getName().equals("StockLevel")) {
+          mean = 5000;
+        } else {
+          LOG.error("returning -1 " + type.getName());
+          return -1;
+        }
+
+        float c = this.benchmarkModule.rng().nextFloat();
+        long thinkTime = (long)(-1 * Math.log(c) * mean);
+        if (thinkTime > 10 * mean) {
+          thinkTime = 10 * mean;
+        }
+        return thinkTime;
     }
 
     /**
@@ -338,13 +340,15 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             // useful sometimes
 
             if (this.wrkld.getUseKeyingTime()) {
-                // Wait for the keying time which is a fixed number for every type of transaction.
-                long keying_time_msecs = getKeyingTime(transactionTypes.getType(pieceOfWork.getType()));
+                // Wait for the keying time which is a fixed amount for each type of transaction.
+                long keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
                 try {
-                    long start_sleep = System.nanoTime();
+                    long sleep_start = System.nanoTime();
                     Thread.sleep(keying_time_msecs);
-                    LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                        " Keying time " + (System.nanoTime() - start_sleep) / 1000 / 1000 / 1000);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                            " Keying time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
+                    }
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }
@@ -409,12 +413,14 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
             if (this.wrkld.getUseThinkTime()) {
                 // Sleep for the think time duration.
-                long think_time_msecs = getThinkTime(transactionTypes.getType(pieceOfWork.getType()));
+                long think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
                 try {
-                    long start_sleep = System.nanoTime();
+                    long sleep_start = System.nanoTime();
                     Thread.sleep(think_time_msecs);
-                    LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                        " Think time " + (System.nanoTime() - start_sleep) / 1000 / 1000 / 1000);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                            " Think time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
+                    }
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }

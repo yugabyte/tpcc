@@ -40,10 +40,10 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
 
     private static final Logger LOG = Logger.getLogger(TPCCWorker.class);
 
+    // This is the warehouse that is a constant for this terminal.
 	private final int terminalWarehouseID;
-	/** Forms a range [lower, upper] (inclusive). */
-	private final int terminalDistrictLowerID;
-	private final int terminalDistrictUpperID;
+	// This is the district ID used for StockLevel transactions.
+	private final int terminalDistrictID;
 	// private boolean debugMessages;
 	private final Random gen = new Random();
 
@@ -54,14 +54,14 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
 			int terminalDistrictUpperID, int numWarehouses)
 			throws SQLException {
 		super(benchmarkModule, id);
-		
+
 		this.terminalWarehouseID = terminalWarehouseID;
-		this.terminalDistrictLowerID = terminalDistrictLowerID;
-		this.terminalDistrictUpperID = terminalDistrictUpperID;
-		assert this.terminalDistrictLowerID >= 1;
-		assert this.terminalDistrictUpperID <= TPCCConfig.configDistPerWhse;
-		assert this.terminalDistrictLowerID <= this.terminalDistrictUpperID;
+		assert terminalDistrictLowerID >= 1;
+		assert terminalDistrictUpperID <= TPCCConfig.configDistPerWhse;
+		assert terminalDistrictLowerID <= terminalDistrictUpperID;
+        this.terminalDistrictID = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
 		this.numWarehouses = numWarehouses;
+        LOG.error("Warehouse and house district " + terminalWarehouseID + " " + terminalDistrictID);
 	}
 
 	/**
@@ -71,8 +71,22 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
     protected TransactionStatus executeWork(TransactionType nextTransaction) throws UserAbortException, SQLException {
         try {
             TPCCProcedure proc = (TPCCProcedure) this.getProcedure(nextTransaction.getProcedureClass());
+
+            // The districts should be chosen randomly from [1,10] for the following transactions:
+            // 1. NewOrder    TPC-C 2.4.1.2
+            // 2. Payment     TPC-C 2.5.1.2
+            // 3. OrderStatus TPC-C 2.6.1.2
+            // The 'StockLevel' transaction has a fixed districtId for the whole terminal.
+            int lowDistrictId = terminalDistrictID;
+            int highDistrictId = terminalDistrictID;
+            if (nextTransaction.getName().equals("NewOrder") ||
+                nextTransaction.getName().equals("Payment") ||
+                nextTransaction.getName().equals("OrderStatus")) {
+              lowDistrictId = 1;
+              highDistrictId = TPCCConfig.configDistPerWhse;
+            }
             proc.run(conn, gen, terminalWarehouseID, numWarehouses,
-                    terminalDistrictLowerID, terminalDistrictUpperID, this);
+                    lowDistrictId, highDistrictId, this);
         } catch (ClassCastException ex){
             //fail gracefully
         	LOG.error("We have been invoked with an INVALID transactionType?!");

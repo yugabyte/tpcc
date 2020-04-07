@@ -26,8 +26,11 @@
     	</transactiontype>
    	</transactiontypes>
 
-    <terminals>2</terminals>
     <scalefactor>2</scalefactor>
+	<!-- TPC-C 4.2.2: The number of terminals should be 10 per warehouse -->
+    <terminals>20</terminals>
+    <useKeyingTime>true</useKeyingTime>
+    <useThinkTime>true</useThinkTime>
     <works>
         <work>
           <time>30</time>

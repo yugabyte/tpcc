@@ -248,8 +248,8 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 			warehouse.w_street_1 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
 			warehouse.w_street_2 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
 			warehouse.w_city = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-			warehouse.w_state = TPCCUtil.randomStr(3).toUpperCase();
-			warehouse.w_zip = "123456789";
+			warehouse.w_state = TPCCUtil.randomStr(2).toUpperCase();
+			warehouse.w_zip = TPCCUtil.randomNStr(4) + "11111";
 
 			int idx = 1;
 			whsePrepStmt.setLong(idx++, warehouse.w_id);
@@ -376,8 +376,8 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 				district.d_street_1 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
 				district.d_street_2 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
 				district.d_city = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-				district.d_state = TPCCUtil.randomStr(3).toUpperCase();
-				district.d_zip = "123456789";
+				district.d_state = TPCCUtil.randomStr(2).toUpperCase();
+				district.d_zip = TPCCUtil.randomNStr(4) + "11111";
 
 				k++;
 				int idx = 1;
@@ -428,7 +428,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 					customer.c_w_id = w_id;
 
 					// discount is random between [0.0000 ... 0.5000]
-					customer.c_discount = (float) (TPCCUtil.randomNumber(1, 5000, benchmark.rng()) / 10000.0);
+					customer.c_discount = (float) (TPCCUtil.randomNumber(0, 5000, benchmark.rng()) / 10000.0);
 
 					if (TPCCUtil.randomNumber(1, 100, benchmark.rng()) <= 10) {
 						customer.c_credit = "BC"; // 10% Bad Credit
@@ -441,24 +441,23 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 						customer.c_last = TPCCUtil.getNonUniformRandomLastNameForLoad(benchmark.rng());
 					}
 					customer.c_first = TPCCUtil.randomStr(TPCCUtil.randomNumber(8, 16, benchmark.rng()));
-					customer.c_credit_lim = 50000;
+					customer.c_credit_lim = (float)50000.0;
 
-					customer.c_balance = -10;
-					customer.c_ytd_payment = 10;
+					customer.c_balance = (float)-10.0;
+					customer.c_ytd_payment = (float)10.0;
 					customer.c_payment_cnt = 1;
 					customer.c_delivery_cnt = 0;
 
 					customer.c_street_1 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
 					customer.c_street_2 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
 					customer.c_city = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-					customer.c_state = TPCCUtil.randomStr(3).toUpperCase();
+					customer.c_state = TPCCUtil.randomStr(2).toUpperCase();
 					// TPC-C 4.3.2.7: 4 random digits + "11111"
 					customer.c_zip = TPCCUtil.randomNStr(4) + "11111";
 					customer.c_phone = TPCCUtil.randomNStr(16);
 					customer.c_since = sysdate;
 					customer.c_middle = "OE";
-					customer.c_data = TPCCUtil.randomStr(TPCCUtil
-							.randomNumber(300, 500, benchmark.rng()));
+					customer.c_data = TPCCUtil.randomStr(TPCCUtil.randomNumber(300, 500, benchmark.rng()));
 
 					history.h_c_id = c;
 					history.h_c_d_id = d;
@@ -466,7 +465,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 					history.h_d_id = d;
 					history.h_w_id = w_id;
 					history.h_date = sysdate;
-					history.h_amount = 10;
+					history.h_amount = (float)10.0;
 					history.h_data = TPCCUtil.randomStr(TPCCUtil
 							.randomNumber(10, 24, benchmark.rng()));
 

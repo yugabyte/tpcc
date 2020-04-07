@@ -18,7 +18,7 @@
 package com.oltpbenchmark.benchmarks.tpcc;
 
 /*
- * jTPCCUtil - utility functions for the Open Source Java implementation of 
+ * jTPCCUtil - utility functions for the Open Source Java implementation of
  *    the TPC-C benchmark
  *
  * Copyright (C) 2003, Raul Barbosa
@@ -68,10 +68,10 @@ public class TPCCUtil {
 	private static final RandomGenerator ran = new RandomGenerator(0);
 
 	public static String randomStr(int strLen) {
-	    if (strLen > 1) 
+	    if (strLen > 1)
 	        return ran.astring(strLen - 1, strLen - 1);
 	    else
-	        return "";
+        return "";
 	} // end randomStr
 
 	public static String randomNStr(int stringLength) {
@@ -90,7 +90,7 @@ public class TPCCUtil {
 		return dS.length() > 6 ? dS.substring(0, 6) : dS;
 	}
 
-	// TODO: TPCC-C 2.1.6: For non-uniform random number generation, the
+	// TODO(sudo): TPCC-C 2.1.6: For non-uniform random number generation, the
 	// constants for item id,
 	// customer id and customer name are supposed to be selected ONCE and reused
 	// for all terminals.

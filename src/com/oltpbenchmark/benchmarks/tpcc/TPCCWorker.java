@@ -61,7 +61,6 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
 		assert terminalDistrictLowerID <= terminalDistrictUpperID;
         this.terminalDistrictID = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
 		this.numWarehouses = numWarehouses;
-        LOG.error("Warehouse and house district " + terminalWarehouseID + " " + terminalDistrictID);
 	}
 
 	/**

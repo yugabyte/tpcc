@@ -37,6 +37,7 @@ package com.oltpbenchmark.benchmarks.tpcc;
 import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -47,6 +48,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.Loader;
+import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.*;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.catalog.Table;
@@ -67,6 +69,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         }
     }
 
+    private boolean deferConstraintChecks;
     private int numWarehouses = 0;
     private static final int FIRST_UNPROCESSED_O_ID = 2101;
 
@@ -74,12 +77,17 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
     public List<LoaderThread> createLoaderThreads() throws SQLException {
         List<LoaderThread> threads = new ArrayList<LoaderThread>();
         final CountDownLatch itemLatch = new CountDownLatch(1);
+        final CountDownLatch warehouseLatch = new CountDownLatch(numWarehouses);
 
         // ITEM
         // This will be invoked first and executed in a single thread.
         threads.add(new LoaderThread() {
             @Override
             public void load(Connection conn) throws SQLException {
+                if (!workConf.getDeferConstraintChecks()) {
+                    EnableForeignKeyConstraints(conn);
+                    LOG.info("The total Time for enabling foreign keys " + (System.nanoTime() - startTime) / 1000 / 1000 / 1000);
+                }
                 loadItems(conn, TPCCConfig.configItemCount);
                 itemLatch.countDown();
             }
@@ -118,10 +126,30 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 
                     // ORDERS
                     loadOrders(conn, w_id, TPCCConfig.configDistPerWhse, TPCCConfig.configCustPerDist);
+
+                    warehouseLatch.countDown();
                 }
             };
             threads.add(t);
         } // FOR
+
+        if (workConf.getDeferConstraintChecks()) {
+            threads.add(new LoaderThread() {
+                @Override
+                public void load(Connection conn) throws SQLException {
+                    try {
+                        warehouseLatch.await();
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                        throw new RuntimeException(ex);
+                    }
+                    long startTime = System.nanoTime();
+                    EnableForeignKeyConstraints(conn);
+                    LOG.info("The total Time for enabling foreign keys " + (System.nanoTime() - startTime) / 1000 / 1000 / 1000);
+                }
+            });
+        }
+
         return (threads);
     }
 
@@ -143,6 +171,33 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 
     protected void transCommit(Connection conn) {
         try {
+            conn.commit();
+        } catch (SQLException se) {
+            LOG.debug(se.getMessage());
+            transRollback(conn);
+        }
+    }
+
+    protected void EnableForeignKeyConstraints(Connection conn) {
+        try {
+            Statement st = conn.createStatement();
+            String sql;
+
+            sql = "ALTER TABLE CUSTOMER ADD CONSTRAINT C_FKEY_D FOREIGN KEY (C_W_ID, C_D_ID) REFERENCES DISTRICT (D_W_ID, D_ID) NOT VALID";
+            st.execute(sql);
+            sql = "ALTER TABLE OORDER ADD CONSTRAINT O_FKEY_C FOREIGN KEY (O_W_ID, O_D_ID, O_C_ID) REFERENCES CUSTOMER (C_W_ID, C_D_ID, C_ID) NOT VALID";
+            st.execute(sql);
+            sql = "ALTER TABLE NEW_ORDER ADD CONSTRAINT NO_FKEY_O FOREIGN KEY (NO_W_ID, NO_D_ID, NO_O_ID) REFERENCES OORDER (O_W_ID, O_D_ID, O_ID) NOT VALID";
+            st.execute(sql);
+            sql = "ALTER TABLE HISTORY ADD CONSTRAINT H_FKEY_C FOREIGN KEY (H_C_W_ID, H_C_D_ID, H_C_ID) REFERENCES CUSTOMER (C_W_ID, C_D_ID, C_ID) NOT VALID";
+            st.execute(sql);
+            sql = "ALTER TABLE HISTORY ADD CONSTRAINT H_FKEY_D FOREIGN KEY (H_W_ID, H_D_ID) REFERENCES DISTRICT (D_W_ID, D_ID) NOT VALID";
+            st.execute(sql);
+            sql = "ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_O FOREIGN KEY (OL_W_ID, OL_D_ID, OL_O_ID) REFERENCES OORDER (O_W_ID, O_D_ID, O_ID) NOT VALID";
+            st.execute(sql);
+            sql = "ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_S FOREIGN KEY (OL_SUPPLY_W_ID, OL_I_ID) REFERENCES STOCK (S_W_ID, S_I_ID) NOT VALID";
+            st.execute(sql);
+
             conn.commit();
         } catch (SQLException se) {
             LOG.debug(se.getMessage());

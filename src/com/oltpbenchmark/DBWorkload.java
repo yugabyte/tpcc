@@ -237,6 +237,12 @@ public class DBWorkload {
                 // Nothing to do here !
             }
 
+            try {
+              wrkld.setDeferConstraintChecks(xmlConfig.getBoolean("deferConstraintChecks"));
+            } catch(NoSuchElementException nse) {
+                // Nothing to do here !
+            }
+
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
             // ----------------------------------------------------------------

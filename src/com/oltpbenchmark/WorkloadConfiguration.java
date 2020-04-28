@@ -56,6 +56,7 @@ public class WorkloadConfiguration {
     private TraceReader traceReader = null;
     private boolean useKeyingTime = true;
     private boolean useThinkTime = true;
+    private boolean deferConstraintChecks = true;
 
     public TraceReader getTraceReader() {
         return traceReader;
@@ -306,6 +307,14 @@ public class WorkloadConfiguration {
 
     public void setUseThinkTime(boolean useThinkTime) {
       this.useThinkTime = useThinkTime;
+    }
+
+    public boolean getDeferConstraintChecks() {
+      return deferConstraintChecks;
+    }
+
+    public void setDeferConstraintChecks(boolean deferConstraintChecks) {
+      this.deferConstraintChecks = deferConstraintChecks;
     }
 
 	@Override

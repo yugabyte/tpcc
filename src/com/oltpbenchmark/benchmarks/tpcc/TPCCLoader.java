@@ -86,7 +86,6 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
             public void load(Connection conn) throws SQLException {
                 if (!workConf.getDeferConstraintChecks()) {
                     EnableForeignKeyConstraints(conn);
-                    LOG.info("The total Time for enabling foreign keys " + (System.nanoTime() - startTime) / 1000 / 1000 / 1000);
                 }
                 loadItems(conn, TPCCConfig.configItemCount);
                 itemLatch.countDown();
@@ -143,9 +142,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
                         ex.printStackTrace();
                         throw new RuntimeException(ex);
                     }
-                    long startTime = System.nanoTime();
                     EnableForeignKeyConstraints(conn);
-                    LOG.info("The total Time for enabling foreign keys " + (System.nanoTime() - startTime) / 1000 / 1000 / 1000);
                 }
             });
         }

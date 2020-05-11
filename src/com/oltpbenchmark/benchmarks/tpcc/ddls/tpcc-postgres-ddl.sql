@@ -1,4 +1,7 @@
 -- TODO: c_since ON UPDATE CURRENT_TIMESTAMP,
+-- The Foreign keys constraints are enabled based on the flag 'deferConstraintChecks'. If this flag
+-- is set to true we enable the foreign key checks only after the loading of the data is done.
+-- If false, we enable the foreign key constraints just after the creation of the tables.
 
 DROP TABLE IF EXISTS order_line;
 CREATE TABLE order_line (

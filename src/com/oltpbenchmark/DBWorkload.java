@@ -240,7 +240,7 @@ public class DBWorkload {
 
             try {
               // Whether to defer the foreign key checks until after the loading of the data is done.
-              wrkld.setDeferConstraintChecks(xmlConfig.getBoolean("deferConstraintChecks"));
+              wrkld.setEnableForeignKeysAfterLoad(xmlConfig.getBoolean("enableForeignKeysAfterLoad"));
             } catch(NoSuchElementException nse) {
                 // Nothing to do here !
             }

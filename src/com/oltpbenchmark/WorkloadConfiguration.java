@@ -56,7 +56,7 @@ public class WorkloadConfiguration {
     private TraceReader traceReader = null;
     private boolean useKeyingTime = true;
     private boolean useThinkTime = true;
-    private boolean deferConstraintChecks = true;
+    private boolean enableForeignKeysAfterLoad = true;
 
     public TraceReader getTraceReader() {
         return traceReader;
@@ -309,12 +309,12 @@ public class WorkloadConfiguration {
       this.useThinkTime = useThinkTime;
     }
 
-    public boolean getDeferConstraintChecks() {
-      return deferConstraintChecks;
+    public boolean getEnableForeignKeysAfterLoad() {
+      return enableForeignKeysAfterLoad;
     }
 
-    public void setDeferConstraintChecks(boolean deferConstraintChecks) {
-      this.deferConstraintChecks = deferConstraintChecks;
+    public void setEnableForeignKeysAfterLoad(boolean enableForeignKeysAfterLoad) {
+      this.enableForeignKeysAfterLoad = enableForeignKeysAfterLoad;
     }
 
 	@Override

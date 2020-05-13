@@ -15,7 +15,7 @@ CREATE TABLE order_line (
   ol_supply_w_id int NOT NULL,
   ol_quantity decimal(2,0) NOT NULL,
   ol_dist_info char(24) NOT NULL,
-  PRIMARY KEY ((ol_w_id,ol_d_id) hash,ol_o_id,ol_number)
+  PRIMARY KEY ((ol_w_id,ol_d_id) HASH,ol_o_id,ol_number)
 );
 
 DROP TABLE IF EXISTS new_order;
@@ -23,7 +23,7 @@ CREATE TABLE new_order (
   no_w_id int NOT NULL,
   no_d_id int NOT NULL,
   no_o_id int NOT NULL,
-  PRIMARY KEY ((no_w_id,no_d_id) hash,no_o_id)
+  PRIMARY KEY ((no_w_id,no_d_id) HASH,no_o_id)
 );
 
 DROP TABLE IF EXISTS stock;
@@ -45,7 +45,7 @@ CREATE TABLE stock (
   s_dist_08 char(24) NOT NULL,
   s_dist_09 char(24) NOT NULL,
   s_dist_10 char(24) NOT NULL,
-  PRIMARY KEY (s_w_id,s_i_id)
+  PRIMARY KEY ((s_w_id,s_i_id)HASH)
 );
 
 -- TODO: o_entry_d  ON UPDATE CURRENT_TIMESTAMP
@@ -59,8 +59,7 @@ CREATE TABLE oorder (
   o_ol_cnt decimal(2,0) NOT NULL,
   o_all_local decimal(1,0) NOT NULL,
   o_entry_d timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY ((o_w_id,o_d_id) hash,o_id),
-  UNIQUE (o_w_id,o_d_id,o_c_id,o_id)
+  PRIMARY KEY ((o_w_id,o_d_id) HASH,o_id)
 );
 
 -- TODO: h_date ON UPDATE CURRENT_TIMESTAMP
@@ -99,7 +98,7 @@ CREATE TABLE customer (
   c_since timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   c_middle char(2) NOT NULL,
   c_data varchar(500) NOT NULL,
-  PRIMARY KEY ((c_w_id,c_d_id) hash,c_id)
+  PRIMARY KEY ((c_w_id,c_d_id) HASH,c_id)
 );
 
 DROP TABLE IF EXISTS district;
@@ -115,9 +114,8 @@ CREATE TABLE district (
   d_city varchar(20) NOT NULL,
   d_state char(2) NOT NULL,
   d_zip char(9) NOT NULL,
-  PRIMARY KEY ((d_w_id,d_id) hash)
+  PRIMARY KEY ((d_w_id,d_id) HASH)
 );
-
 
 DROP TABLE IF EXISTS item;
 CREATE TABLE item (
@@ -143,7 +141,6 @@ CREATE TABLE warehouse (
   PRIMARY KEY (w_id)
 );
 
-
 --add constraints and indexes
-CREATE INDEX idx_customer_name ON customer (c_w_id,c_d_id,c_last,c_first);
-CREATE INDEX idx_order ON oorder (o_w_id,o_d_id,o_c_id,o_id);
+CREATE INDEX idx_customer_name ON customer ((c_w_id,c_d_id) HASH,c_last,c_first);
+CREATE UNIQUE INDEX idx_order ON oorder ((o_w_id,o_d_id) HASH,o_c_id,o_id DESC);

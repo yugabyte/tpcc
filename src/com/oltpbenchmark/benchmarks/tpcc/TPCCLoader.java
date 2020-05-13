@@ -69,7 +69,6 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         }
     }
 
-    private boolean deferConstraintChecks;
     private int numWarehouses = 0;
     private static final int FIRST_UNPROCESSED_O_ID = 2101;
 
@@ -84,7 +83,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         threads.add(new LoaderThread() {
             @Override
             public void load(Connection conn) throws SQLException {
-                if (!workConf.getDeferConstraintChecks()) {
+                if (!workConf.getEnableForeignKeysAfterLoad()) {
                     EnableForeignKeyConstraints(conn);
                 }
                 loadItems(conn, TPCCConfig.configItemCount);
@@ -132,7 +131,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
             threads.add(t);
         } // FOR
 
-        if (workConf.getDeferConstraintChecks()) {
+        if (workConf.getEnableForeignKeysAfterLoad()) {
             threads.add(new LoaderThread() {
                 @Override
                 public void load(Connection conn) throws SQLException {

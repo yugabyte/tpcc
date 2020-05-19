@@ -231,8 +231,16 @@ public class DBWorkload {
             }
 
             try {
+              // Whether to enable the queuing and keying times based on the TPC-C standard.
               wrkld.setUseKeyingTime(xmlConfig.getBoolean("useKeyingTime"));
               wrkld.setUseThinkTime(xmlConfig.getBoolean("useThinkTime"));
+            } catch(NoSuchElementException nse) {
+                // Nothing to do here !
+            }
+
+            try {
+              // Whether to defer the foreign key checks until after the loading of the data is done.
+              wrkld.setEnableForeignKeysAfterLoad(xmlConfig.getBoolean("enableForeignKeysAfterLoad"));
             } catch(NoSuchElementException nse) {
                 // Nothing to do here !
             }

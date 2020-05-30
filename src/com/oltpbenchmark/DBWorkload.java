@@ -245,6 +245,12 @@ public class DBWorkload {
                 // Nothing to do here !
             }
 
+            try {
+              wrkld.setBatchSize(xmlConfig.getInt("batchSize"));
+            } catch(NoSuchElementException nse) {
+                // Nothing to do here !
+            }
+
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
             // ----------------------------------------------------------------

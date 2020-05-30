@@ -57,6 +57,7 @@ public class WorkloadConfiguration {
     private boolean useKeyingTime = true;
     private boolean useThinkTime = true;
     private boolean enableForeignKeysAfterLoad = true;
+    private int batchSize = 128;
 
     public TraceReader getTraceReader() {
         return traceReader;
@@ -315,6 +316,14 @@ public class WorkloadConfiguration {
 
     public void setEnableForeignKeysAfterLoad(boolean enableForeignKeysAfterLoad) {
       this.enableForeignKeysAfterLoad = enableForeignKeysAfterLoad;
+    }
+
+    public int getBatchSize() {
+      return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+      this.batchSize = batchSize;
     }
 
 	@Override

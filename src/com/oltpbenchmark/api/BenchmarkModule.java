@@ -117,7 +117,7 @@ public abstract class BenchmarkModule {
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
 
-        String[] dbConnections = workConf.getDBConnection().split(";");
+        String[] dbConnections = workConf.getDBConnection().split(",");
         int r = (int)TPCCUtil.randomNumber(0, dbConnections.length - 1, rng);
 
         Connection conn = DriverManager.getConnection(dbConnections[r], props);

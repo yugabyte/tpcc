@@ -6,7 +6,18 @@
     <username>yugabyte</username>
     <password></password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
-    <loaderThreads>2</loaderThreads>
+
+    <!-- The number of warehouses -->
+    <scalefactor>10</scalefactor>
+    <!-- Number of threads used for loading data -->
+    <loaderThreads>10</loaderThreads>
+    <!-- TPC-C 4.2.2: The number of terminals should be 10 per warehouse -->
+    <terminals>100</terminals>
+    <batchSize>128</batchSize>
+
+    <useKeyingTime>true</useKeyingTime>
+    <useThinkTime>true</useThinkTime>
+    <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>
 
    	<transactiontypes>
     	<transactiontype>
@@ -25,13 +36,6 @@
     		<name>StockLevel</name>
     	</transactiontype>
    	</transactiontypes>
-
-    <scalefactor>2</scalefactor>
-	<!-- TPC-C 4.2.2: The number of terminals should be 10 per warehouse -->
-    <terminals>20</terminals>
-    <useKeyingTime>true</useKeyingTime>
-    <useThinkTime>true</useThinkTime>
-    <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>
     <works>
         <work>
           <time>300</time>

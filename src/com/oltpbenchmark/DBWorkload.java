@@ -201,7 +201,11 @@ public class DBWorkload {
             // Pull in database configuration
             wrkld.setDBType(DatabaseType.get(xmlConfig.getString("dbtype")));
             wrkld.setDBDriver(xmlConfig.getString("driver"));
-            wrkld.setDBConnection(xmlConfig.getString("DBUrl"));
+
+            Object obj = xmlConfig.getProperty("DBUrls/DBUrl");
+            List<String> dbConnections = (List<String>)obj;
+            wrkld.setDBConnections(dbConnections);
+
             wrkld.setDBName(xmlConfig.getString("DBName"));
             wrkld.setDBUsername(xmlConfig.getString("username"));
             wrkld.setDBPassword(xmlConfig.getString("password"));
@@ -267,7 +271,7 @@ public class DBWorkload {
             initDebug.put("Configuration", configFile);
             initDebug.put("Type", wrkld.getDBType());
             initDebug.put("Driver", wrkld.getDBDriver());
-            initDebug.put("URL", wrkld.getDBConnection());
+            initDebug.put("URL", wrkld.getDBConnections());
             initDebug.put("Isolation", wrkld.getIsolationString());
             initDebug.put("Scale Factor", wrkld.getScaleFactor());
 

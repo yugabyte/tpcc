@@ -43,7 +43,7 @@ public class WorkloadConfiguration {
         this.benchmarkName = benchmarkName;
     }
 
-    private String db_connection;
+    private List<String> dbConnections;
 	private String db_name;
 	private String db_username;
 	private String db_password;
@@ -103,12 +103,12 @@ public class WorkloadConfiguration {
         return db_type;
     }
 
-	public void setDBConnection(String database) {
-		this.db_connection = database;
+	public void setDBConnections(List<String> connections) {
+      this.dbConnections = connections;
 	}
 
-	public String getDBConnection() {
-		return db_connection;
+	public List<String> getDBConnections() {
+		return dbConnections;
 	}
 
 	public void setDBName(String dbname) {

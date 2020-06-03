@@ -24,12 +24,7 @@ import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.log4j.Logger;
 
@@ -117,10 +112,9 @@ public abstract class BenchmarkModule {
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
 
-        String[] dbConnections = workConf.getDBConnection().split(",");
-        int r = (int)TPCCUtil.randomNumber(0, dbConnections.length - 1, rng);
-
-        Connection conn = DriverManager.getConnection(dbConnections[r], props);
+        List<String> dbConnections = workConf.getDBConnections();
+        int r = (int)TPCCUtil.randomNumber(0, dbConnections.size() - 1, rng);
+        Connection conn = DriverManager.getConnection(dbConnections.get(r), props);
         Catalog.setSeparator(conn);
         return (conn);
     }

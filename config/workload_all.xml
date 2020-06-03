@@ -2,7 +2,11 @@
 <parameters>
     <dbtype>postgres</dbtype>
     <driver>org.postgresql.Driver</driver>
-    <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
+    <DBUrls>
+      <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
+      <DBUrl>jdbc:postgresql://127.0.0.2:5433/yugabyte</DBUrl>
+      <DBUrl>jdbc:postgresql://127.0.0.3:5433/yugabyte</DBUrl>
+    </DBUrls>
     <username>yugabyte</username>
     <password></password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>

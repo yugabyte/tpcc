@@ -2,7 +2,10 @@
 <parameters>
     <dbtype>postgres</dbtype>
     <driver>org.postgresql.Driver</driver>
-    <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
+    <DBUrls>
+      <!-- Add as many DBUrl as the number of nodes present.  -->
+      <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
+    </DBUrls>
     <username>yugabyte</username>
     <password></password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>

@@ -61,6 +61,9 @@ public class DBWorkload {
     private static final String RATE_DISABLED = "disabled";
     private static final String RATE_UNLIMITED = "unlimited";
 
+    private static int newOrderTxnId = -1;
+    private static int numWarehouses = -1;
+
     /**
      * @param args
      * @throws Exception
@@ -222,6 +225,7 @@ public class DBWorkload {
             String isolationMode = xmlConfig.getString("isolation[not(@bench)]", "TRANSACTION_SERIALIZABLE");
             wrkld.setIsolationMode(xmlConfig.getString("isolation" + pluginTest, isolationMode));
             wrkld.setScaleFactor(xmlConfig.getDouble("scalefactor", 1.0));
+            numWarehouses = (int)wrkld.getScaleFactor();
             wrkld.setRecordAbortMessages(xmlConfig.getBoolean("recordabortmessages", false));
             wrkld.setDataDir(xmlConfig.getString("datadir", "."));
 
@@ -306,6 +310,9 @@ public class DBWorkload {
                 }
 
                 TransactionType tmpType = bench.initTransactionType(txnName, txnId + txnIdOffset);
+                if (txnName.equals("NewOrder")) {
+                    newOrderTxnId = txnId + txnIdOffset;
+                }
 
                 // Keep a reference for filtering
                 activeTXTypes.add(tmpType);
@@ -840,6 +847,8 @@ public class DBWorkload {
     private static Results runWorkload(List<BenchmarkModule> benchList, boolean verbose, int intervalMonitor) throws QueueLimitException, IOException {
         List<Worker<?>> workers = new ArrayList<Worker<?>>();
         List<WorkloadConfiguration> workConfs = new ArrayList<WorkloadConfiguration>();
+
+        long start = System.nanoTime();
         for (BenchmarkModule bench : benchList) {
             LOG.info("Creating " + bench.getWorkloadConfiguration().getTerminals() + " virtual terminals...");
             workers.addAll(bench.makeWorkers(verbose));
@@ -852,8 +861,27 @@ public class DBWorkload {
 
         }
         Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, intervalMonitor);
+        long end = System.nanoTime();
+
+        long numNewOrderTransactions = 0;
+        for (Worker<?> w : workers) {
+            for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
+                if (sample.tranType == newOrderTxnId) {
+                    ++numNewOrderTransactions;
+                }
+            }
+        }
         LOG.info(SINGLE_LINE);
         LOG.info("Rate limited reqs/s: " + r);
+
+        long time_seconds = (end - start) / 1000 / 1000 / 1000;
+        long tpmc = numNewOrderTransactions * 60 * 1000 * 1000 * 1000 / (end - start);
+        double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
+
+        LOG.info("Num New Order transactions : " + numNewOrderTransactions +
+                 " time seconds: " + time_seconds +
+                 " TPM-C: " + tpmc +
+                 " Efficienccy : " + efficiency);
         return r;
     }
 

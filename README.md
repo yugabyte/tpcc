@@ -14,7 +14,7 @@ features, e.g., per-transaction-type latency and throughput logs.
 
 
 ## Environment Setup
-+ Install Java and Ant.
++ Install Java, Ant and Ivy.
 + Download the source code.
   ```bash
   git clone https://github.com/yugabyte/tpcc.git

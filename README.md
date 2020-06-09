@@ -64,20 +64,20 @@ A utility script (./tpccbenchmark) is provided for running the benchmark. The op
 ```
 
 ## Example
-The following command for example initiates a tpcc database (--create=true --load=true) and a then run a workload as described in config/workload_1.xml file. The results (latency, throughput) are summarized into 5 seconds buckets (-s 5) and the output is written into two file: outputfile.res (aggregated) and outputfile.raw (detailed):
+The following command for example initiates a tpcc database (--create=true --load=true) and a then run a workload as described in config/workload_all.xml file. The results (latency, throughput) are summarized and written into two files: outputfile.res (aggregated) and outputfile.raw (detailed):
 
 ```
-./tpccbenchmark -c config/workload_1.xml --create=true --load=true --execute=true -s 5 -o outputfile
+./tpccbenchmark -c config/workload_all.xml --create=true --load=true --execute=true -s 300 -o outputfile
 ```
 
 Since data loading can be a lengthy process, one could first create a and populate a database which can be reused for multiple experiments:
 
 ```
-./tpccbenchmark -c config/workload_1.xml --create=true --load=true
+./tpccbenchmark -c config/workload_all.xml --create=true --load=true
 ```
 
 Then running an experiment could be simply done with the following command on a fresh or used database.
 
 ```
-./tpccbenchmark -c config/workload_1.xml --execute=true -s 5 -o outputfile
+./tpccbenchmark -c config/workload_all.xml --execute=true -s 300 -o outputfile
 ```

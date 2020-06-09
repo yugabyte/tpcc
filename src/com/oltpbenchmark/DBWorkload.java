@@ -206,7 +206,12 @@ public class DBWorkload {
             wrkld.setDBDriver(xmlConfig.getString("driver"));
 
             Object obj = xmlConfig.getProperty("DBUrls/DBUrl");
-            List<String> dbConnections = (List<String>)obj;
+            List<String> dbConnections = new LinkedList<>();
+            if (obj instanceof List<?>) {
+                dbConnections = (List<String>)obj;
+            } else {
+                dbConnections.add((String)obj);
+            }
             wrkld.setDBConnections(dbConnections);
 
             wrkld.setDBName(xmlConfig.getString("DBName"));

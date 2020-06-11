@@ -91,7 +91,7 @@ public abstract class BenchmarkModule {
      */
     private final Random rng = new Random();
 
-    public BenchmarkModule(String benchmarkName, WorkloadConfiguration workConf, boolean withCatalog) {
+    public BenchmarkModule(String benchmarkName, WorkloadConfiguration workConf, boolean withCatalog) throws Exception {
         assert (workConf != null) : "The WorkloadConfiguration instance is null.";
 
         this.benchmarkName = benchmarkName;
@@ -104,13 +104,15 @@ public abstract class BenchmarkModule {
             createDataSource();
         } catch (Exception e) {
             LOG.error("Failed to create Data source", e);
+            throw e;
         }
     }
 
     private List<HikariDataSource> listDataSource = new ArrayList<>();
 
     public void createDataSource() throws SQLException {
-        int numConnections = workConf.getNumDBConnections() / workConf.getNodes().size();
+        int numConnections =
+            (workConf.getNumDBConnections() + workConf.getNodes().size() - 1) / workConf.getNodes().size();
         for (String ip : workConf.getNodes()) {
             Properties props = new Properties();
             props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");

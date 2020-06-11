@@ -643,7 +643,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @throws SQLException
      *             TODO
      */
-    protected abstract TransactionStatus executeWork(Connection conn,TransactionType txnType) throws UserAbortException, SQLException;
+    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType) throws UserAbortException, SQLException;
 
     /**
      * Called at the end of the test to do any clean up that may be required.

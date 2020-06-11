@@ -3,10 +3,9 @@
     <dbtype>postgres</dbtype>
     <driver>org.postgresql.Driver</driver>
     <nodes>
-      <!-- Add as many DBUrl as the number of nodes present.  -->
+      <!-- Add as many node entries as the number of nodes present.  -->
       <node>127.0.0.1</node>
     </nodes>
-    <port>5433</port>
     <username>yugabyte</username>
     <DBName>yugabyte</DBName>
     <password></password>

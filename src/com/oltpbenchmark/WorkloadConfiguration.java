@@ -105,13 +105,9 @@ public class WorkloadConfiguration {
         return db_type;
     }
 
-	public void setNodes(List<String> nodes) {
-      this.nodes = nodes;
-	}
+	public void setNodes(List<String> nodes) { this.nodes = nodes; }
 
-	public List<String> getNodes() {
-		return nodes;
-	}
+	public List<String> getNodes() { return nodes; }
 
 	public void setDBName(String dbname) {
 		this.db_name = dbname;

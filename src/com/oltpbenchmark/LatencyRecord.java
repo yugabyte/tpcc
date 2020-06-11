@@ -102,7 +102,6 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
 	private final class LatencyRecordIterator implements Iterator<Sample> {
 		private int chunkIndex = 0;
 		private int subIndex = 0;
-		//private long lastIteratorNs = startNs;
 
 		@Override
 		public boolean hasNext() {

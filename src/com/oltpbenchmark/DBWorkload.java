@@ -882,10 +882,9 @@ public class DBWorkload {
         long tpmc = numNewOrderTransactions * 60 / time;
         double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
 
-        LOG.info("Num New Order transactions : " + numNewOrderTransactions +
-                 " time seconds: " + time +
-                 " TPM-C: " + tpmc +
-                 " Efficiency : " + efficiency);
+        LOG.info("Num New Order transactions : " + numNewOrderTransactions + " time seconds: " + time);
+        LOG.info("TPM-C: " + tpmc);
+        LOG.info("Efficiency : " + efficiency);
         return r;
     }
 

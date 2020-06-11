@@ -23,7 +23,9 @@
 		<dependency org="com.yugabyte" name="jdbc-yugabytedb" rev="42.2.7-yb-3" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<dependency org="org.hsqldb" name="hsqldb" rev="2.4.1" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 
-      <!-- Core Libraries -->
+		<dependency org="com.zaxxer" name="HikariCP" rev="3.4.5" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
+
+		<!-- Core Libraries -->
 		<dependency org="org.apache.httpcomponents" name="httpclient" rev="4.3" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<dependency org="org.apache.httpcomponents" name="httpcore" rev="4.3" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<dependency org="org.apache.httpcomponents" name="httpmime" rev="4.3" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>

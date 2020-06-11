@@ -205,14 +205,14 @@ public class DBWorkload {
             wrkld.setDBType(DatabaseType.get(xmlConfig.getString("dbtype")));
             wrkld.setDBDriver(xmlConfig.getString("driver"));
 
-            Object obj = xmlConfig.getProperty("DBUrls/DBUrl");
-            List<String> dbConnections = new LinkedList<>();
+            Object obj = xmlConfig.getProperty("nodes/node");
+            List<String> nodes = new LinkedList<>();
             if (obj instanceof List<?>) {
-                dbConnections = (List<String>)obj;
+                nodes = (List<String>)obj;
             } else {
-                dbConnections.add((String)obj);
+                nodes.add((String)obj);
             }
-            wrkld.setDBConnections(dbConnections);
+            wrkld.setNodes(nodes);
 
             wrkld.setDBName(xmlConfig.getString("DBName"));
             wrkld.setDBUsername(xmlConfig.getString("username"));
@@ -264,6 +264,26 @@ public class DBWorkload {
                 // Nothing to do here !
             }
 
+            try {
+                wrkld.setPort(xmlConfig.getInt("port"));
+            } catch(NoSuchElementException nse) {
+                // Nothing to do here !
+            }
+
+            try {
+                wrkld.setNumDBConnections(xmlConfig.getInt("numDBConnections"));
+            } catch(NoSuchElementException nse) {
+                // Nothing to do here !
+            }
+
+            if (wrkld.getNumDBConnections() <= 0) {
+                wrkld.setNumDBConnections(wrkld.getTerminals());
+            }
+
+            if (wrkld.getNumDBConnections() < wrkld.getLoaderThreads()) {
+                wrkld.setNumDBConnections(wrkld.getLoaderThreads());
+            }
+
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
             // ----------------------------------------------------------------
@@ -280,7 +300,7 @@ public class DBWorkload {
             initDebug.put("Configuration", configFile);
             initDebug.put("Type", wrkld.getDBType());
             initDebug.put("Driver", wrkld.getDBDriver());
-            initDebug.put("URL", wrkld.getDBConnections());
+            initDebug.put("URL", wrkld.getNodes());
             initDebug.put("Isolation", wrkld.getIsolationString());
             initDebug.put("Scale Factor", wrkld.getScaleFactor());
 

@@ -39,7 +39,6 @@ public abstract class Procedure {
     private DatabaseType dbType;
     private Map<String, SQLStmt> name_stmt_xref;
     private final Map<SQLStmt, String> stmt_name_xref = new HashMap<SQLStmt, String>();
-    private final Map<SQLStmt, PreparedStatement> prepardStatements = new HashMap<SQLStmt, PreparedStatement>();
     
     /**
      * Constructor
@@ -81,14 +80,6 @@ public abstract class Procedure {
     protected final DatabaseType getDatabaseType() {
         return (this.dbType);
     }
-    
-    /**
-     * Flush all PreparedStatements, requiring us to rebuild them the next time
-     * we try to run one.
-     */
-    public void resetPreparedStatements() {
-        prepardStatements.clear();
-    }
 
     /**
      * Return a PreparedStatement for the given SQLStmt handle
@@ -121,25 +112,22 @@ public abstract class Procedure {
      */
     public final PreparedStatement getPreparedStatementReturnKeys(Connection conn, SQLStmt stmt, int[] is) throws SQLException {
         assert(this.name_stmt_xref != null) : "The Procedure " + this + " has not been initialized yet!";
-        PreparedStatement pStmt = this.prepardStatements.get(stmt);
-        if (pStmt == null) {
-            assert(this.stmt_name_xref.containsKey(stmt)) :
-                "Unexpected SQLStmt handle in " + this.getClass().getSimpleName() + "\n" + this.name_stmt_xref;
-            
-            // HACK: If the target system is Postgres, wrap the PreparedStatement in a special
-            //       one that fakes the getGeneratedKeys().
-            if (is != null && this.dbType == DatabaseType.POSTGRES) {
-                pStmt = new AutoIncrementPreparedStatement(this.dbType, conn.prepareStatement(stmt.getSQL()));
-            }
-            // Everyone else can use the regular getGeneratedKeys() method
-            else if (is != null) {
-                pStmt = conn.prepareStatement(stmt.getSQL(), is);
-            }
-            // They don't care about keys
-            else {
-                pStmt = conn.prepareStatement(stmt.getSQL());
-            }
-            this.prepardStatements.put(stmt, pStmt);
+        PreparedStatement pStmt;
+        assert(this.stmt_name_xref.containsKey(stmt)) :
+            "Unexpected SQLStmt handle in " + this.getClass().getSimpleName() + "\n" + this.name_stmt_xref;
+
+        // HACK: If the target system is Postgres, wrap the PreparedStatement in a special
+        //       one that fakes the getGeneratedKeys().
+        if (is != null && this.dbType == DatabaseType.POSTGRES) {
+            pStmt = new AutoIncrementPreparedStatement(this.dbType, conn.prepareStatement(stmt.getSQL()));
+        }
+        // Everyone else can use the regular getGeneratedKeys() method
+        else if (is != null) {
+            pStmt = conn.prepareStatement(stmt.getSQL(), is);
+        }
+        // They don't care about keys
+        else {
+            pStmt = conn.prepareStatement(stmt.getSQL());
         }
         assert(pStmt != null) : "Unexpected null PreparedStatement for " + stmt;
         return (pStmt);

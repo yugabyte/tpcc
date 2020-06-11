@@ -43,7 +43,7 @@ public class WorkloadConfiguration {
         this.benchmarkName = benchmarkName;
     }
 
-    private List<String> dbConnections;
+    private List<String> nodes;
 	private String db_name;
 	private String db_username;
 	private String db_password;
@@ -51,6 +51,8 @@ public class WorkloadConfiguration {
 	private double scaleFactor = 1.0;
 	private double selectivity = -1.0;
 	private int terminals;
+	private int numDBConnections = -1;
+	private int port = 5433;
 	private int loaderThreads = ThreadUtil.availableProcessors();
 	private int numTxnTypes;
     private TraceReader traceReader = null;
@@ -103,12 +105,12 @@ public class WorkloadConfiguration {
         return db_type;
     }
 
-	public void setDBConnections(List<String> connections) {
-      this.dbConnections = connections;
+	public void setNodes(List<String> nodes) {
+      this.nodes = nodes;
 	}
 
-	public List<String> getDBConnections() {
-		return dbConnections;
+	public List<String> getNodes() {
+		return nodes;
 	}
 
 	public void setDBName(String dbname) {
@@ -243,6 +245,14 @@ public class WorkloadConfiguration {
 	public int getTerminals() {
 		return terminals;
 	}
+
+	public void setNumDBConnections(int numDBConnections) { this.numDBConnections = numDBConnections; }
+
+	public int getNumDBConnections() { return this.numDBConnections; }
+
+	public void setPort(int port) { this.port = port; }
+
+	public int getPort() { return port; }
 
 	public TransactionTypes getTransTypes() {
 		return transTypes;

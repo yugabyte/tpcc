@@ -25,6 +25,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import org.apache.log4j.Logger;
 
@@ -95,28 +99,37 @@ public abstract class BenchmarkModule {
         this.catalog = (withCatalog ? new Catalog(this) : null);
         File xmlFile = this.getSQLDialect();
         this.dialects = new StatementDialects(this.workConf.getDBType(), xmlFile);
+
+        try {
+            createDataSource();
+        } catch (Exception e) {
+            LOG.error("Failed to create Data source", e);
+        }
     }
 
-    // --------------------------------------------------------------------------
-    // DATABASE CONNETION
-    // --------------------------------------------------------------------------
+    private List<HikariDataSource> listDataSource = new ArrayList<>();
 
-    /**
-     *
-     * @return
-     * @throws SQLException
-     */
-    public final Connection makeConnection() throws SQLException {
-        java.util.Properties props = new java.util.Properties();
-        props.put("user", workConf.getDBUsername());
-        props.put("password", workConf.getDBPassword());
-        props.put("reWriteBatchedInserts", "true");
+    public void createDataSource() throws SQLException {
+        int numConnections = workConf.getNumDBConnections() / workConf.getNodes().size();
+        for (String ip : workConf.getNodes()) {
+            Properties props = new Properties();
+            props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
+            props.setProperty("dataSource.serverName", ip);
+            props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
+            props.setProperty("dataSource.user", workConf.getDBUsername());
+            props.setProperty("dataSource.password", workConf.getDBPassword());
+            props.setProperty("dataSource.databaseName", workConf.getDBName());
+            props.setProperty("maximumPoolSize", Integer.toString(numConnections));
 
-        List<String> dbConnections = workConf.getDBConnections();
-        int r = (int)TPCCUtil.randomNumber(0, dbConnections.size() - 1, rng);
-        Connection conn = DriverManager.getConnection(dbConnections.get(r), props);
-        Catalog.setSeparator(conn);
-        return (conn);
+            HikariConfig config = new HikariConfig(props);
+            listDataSource.add(new HikariDataSource(config));
+        }
+    }
+
+    private static AtomicInteger dataSourceCounter = new AtomicInteger(0);
+    public final HikariDataSource getDataSource() {
+        int r =  dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
+        return listDataSource.get(r);
     }
 
     // --------------------------------------------------------------------------
@@ -242,7 +255,7 @@ public abstract class BenchmarkModule {
      */
     public final void createDatabase() {
         try {
-            Connection conn = this.makeConnection();
+            Connection conn = listDataSource.get(0).getConnection();
             this.createDatabase(this.workConf.getDBType(), conn);
             conn.close();
         } catch (SQLException ex) {
@@ -272,7 +285,7 @@ public abstract class BenchmarkModule {
      */
     public final void runScript(String script) {
         try {
-            Connection conn = this.makeConnection();
+            Connection conn = listDataSource.get(0).getConnection();
             ScriptRunner runner = new ScriptRunner(conn, true, true);
             File scriptFile= new File(script);
             runner.runScript(scriptFile.toURI().toURL());
@@ -330,7 +343,7 @@ public abstract class BenchmarkModule {
         try {
             Loader<? extends BenchmarkModule> loader = this.makeLoaderImpl();
             if (loader != null) {
-                Connection conn = this.makeConnection();
+                Connection conn = listDataSource.get(0).getConnection();
                 conn.setAutoCommit(false);
                 loader.unload(conn, this.catalog);
                 conn.commit();

@@ -26,6 +26,9 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+
+import com.zaxxer.hikari.HikariDataSource;
+
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.LatencyRecord;
@@ -53,7 +56,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     private final int id;
     private final T benchmarkModule;
-    protected final Connection conn;
+    protected final HikariDataSource dataSource;
     protected final WorkloadConfiguration wrkld;
     protected final TransactionTypes transactionTypes;
     protected final Map<TransactionType, Procedure> procedures = new HashMap<TransactionType, Procedure>();
@@ -78,16 +81,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
 
         try {
-            this.conn = this.benchmarkModule.makeConnection();
-            this.conn.setAutoCommit(false);
-
-            // 2018-01-11: Since we want to support NoSQL systems
-            // that do not support txns, we will not invoke certain JDBC functions
-            // that may cause an error in them.
-            if (this.wrkld.getDBType().shouldUseTransactions()) {
-                this.conn.setTransactionIsolation(this.wrkld.getIsolationMode());
-            }
-        } catch (SQLException ex) {
+            this.dataSource = this.benchmarkModule.getDataSource();
+        } catch (Exception ex) {
             throw new RuntimeException("Failed to connect to database", ex);
         }
 
@@ -140,10 +135,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     public final Random rng() {
         return (this.benchmarkModule.rng());
-    }
-
-    public final Connection getConnection() {
-        return (this.conn);
     }
 
     public final int getRequests() {
@@ -445,7 +436,13 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         final DatabaseType dbType = wrkld.getDBType();
         final boolean recordAbortMessages = wrkld.getRecordAbortMessages();
 
+
+        Connection conn = null;
         try {
+            conn = dataSource.getConnection();
+            conn.setAutoCommit(false);
+            conn.setTransactionIsolation(this.wrkld.getIsolationMode());
+
             while (status == TransactionStatus.RETRY && this.wrkldState.getGlobalState() != State.DONE) {
                 if (next == null) {
                     next = transactionTypes.getType(pieceOfWork.getType());
@@ -462,7 +459,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // }
 
                     status = TransactionStatus.UNKNOWN;
-                    status = this.executeWork(next);
+                    status = this.executeWork(conn, next);
 
                 // User Abort Handling
                 // These are not errors
@@ -481,9 +478,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     }
 
                     if (savepoint != null) {
-                        this.conn.rollback(savepoint);
+                        conn.rollback(savepoint);
                     } else {
-                        this.conn.rollback();
+                        conn.rollback();
                     }
 
                     status = TransactionStatus.USER_ABORTED;
@@ -502,9 +499,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
 		    if (this.wrkld.getDBType().shouldUseTransactions()) {
 			if (savepoint != null) {
-			    this.conn.rollback(savepoint);
+			    conn.rollback(savepoint);
 			} else {
-			    this.conn.rollback();
+			    conn.rollback();
 			}
 		    }
 
@@ -607,6 +604,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 }
 
             } // WHILE
+            conn.close();
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s' [%s]",
                                        this, next, dbType);
@@ -645,7 +643,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @throws SQLException
      *             TODO
      */
-    protected abstract TransactionStatus executeWork(TransactionType txnType) throws UserAbortException, SQLException;
+    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType) throws UserAbortException, SQLException;
 
     /**
      * Called at the end of the test to do any clean up that may be required.
@@ -653,13 +651,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * @param error
      *            TODO
      */
-    public void tearDown(boolean error) {
-        try {
-            conn.close();
-        } catch (SQLException e) {
-            LOG.warn("No connection to close");
-        }
-    }
+    public void tearDown(boolean error) { }
 
     public void initializeState() {
         assert (this.wrkldState == null);

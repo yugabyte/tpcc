@@ -205,14 +205,14 @@ public class DBWorkload {
             wrkld.setDBType(DatabaseType.get(xmlConfig.getString("dbtype")));
             wrkld.setDBDriver(xmlConfig.getString("driver"));
 
-            Object obj = xmlConfig.getProperty("DBUrls/DBUrl");
-            List<String> dbConnections = new LinkedList<>();
+            Object obj = xmlConfig.getProperty("nodes/node");
+            List<String> nodes = new LinkedList<>();
             if (obj instanceof List<?>) {
-                dbConnections = (List<String>)obj;
+                nodes = (List<String>)obj;
             } else {
-                dbConnections.add((String)obj);
+                nodes.add((String)obj);
             }
-            wrkld.setDBConnections(dbConnections);
+            wrkld.setNodes(nodes);
 
             wrkld.setDBName(xmlConfig.getString("DBName"));
             wrkld.setDBUsername(xmlConfig.getString("username"));
@@ -234,34 +234,36 @@ public class DBWorkload {
             wrkld.setRecordAbortMessages(xmlConfig.getBoolean("recordabortmessages", false));
             wrkld.setDataDir(xmlConfig.getString("datadir", "."));
 
-            double selectivity = -1;
-            try {
-                selectivity = xmlConfig.getDouble("selectivity");
-                wrkld.setSelectivity(selectivity);
+            if (xmlConfig.containsKey("useKeyingTime")) {
+                wrkld.setUseKeyingTime(xmlConfig.getBoolean("useKeyingTime"));
             }
-            catch(NoSuchElementException nse) {
-                // Nothing to do here !
+            if (xmlConfig.containsKey("useThinkTime")) {
+                wrkld.setUseKeyingTime(xmlConfig.getBoolean("useThinkTime"));
             }
 
-            try {
-              // Whether to enable the queuing and keying times based on the TPC-C standard.
-              wrkld.setUseKeyingTime(xmlConfig.getBoolean("useKeyingTime"));
-              wrkld.setUseThinkTime(xmlConfig.getBoolean("useThinkTime"));
-            } catch(NoSuchElementException nse) {
-                // Nothing to do here !
+            if (xmlConfig.containsKey("enableForeignKeysAfterLoad")) {
+                wrkld.setEnableForeignKeysAfterLoad(xmlConfig.getBoolean("enableForeignKeysAfterLoad"));
             }
 
-            try {
-              // Whether to defer the foreign key checks until after the loading of the data is done.
-              wrkld.setEnableForeignKeysAfterLoad(xmlConfig.getBoolean("enableForeignKeysAfterLoad"));
-            } catch(NoSuchElementException nse) {
-                // Nothing to do here !
+            if (xmlConfig.containsKey("batchSize")) {
+                wrkld.setBatchSize(xmlConfig.getInt("batchSize"));
             }
 
-            try {
-              wrkld.setBatchSize(xmlConfig.getInt("batchSize"));
-            } catch(NoSuchElementException nse) {
-                // Nothing to do here !
+            if (xmlConfig.containsKey("port")) {
+                LOG.info("port exists");
+                wrkld.setPort(xmlConfig.getInt("port"));
+            }
+
+            if (xmlConfig.containsKey("numDBConnections")) {
+                wrkld.setNumDBConnections(xmlConfig.getInt("numDBConnections"));
+            }
+
+            if (wrkld.getNumDBConnections() <= 0) {
+                wrkld.setNumDBConnections(wrkld.getTerminals());
+            }
+
+            if (wrkld.getNumDBConnections() < wrkld.getLoaderThreads()) {
+                wrkld.setNumDBConnections(wrkld.getLoaderThreads());
             }
 
             // ----------------------------------------------------------------
@@ -280,12 +282,9 @@ public class DBWorkload {
             initDebug.put("Configuration", configFile);
             initDebug.put("Type", wrkld.getDBType());
             initDebug.put("Driver", wrkld.getDBDriver());
-            initDebug.put("URL", wrkld.getDBConnections());
+            initDebug.put("URL", wrkld.getNodes());
             initDebug.put("Isolation", wrkld.getIsolationString());
             initDebug.put("Scale Factor", wrkld.getScaleFactor());
-
-            if(selectivity != -1)
-                initDebug.put("Selectivity", selectivity);
 
             LOG.info(SINGLE_LINE + "\n\n" + StringUtil.formatMaps(initDebug));
             LOG.info(SINGLE_LINE);

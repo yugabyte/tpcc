@@ -104,7 +104,7 @@ public abstract class DBCollector {
     public static DBCollector createCollector(WorkloadConfiguration workConf) {
         return createCollector(
                 workConf.getDBType(),
-                workConf.getDBConnections().get(0),
+                workConf.getNodes().get(0),
                 workConf.getDBUsername(),
                 workConf.getDBPassword());
     }

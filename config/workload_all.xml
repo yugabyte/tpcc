@@ -2,11 +2,12 @@
 <parameters>
     <dbtype>postgres</dbtype>
     <driver>org.postgresql.Driver</driver>
-    <DBUrls>
-      <!-- Add as many DBUrl as the number of nodes present.  -->
-      <DBUrl>jdbc:postgresql://127.0.0.1:5433/yugabyte</DBUrl>
-    </DBUrls>
+    <nodes>
+      <!-- Add as many node entries as the number of nodes present.  -->
+      <node>127.0.0.1</node>
+    </nodes>
     <username>yugabyte</username>
+    <DBName>yugabyte</DBName>
     <password></password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
@@ -17,6 +18,9 @@
     <!-- TPC-C 4.2.2: The number of terminals should be 10 per warehouse -->
     <terminals>100</terminals>
     <batchSize>128</batchSize>
+
+      <!-- The actual number of connections used  -->
+    <numDBConnections>10</numDBConnections>
 
     <useKeyingTime>true</useKeyingTime>
     <useThinkTime>true</useThinkTime>

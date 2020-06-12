@@ -63,6 +63,7 @@ public class DBWorkload {
 
     private static int newOrderTxnId = -1;
     private static int numWarehouses = -1;
+    private static int time = -1;
 
     /**
      * @param args
@@ -464,7 +465,7 @@ public class DBWorkload {
                     System.exit(-1);
                 }
 
-                int time = work.getInt("/time", 0);
+                time = work.getInt("/time", 0);
                 int warmup = work.getInt("/warmup", 0);
                 timed = (time > 0);
                 if (scriptRun) {
@@ -853,6 +854,7 @@ public class DBWorkload {
         List<WorkloadConfiguration> workConfs = new ArrayList<WorkloadConfiguration>();
 
         long start = System.nanoTime();
+        long end = start + Long.valueOf(time) * 1000 * 1000 * 1000;
         for (BenchmarkModule bench : benchList) {
             LOG.info("Creating " + bench.getWorkloadConfiguration().getTerminals() + " virtual terminals...");
             workers.addAll(bench.makeWorkers(verbose));
@@ -865,12 +867,11 @@ public class DBWorkload {
 
         }
         Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, intervalMonitor);
-        long end = System.nanoTime();
 
         long numNewOrderTransactions = 0;
         for (Worker<?> w : workers) {
             for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
-                if (sample.tranType == newOrderTxnId) {
+                if (sample.tranType == newOrderTxnId && sample.startNs + 1000L * sample.latencyUs <= end) {
                     ++numNewOrderTransactions;
                 }
             }
@@ -878,14 +879,12 @@ public class DBWorkload {
         LOG.info(SINGLE_LINE);
         LOG.info("Rate limited reqs/s: " + r);
 
-        long time_seconds = (end - start) / 1000 / 1000 / 1000;
-        long tpmc = numNewOrderTransactions * 60 * 1000 * 1000 * 1000 / (end - start);
+        long tpmc = numNewOrderTransactions * 60 / time;
         double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
 
-        LOG.info("Num New Order transactions : " + numNewOrderTransactions +
-                 " time seconds: " + time_seconds +
-                 " TPM-C: " + tpmc +
-                 " Efficienccy : " + efficiency);
+        LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
+        LOG.info("TPM-C: " + tpmc);
+        LOG.info("Efficiency : " + efficiency);
         return r;
     }
 

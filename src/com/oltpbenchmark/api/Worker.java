@@ -325,6 +325,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
             // PART 3: Execute work
 
+            long start = System.nanoTime();
+
             // TODO: Measuring latency when not rate limited is ... a little
             // weird because if you add more simultaneous clients, you will
             // increase latency (queue delay) but we do this anyway since it is
@@ -344,8 +346,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     LOG.error("Thread sleep interrupted");
                 }
             }
-
-            long start = System.nanoTime();
 
             TransactionType type = invalidTT;
             try {
@@ -370,6 +370,21 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                         default:
                             throw e;
                     }
+                }
+            }
+
+            if (this.wrkld.getUseThinkTime()) {
+                // Sleep for the think time duration.
+                long think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+                try {
+                    long sleep_start = System.nanoTime();
+                    Thread.sleep(think_time_msecs);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                            " Think time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
+                    }
+                } catch (InterruptedException e) {
+                    LOG.error("Thread sleep interrupted");
                 }
             }
 
@@ -402,20 +417,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // Do nothing
             }
 
-            if (this.wrkld.getUseThinkTime()) {
-                // Sleep for the think time duration.
-                long think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
-                try {
-                    long sleep_start = System.nanoTime();
-                    Thread.sleep(think_time_msecs);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                            " Think time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
-                    }
-                } catch (InterruptedException e) {
-                    LOG.error("Thread sleep interrupted");
-                }
-            }
+
             wrkldState.finishedWork();
         }
 

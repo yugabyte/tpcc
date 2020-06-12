@@ -27,45 +27,27 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
 
 	/**
 	 * Contains (start time, latency, transactionType, workerid, phaseid) pentiplets 
-	 * in microsecond form. The start times are "compressed" by encoding them as 
-	 * increments, starting from startNs. A 32-bit integer provides sufficient resolution
-	 * for an interval of 2146 seconds, or 35 minutes.
+	 * in microsecond form. 
 	 */
 	private final ArrayList<Sample[]> values = new ArrayList<Sample[]>();
 	private int nextIndex;
 
-	private final long startNs;
-	private long lastNs;
-
 	public LatencyRecord(long startNs) {
 		assert startNs > 0;
-
-		this.startNs = startNs;
-		lastNs = startNs;
 		allocateChunk();
-
 	}
 
     public void addLatency(int transType, long startNs, long endNs, int workerId, int phaseId) {
-		assert lastNs > 0;
-		assert lastNs - 500 <= startNs;
 		assert endNs >= startNs;
-
 		if (nextIndex == ALLOC_SIZE) {
 			allocateChunk();
 		}
 		Sample[] chunk = values.get(values.size() - 1);
-
-		long startOffsetNs = (startNs - lastNs + 500);
-		assert startOffsetNs >= 0;
 		int latencyUs = (int) ((endNs - startNs + 500) / 1000);
 		assert latencyUs >= 0;
 
-		chunk[nextIndex] = new Sample(transType, startOffsetNs, latencyUs
-				, workerId, phaseId);
+		chunk[nextIndex] = new Sample(transType, startNs, latencyUs, workerId, phaseId);
 		++nextIndex;
-
-		lastNs += startOffsetNs;
 	}
 
 	private void allocateChunk() {
@@ -120,7 +102,6 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
 	private final class LatencyRecordIterator implements Iterator<Sample> {
 		private int chunkIndex = 0;
 		private int subIndex = 0;
-		private long lastIteratorNs = startNs;
 
 		@Override
 		public boolean hasNext() {
@@ -149,12 +130,6 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
 				chunkIndex += 1;
 				subIndex = 0;
 			}
-
-			// Previously, s.startNs was just an offset from the previous
-			// value.  Now we make it an absolute.
-			s.startNs += lastIteratorNs;
-			lastIteratorNs = s.startNs;
-
 			return s;
 		}
 

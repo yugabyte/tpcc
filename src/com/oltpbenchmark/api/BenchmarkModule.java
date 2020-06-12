@@ -130,7 +130,7 @@ public abstract class BenchmarkModule {
 
     private static AtomicInteger dataSourceCounter = new AtomicInteger(0);
     public final HikariDataSource getDataSource() {
-        int r =  dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
+        int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
         return listDataSource.get(r);
     }
 

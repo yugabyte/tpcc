@@ -36,7 +36,7 @@ import com.oltpbenchmark.types.DatabaseType;
 public class TPCCBenchmark extends BenchmarkModule {
     private static final Logger LOG = Logger.getLogger(TPCCBenchmark.class);
 
-	public TPCCBenchmark(WorkloadConfiguration workConf) {
+	public TPCCBenchmark(WorkloadConfiguration workConf) throws Exception {
 		super("tpcc", workConf, true);
 	}
 

@@ -62,6 +62,7 @@ public abstract class Loader<T extends BenchmarkModule> {
 
                 this.load(conn);
                 conn.commit();
+                conn.close();
             } catch (SQLException ex) {
                 SQLException next_ex = ex.getNextException();
                 String msg = String.format("Unexpected error when loading %s database",

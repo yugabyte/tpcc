@@ -45,7 +45,7 @@
    	</transactiontypes>
     <works>
         <work>
-          <time>300</time>
+          <time>1800</time>
           <rate>10000</rate>
           <ratelimited bench="tpcc">true</ratelimited>
           <weights>45,43,4,4,4</weights>

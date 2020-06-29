@@ -20,12 +20,7 @@ package com.oltpbenchmark;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -97,7 +92,7 @@ public class DBWorkload {
                 "c",
                 "config",
                 true,
-                "[required] Workload configuration file");
+                "Workload configuration file [default: config/workload_all.xml]");
         options.addOption(
                 null,
                 "create",
@@ -148,14 +143,14 @@ public class DBWorkload {
         options.addOption(null, "output-raw", true, "Output raw data");
         options.addOption(null, "output-samples", true, "Output sample data");
 
+        options.addOption(null, "nodes", true, "comma separated list of nodes (default 127.0.0.1)");
+        options.addOption(null, "warehouses", true, "Number of warehouses (default 10)");
+        options.addOption(null, "loaderthreads", true, "Number of loader threads (default 10)");
+
 
         // parse the command line arguments
         CommandLine argsLine = parser.parse(options, args);
         if (argsLine.hasOption("h")) {
-            printUsage(options);
-            return;
-        } else if (argsLine.hasOption("c") == false) {
-            LOG.error("Missing Configuration file");
             printUsage(options);
             return;
         }
@@ -166,9 +161,30 @@ public class DBWorkload {
             intervalMonitor = Integer.parseInt(argsLine.getOptionValue("im"));
         }
 
+        String val = argsLine.getOptionValue("nodes");
+
+        List<String> nodes = new ArrayList<>();
+        nodes.add("127.0.0.1");
+
+        if (argsLine.hasOption("nodes")) {
+            nodes = Arrays.asList(val.split(","));
+        }
+
+        int numWarehouses = 10;
+        if (argsLine.hasOption("warehouses")) {
+            numWarehouses = Integer.parseInt(argsLine.getOptionValue("warehouses"));
+        }
+
+        int loaderThreads = 10;
+        if (argsLine.hasOption("loaderthreads")) {
+            loaderThreads = Integer.parseInt(argsLine.getOptionValue("loaderthreads"));
+        }
+
         // -------------------------------------------------------------------
         // GET PLUGIN LIST
         // -------------------------------------------------------------------
+
+
 
         String targetBenchmarks = "tpcc";
 
@@ -178,7 +194,10 @@ public class DBWorkload {
         // Use this list for filtering of the output
         List<TransactionType> activeTXTypes = new ArrayList<TransactionType>();
 
-        String configFile = argsLine.getOptionValue("c");
+        String configFile = "config/workload_all.xml";
+        if (argsLine.hasOption("c")) {
+            configFile = argsLine.getOptionValue("c");
+        }
         XMLConfiguration xmlConfig = new XMLConfiguration(configFile);
         xmlConfig.setExpressionEngine(new XPathExpressionEngine());
 
@@ -206,32 +225,21 @@ public class DBWorkload {
             wrkld.setDBType(DatabaseType.get(xmlConfig.getString("dbtype")));
             wrkld.setDBDriver(xmlConfig.getString("driver"));
 
-            Object obj = xmlConfig.getProperty("nodes/node");
-            List<String> nodes = new LinkedList<>();
-            if (obj instanceof List<?>) {
-                nodes = (List<String>)obj;
-            } else {
-                nodes.add((String)obj);
-            }
             wrkld.setNodes(nodes);
 
             wrkld.setDBName(xmlConfig.getString("DBName"));
             wrkld.setDBUsername(xmlConfig.getString("username"));
             wrkld.setDBPassword(xmlConfig.getString("password"));
 
-            int terminals = xmlConfig.getInt("terminals[not(@bench)]", 0);
+            int terminals = xmlConfig.getInt("terminals[not(@bench)]", numWarehouses * 10);
             terminals = xmlConfig.getInt("terminals" + pluginTest, terminals);
             wrkld.setTerminals(terminals);
 
-            if (xmlConfig.containsKey("loaderThreads")) {
-                int loaderThreads = xmlConfig.getInt("loaderThreads");
-                wrkld.setLoaderThreads(loaderThreads);
-            }
+            wrkld.setLoaderThreads(loaderThreads);
 
             String isolationMode = xmlConfig.getString("isolation[not(@bench)]", "TRANSACTION_SERIALIZABLE");
             wrkld.setIsolationMode(xmlConfig.getString("isolation" + pluginTest, isolationMode));
-            wrkld.setScaleFactor(xmlConfig.getDouble("scalefactor", 1.0));
-            numWarehouses = (int)wrkld.getScaleFactor();
+            wrkld.setScaleFactor(numWarehouses);
             wrkld.setRecordAbortMessages(xmlConfig.getBoolean("recordabortmessages", false));
             wrkld.setDataDir(xmlConfig.getString("datadir", "."));
 
@@ -251,13 +259,21 @@ public class DBWorkload {
             }
 
             if (xmlConfig.containsKey("port")) {
-                LOG.info("port exists");
                 wrkld.setPort(xmlConfig.getInt("port"));
             }
 
             if (xmlConfig.containsKey("numDBConnections")) {
                 wrkld.setNumDBConnections(xmlConfig.getInt("numDBConnections"));
+            } else {
+                wrkld.setNumDBConnections(numWarehouses);
             }
+
+            LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
+                ", port: " + wrkld.getPort() +
+                ", warehouses: " + wrkld.getScaleFactor() +
+                ", terminals: " + wrkld.getTerminals() +
+                ", dbConnections: " + wrkld.getNumDBConnections() +
+                ", loaderThreads: " + wrkld.getLoaderThreads() );
 
             if (wrkld.getNumDBConnections() <= 0) {
                 wrkld.setNumDBConnections(wrkld.getTerminals());

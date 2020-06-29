@@ -2,26 +2,18 @@
 <parameters>
     <dbtype>postgres</dbtype>
     <driver>org.postgresql.Driver</driver>
-    <nodes>
-      <!-- Add as many node entries as the number of nodes present.  -->
-      <node>127.0.0.1</node>
-    </nodes>
+    <port>5433</port>
     <username>yugabyte</username>
     <DBName>yugabyte</DBName>
     <password></password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
-    <!-- The number of warehouses -->
-    <scalefactor>10</scalefactor>
-    <!-- Number of threads used for loading data -->
-    <loaderThreads>10</loaderThreads>
-    <!-- TPC-C 4.2.2: The number of terminals should be 10 per warehouse -->
+    <!--
     <terminals>100</terminals>
-    <batchSize>128</batchSize>
-
-      <!-- The actual number of connections used  -->
     <numDBConnections>10</numDBConnections>
+    -->
 
+    <batchSize>128</batchSize>
     <useKeyingTime>true</useKeyingTime>
     <useThinkTime>true</useThinkTime>
     <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>

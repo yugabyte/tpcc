@@ -1,3 +1,20 @@
 #!/bin/bash
-java -Xmx8G -cp `./classpath.sh bin` -Dlog4j.configuration=log4j.properties com.oltpbenchmark.DBWorkload $@
+memory='8G'
+arguments=''
+for i; do
+  if [[ "$i" != *"memory"* ]]
+  then
+    arguments="${arguments} ${i}"
+  fi
+done
 
+while [ $# -gt 0 ]; do
+   if [[ $1 == *"--"* ]]; then
+        param="${1/--/}"
+        declare $param="$2"
+   fi
+  shift
+done
+memory="${memory%=}"
+
+java -Xmx$memory -cp `./classpath.sh bin` -Dlog4j.configuration=log4j.properties com.oltpbenchmark.DBWorkload $arguments

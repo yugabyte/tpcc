@@ -57,7 +57,7 @@ public class DBWorkload {
     private static final String RATE_UNLIMITED = "unlimited";
 
     private static int newOrderTxnId = -1;
-    private static int numWarehouses = -1;
+    private static int numWarehouses = 10;
     private static int time = -1;
 
     /**
@@ -170,7 +170,6 @@ public class DBWorkload {
             nodes = Arrays.asList(val.split(","));
         }
 
-        int numWarehouses = 10;
         if (argsLine.hasOption("warehouses")) {
             numWarehouses = Integer.parseInt(argsLine.getOptionValue("warehouses"));
         }

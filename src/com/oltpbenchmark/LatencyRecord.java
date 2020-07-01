@@ -22,8 +22,8 @@ import java.util.Iterator;
 
 /** Efficiently stores a record of (start time, latency) pairs. */
 public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
-	/** Allocate space for 500k samples at a time */
-	static final int ALLOC_SIZE = 500000;
+	/** Allocate space for 200 samples at a time */
+	static final int ALLOC_SIZE = 200;
 
 	/**
 	 * Contains (start time, latency, transactionType, workerid, phaseid) pentiplets 

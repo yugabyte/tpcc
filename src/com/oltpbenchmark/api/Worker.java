@@ -41,13 +41,11 @@ import com.oltpbenchmark.catalog.Catalog;
 import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.types.TransactionStatus;
-import com.oltpbenchmark.util.Histogram;
-import com.oltpbenchmark.util.StringUtil;
 
 public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     private static final Logger LOG = Logger.getLogger(Worker.class);
 
-    private WorkloadState wrkldState;
+    private static WorkloadState wrkldState;
     private LatencyRecord latencies;
     private Statement currStatement;
 
@@ -57,17 +55,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     private final int id;
     private final T benchmarkModule;
     protected final HikariDataSource dataSource;
-    protected final WorkloadConfiguration wrkld;
-    protected final TransactionTypes transactionTypes;
-    protected final Map<TransactionType, Procedure> procedures = new HashMap<TransactionType, Procedure>();
-    protected final Map<String, Procedure> name_procedures = new HashMap<String, Procedure>();
-    protected final Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<Class<? extends Procedure>, Procedure>();
-
-    private final Histogram<TransactionType> txnSuccess = new Histogram<TransactionType>();
-    private final Histogram<TransactionType> txnAbort = new Histogram<TransactionType>();
-    private final Histogram<TransactionType> txnRetry = new Histogram<TransactionType>();
-    private final Histogram<TransactionType> txnErrors = new Histogram<TransactionType>();
-    private final Map<TransactionType, Histogram<String>> txnAbortMessages = new HashMap<TransactionType, Histogram<String>>();
+    protected static WorkloadConfiguration wrkld;
+    protected TransactionTypes transactionTypes;
+    protected Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<Class<? extends Procedure>, Procedure>();
 
     private boolean seenDone = false;
 
@@ -77,25 +67,23 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         this.wrkld = this.benchmarkModule.getWorkloadConfiguration();
         this.wrkldState = this.wrkld.getWorkloadState();
         this.currStatement = null;
-        this.transactionTypes = this.wrkld.getTransTypes();
-        assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
+        InitializeProcedures();
 
+        assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
         try {
             this.dataSource = this.benchmarkModule.getDataSource();
         } catch (Exception ex) {
             throw new RuntimeException("Failed to connect to database", ex);
         }
+    }
 
+    public final void InitializeProcedures() {
         // Generate all the Procedures that we're going to need
-        this.procedures.putAll(this.benchmarkModule.getProcedures());
-        assert (this.procedures.size() == this.transactionTypes.size()) : String.format("Failed to get all of the Procedures for %s [expected=%d, actual=%d]", this.benchmarkModule.getBenchmarkName(),
-                this.transactionTypes.size(), this.procedures.size());
-        for (Entry<TransactionType, Procedure> e : this.procedures.entrySet()) {
+        this.transactionTypes = this.wrkld.getTransTypes();
+        for (Entry<TransactionType, Procedure> e : this.benchmarkModule.getProcedures().entrySet()) {
             Procedure proc = e.getValue();
-            this.name_procedures.put(e.getKey().getName(), proc);
             this.class_procedures.put(proc.getClass(), proc);
-            // e.getValue().generateAllPreparedStatements(this.conn);
-        } // FOR
+        }
     }
 
     /**
@@ -149,38 +137,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         return latencies;
     }
 
-    public final Procedure getProcedure(TransactionType type) {
-        return (this.procedures.get(type));
-    }
-
-    @Deprecated
-    public final Procedure getProcedure(String name) {
-        return (this.name_procedures.get(name));
-    }
-
     @SuppressWarnings("unchecked")
     public final <P extends Procedure> P getProcedure(Class<P> procClass) {
         return (P) (this.class_procedures.get(procClass));
-    }
-
-    public final Histogram<TransactionType> getTransactionSuccessHistogram() {
-        return (this.txnSuccess);
-    }
-
-    public final Histogram<TransactionType> getTransactionRetryHistogram() {
-        return (this.txnRetry);
-    }
-
-    public final Histogram<TransactionType> getTransactionAbortHistogram() {
-        return (this.txnAbort);
-    }
-
-    public final Histogram<TransactionType> getTransactionErrorHistogram() {
-        return (this.txnErrors);
-    }
-
-    public final Map<TransactionType, Histogram<String>> getTransactionAbortMessageHistogram() {
-        return (this.txnAbortMessages);
     }
 
     synchronized public void setCurrStatement(Statement s) {
@@ -468,17 +427,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 } catch (UserAbortException ex) {
                     if (LOG.isDebugEnabled())
                         LOG.trace(next + " Aborted", ex);
-
-                    /* PAVLO */
-                    if (recordAbortMessages) {
-                        Histogram<String> error_h = this.txnAbortMessages.get(next);
-                        if (error_h == null) {
-                            error_h = new Histogram<String>();
-                            this.txnAbortMessages.put(next, error_h);
-                        }
-                        error_h.put(StringUtil.abbrv(ex.getMessage(), 20));
-                    }
-
                     if (savepoint != null) {
                         conn.rollback(savepoint);
                     } else {
@@ -497,8 +445,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                                                ex.getClass().getSimpleName(), next, this.toString(),
                                                ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
-                    this.txnErrors.put(next);
-
 		    if (this.wrkld.getDBType().shouldUseTransactions()) {
 			if (savepoint != null) {
 			    conn.rollback(savepoint);
@@ -509,23 +455,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
                     if (ex.getSQLState() == null) {
                         continue;
-                    // ------------------
-                    // MYSQL
-                    // ------------------
-                    } else if (ex.getErrorCode() == 1213 && ex.getSQLState().equals("40001")) {
-                        // MySQLTransactionRollbackException
-                        continue;
-                    } else if (ex.getErrorCode() == 1205 && ex.getSQLState().equals("41000")) {
-                        // MySQL Lock timeout
-                        continue;
-
-                    // ------------------
-                    // SQL SERVER
-                    // ------------------
-                    } else if (ex.getErrorCode() == 1205 && ex.getSQLState().equals("40001")) {
-                        // SQLServerException Deadlock
-                        continue;
-
                     // ------------------
                     // POSTGRES
                     // ------------------
@@ -538,33 +467,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("XX000")) {
                         // Postgres no pinned buffers available
                         throw ex;
-
-                    // ------------------
-                    // ORACLE
-                    // ------------------
-                    } else if (ex.getErrorCode() == 8177 && ex.getSQLState().equals("72000")) {
-                        // ORA-08177: Oracle Serialization
-                        continue;
-
-                    // ------------------
-                    // DB2
-                    // ------------------
-                    } else if (ex.getErrorCode() == -911 && ex.getSQLState().equals("40001")) {
-                        // DB2Exception Deadlock
-                        continue;
-                    } else if ((ex.getErrorCode() == 0 && ex.getSQLState().equals("57014")) ||
-                               (ex.getErrorCode() == -952 && ex.getSQLState().equals("57014"))) {
-                        // Query cancelled by benchmark because we changed
-                        // state. That's fine! We expected/caused this.
-                        status = TransactionStatus.RETRY_DIFFERENT;
-                        continue;
-                    } else if (ex.getErrorCode() == 0 && ex.getSQLState().equals("02000")) {
-                        // No results returned. That's okay, we can proceed to
-                        // a different query. But we should send out a warning,
-                        // too, since this is unusual.
-                        status = TransactionStatus.RETRY_DIFFERENT;
-                        continue;
-
                     // ------------------
                     // UNKNOWN!
                     // ------------------
@@ -590,13 +492,10 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
                     switch (status) {
                         case SUCCESS:
-                            this.txnSuccess.put(next);
                             break;
                         case RETRY_DIFFERENT:
-                            this.txnRetry.put(next);
                             break;
                         case USER_ABORTED:
-                            this.txnAbort.put(next);
                             break;
                         case RETRY:
                             continue;
@@ -610,12 +509,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s' [%s]",
                                        this, next, dbType);
-            // FIXME: PAVLO 2016-12-29
-            // Right now our DBMS throws an exception when the txn gets aborted
-            // due to a conflict, so for now we have to not kill ourselves.
-            // This *does not* incorrectly inflate our performance numbers.
-            // It's more of a workaround for now until I can figure out how to do
-            // this correctly in JDBC.
             if (dbType == DatabaseType.NOISEPAGE) {
                 msg += "\nBut we are not stopping because " + dbType + " cannot handle this correctly";
                 LOG.warn(msg);

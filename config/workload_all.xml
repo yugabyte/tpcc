@@ -17,7 +17,7 @@
     <useKeyingTime>true</useKeyingTime>
     <useThinkTime>true</useThinkTime>
     <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>
-
+    <hikariConnectionTimeoutMs>60000</hikariConnectionTimeoutMs>
    	<transactiontypes>
     	<transactiontype>
     		<name>NewOrder</name>

@@ -122,6 +122,7 @@ public abstract class BenchmarkModule {
             props.setProperty("dataSource.password", workConf.getDBPassword());
             props.setProperty("dataSource.databaseName", workConf.getDBName());
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
+            props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
 
             HikariConfig config = new HikariConfig(props);
             listDataSource.add(new HikariDataSource(config));

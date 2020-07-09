@@ -60,6 +60,7 @@ public class WorkloadConfiguration {
   private boolean useThinkTime = true;
   private boolean enableForeignKeysAfterLoad = true;
   private int batchSize = 128;
+  private int hikariConnectionTimeout = 60000;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -258,6 +259,14 @@ public class WorkloadConfiguration {
 
   public int getNumDBConnections() {
     return this.numDBConnections;
+  }
+
+  public void setHikariConnectionTimeout(int hikariConnectionTimeout) {
+    this.hikariConnectionTimeout = hikariConnectionTimeout;
+  }
+
+  public int getHikariConnectionTimeout() {
+    return this.hikariConnectionTimeout;
   }
 
   public void setPort(int port) {

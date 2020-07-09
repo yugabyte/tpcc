@@ -48,6 +48,8 @@ import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;
 import com.oltpbenchmark.util.TimeUtil;
 
+import static java.lang.Integer.min;
+
 public class DBWorkload {
     private static final Logger LOG = Logger.getLogger(DBWorkload.class);
 
@@ -264,7 +266,12 @@ public class DBWorkload {
             if (xmlConfig.containsKey("numDBConnections")) {
                 wrkld.setNumDBConnections(xmlConfig.getInt("numDBConnections"));
             } else {
-                wrkld.setNumDBConnections(numWarehouses);
+                // We use a max of 200 connections per node so as to not overwhelm the DB cluster.
+                wrkld.setNumDBConnections(min(numWarehouses, wrkld.getNodes().size() * 200));
+            }
+
+            if (xmlConfig.containsKey("hikariConnectionTimeoutMs")) {
+                wrkld.setHikariConnectionTimeout(xmlConfig.getInt("hikariConnectionTimeoutMs"));
             }
 
             LOG.info("Configuration -> nodes: " + wrkld.getNodes() +

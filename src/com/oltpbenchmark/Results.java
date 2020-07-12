@@ -141,15 +141,6 @@ public final class Results {
         }
     }
 
-    public void writeAllCSV(PrintStream out) {
-        long startNs = latencySamples.get(0).startNs;
-        out.println("transaction type (index in config file), start time (microseconds),latency (microseconds)");
-        for (Sample s : latencySamples) {
-            long startUs = (s.startNs - startNs + 500) / 1000;
-            out.println(s.tranType + "," + startUs + "," + s.latencyUs);
-        }
-    }
-
     public void writeAllCSVAbsoluteTiming(List<TransactionType> activeTXTypes, PrintStream out) {
 
         // This is needed because nanTime does not guarantee offset... we
@@ -160,25 +151,17 @@ public final class Results {
 
         // long startNs = latencySamples.get(0).startNs;
         String header[] = {
-            "Transaction Type Index",
             "Transaction Name",
             "Start Time (microseconds)",
-            "Latency (microseconds)",
-            "Worker Id (start number)",
-            "Phase Id (index in config file)"
+            "Latency (microseconds)"
         };
         out.println(StringUtil.join(",", header));
         for (Sample s : latencySamples) {
             double startUs = ((double) s.startNs / (double) 1000000000);
             String row[] = {
-                Integer.toString(s.tranType),
-                // Important!
-                // The TxnType offsets start at 1!
                 activeTXTypes.get(s.tranType-1).getName(),
                 String.format("%10.6f", startUs - offset),
-                Integer.toString(s.latencyUs),
-                Integer.toString(s.workerId),
-                Integer.toString(s.phaseId),
+                Integer.toString(s.operationLatencyUs),
             };
             out.println(StringUtil.join(",", row));
         }

@@ -306,6 +306,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 }
             }
 
+            long startOperation = System.nanoTime();
             TransactionType type = invalidTT;
             try {
                 type = doWork(preState == State.MEASURE, pieceOfWork);
@@ -331,6 +332,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     }
                 }
             }
+            long endOperation = System.nanoTime();
 
             if (this.wrkld.getUseThinkTime()) {
                 // Sleep for the think time duration.
@@ -360,7 +362,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // that either started during the warmup phase or ended
                     // after the timer went off.
                     if (preState == State.MEASURE && type != null && this.wrkldState.getCurrentPhase().id == phase.id) {
-                        latencies.addLatency(type.getId(), start, end, this.id, phase.id);
+                        latencies.addLatency(type.getId(), start, end, startOperation, endOperation, this.id, phase.id);
                         intervalRequests.incrementAndGet();
                     }
                     if (phase.isLatencyRun())

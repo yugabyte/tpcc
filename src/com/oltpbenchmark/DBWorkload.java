@@ -20,6 +20,7 @@ package com.oltpbenchmark;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.text.DecimalFormat;
 import java.util.*;
 
 import org.apache.commons.cli.CommandLine;
@@ -890,7 +891,6 @@ public class DBWorkload {
             LOG.info(String.format("Launching the %s Benchmark with %s Phase%s...",
                     bench.getBenchmarkName().toUpperCase(), num_phases, (num_phases > 1 ? "s" : "")));
             workConfs.add(bench.getWorkloadConfiguration());
-
         }
         Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, intervalMonitor);
 
@@ -903,15 +903,44 @@ public class DBWorkload {
             }
         }
         LOG.info(SINGLE_LINE);
-        LOG.info("Rate limited reqs/s: " + r);
 
-        long tpmc = numNewOrderTransactions * 60 / time;
+        double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
         double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
+        DecimalFormat df = new DecimalFormat();
+        df.setMaximumFractionDigits(2);
 
+        LOG.info("Throughput: " + r + " reqs/sec");
         LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
-        LOG.info("TPM-C: " + tpmc);
-        LOG.info("Efficiency : " + efficiency);
+        LOG.info("TPM-C: " + df.format(tpmc));
+        LOG.info("Efficiency : " + df.format(efficiency) + "%");
+        printLatencies(workers, workConfs.get(0).getTransTypes());
         return r;
+    }
+
+    private static void printLatencies(List<Worker<?>> workers, TransactionTypes transactionTypes) {
+        // TODO (Sudheer): Store this efficiently so as to avoid this expensive operation.
+        List<List<Integer>> list_latencies = new ArrayList<>();
+        for (int i = 0; i < 5; ++i) {
+            list_latencies.add(new ArrayList<Integer>());
+        }
+        for (Worker<?> w : workers) {
+            for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
+                list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
+            }
+        }
+        for (int i = 0; i < 5; ++i) {
+            Collections.sort(list_latencies.get(i));
+            long sum = 0;
+            for (int val : list_latencies.get(i)) {
+                sum += val;
+            }
+            double avgLatency = sum / list_latencies.get(i).size();
+            int p99Index = (int)(list_latencies.get(i).size() * 0.99);
+
+            LOG.info(transactionTypes.getType(i+1).getName() +
+                     ", Avg Latency: " + avgLatency / 1000 +
+                     " msecs, p99 Latency: " + list_latencies.get(i).get(p99Index) * 1.0 / 1000 + " msecs");
+        }
     }
 
     private static void printUsage(Options options) {

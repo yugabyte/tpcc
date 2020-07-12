@@ -61,6 +61,8 @@ public class DBWorkload {
 
     private static int newOrderTxnId = -1;
     private static int numWarehouses = 10;
+    private static int startWarehouseId = -1;
+    private static int totalWarehousesAcrossExecutions = 10;
     private static int time = -1;
 
     /**
@@ -148,7 +150,10 @@ public class DBWorkload {
 
         options.addOption(null, "nodes", true, "comma separated list of nodes (default 127.0.0.1)");
         options.addOption(null, "warehouses", true, "Number of warehouses (default 10)");
+        options.addOption(null, "startwarehouse", true, "Start warehouse id");
+        options.addOption(null, "totalwarehouses", true, "Total number of warehouses across all executions");
         options.addOption(null, "loaderthreads", true, "Number of loader threads (default 10)");
+        options.addOption(null, "enableforeignkeys", true, "Whether to enable foregin keys");
 
 
         // parse the command line arguments
@@ -177,7 +182,17 @@ public class DBWorkload {
             numWarehouses = Integer.parseInt(argsLine.getOptionValue("warehouses"));
         }
 
-        int loaderThreads = 10;
+        if (argsLine.hasOption("startwarehouse")) {
+            startWarehouseId = Integer.parseInt(argsLine.getOptionValue("startwarehouse"));
+        } else {
+            startWarehouseId = 1;
+        }
+
+        if (argsLine.hasOption("totalwarehouses")) {
+            totalWarehousesAcrossExecutions = Integer.parseInt(argsLine.getOptionValue("totalwarehouses"));
+        }
+
+        int loaderThreads = min(10,numWarehouses);
         if (argsLine.hasOption("loaderthreads")) {
             loaderThreads = Integer.parseInt(argsLine.getOptionValue("loaderthreads"));
         }
@@ -185,8 +200,6 @@ public class DBWorkload {
         // -------------------------------------------------------------------
         // GET PLUGIN LIST
         // -------------------------------------------------------------------
-
-
 
         String targetBenchmarks = "tpcc";
 
@@ -241,7 +254,11 @@ public class DBWorkload {
 
             String isolationMode = xmlConfig.getString("isolation[not(@bench)]", "TRANSACTION_SERIALIZABLE");
             wrkld.setIsolationMode(xmlConfig.getString("isolation" + pluginTest, isolationMode));
+
             wrkld.setScaleFactor(numWarehouses);
+            wrkld.setStartWarehouseId(startWarehouseId);
+            wrkld.setTotalWarehousesAcrossExecutions(totalWarehousesAcrossExecutions);
+
             wrkld.setRecordAbortMessages(xmlConfig.getBoolean("recordabortmessages", false));
             wrkld.setDataDir(xmlConfig.getString("datadir", "."));
 
@@ -254,6 +271,9 @@ public class DBWorkload {
 
             if (xmlConfig.containsKey("enableForeignKeysAfterLoad")) {
                 wrkld.setEnableForeignKeysAfterLoad(xmlConfig.getBoolean("enableForeignKeysAfterLoad"));
+            }
+            if (argsLine.hasOption("startwarehouse")) {
+                wrkld.setShouldEnableForeignKeys(false);
             }
 
             if (xmlConfig.containsKey("batchSize")) {
@@ -278,6 +298,7 @@ public class DBWorkload {
             LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
                 ", port: " + wrkld.getPort() +
                 ", warehouses: " + wrkld.getScaleFactor() +
+                ", startWH: " + wrkld.getStartWarehouseId() +
                 ", terminals: " + wrkld.getTerminals() +
                 ", dbConnections: " + wrkld.getNumDBConnections() +
                 ", loaderThreads: " + wrkld.getLoaderThreads() );
@@ -616,6 +637,12 @@ public class DBWorkload {
         } else if (LOG.isDebugEnabled()) {
             LOG.debug("Skipping loading benchmark database records");
             LOG.info(SINGLE_LINE);
+        }
+
+        if (isBooleanOptionSet(argsLine, "enableforeignkeys")) {
+            for (BenchmarkModule benchmark : benchList) {
+                benchmark.enableForeignKeys();
+            }
         }
 
         // Execute a Script

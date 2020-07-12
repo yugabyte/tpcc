@@ -48,7 +48,9 @@ public class WorkloadConfiguration {
   private String db_username;
   private String db_password;
   private String db_driver;
-  private double scaleFactor = 1.0;
+  private int scaleFactor = -1;
+  private int startWarehouseId = -1;
+  private int totalWarehousesAcrossExecutions = -1;
   private double selectivity = -1.0;
   private int terminals;
   private int numDBConnections = -1;
@@ -59,6 +61,7 @@ public class WorkloadConfiguration {
   private boolean useKeyingTime = true;
   private boolean useThinkTime = true;
   private boolean enableForeignKeysAfterLoad = true;
+  private boolean shouldEnableForeignKeys = true;
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
@@ -197,7 +200,7 @@ public class WorkloadConfiguration {
    *
    * @param scaleFactor
    */
-  public void setScaleFactor(double scaleFactor) {
+  public void setScaleFactor(int scaleFactor) {
     this.scaleFactor = scaleFactor;
   }
 
@@ -206,7 +209,7 @@ public class WorkloadConfiguration {
    *
    * @return
    */
-  public double getScaleFactor() {
+  public int getScaleFactor() {
     return this.scaleFactor;
   }
 
@@ -256,6 +259,20 @@ public class WorkloadConfiguration {
 
   public void setNumDBConnections(int numDBConnections) {
     this.numDBConnections = numDBConnections;
+  }
+
+  public void setStartWarehouseId(int startWarehoue) {
+    this.startWarehouseId = startWarehoue;
+  }
+  public int getStartWarehouseId() {
+    return this.startWarehouseId;
+  }
+
+  public void setTotalWarehousesAcrossExecutions(int totalWarehousesAcrossExecutions) {
+    this.totalWarehousesAcrossExecutions = totalWarehousesAcrossExecutions;
+  }
+  public int getTotalWarehousesAcrossExecutions() {
+    return this.totalWarehousesAcrossExecutions;
   }
 
   public int getNumDBConnections() {
@@ -350,6 +367,13 @@ public class WorkloadConfiguration {
 
   public void setEnableForeignKeysAfterLoad(boolean enableForeignKeysAfterLoad) {
     this.enableForeignKeysAfterLoad = enableForeignKeysAfterLoad;
+  }
+
+  public boolean getShouldEnableForeignKeys() {
+    return this.shouldEnableForeignKeys;
+  }
+  public void setShouldEnableForeignKeys(boolean shouldEnableForeignKeys) {
+    this.shouldEnableForeignKeys = shouldEnableForeignKeys;
   }
 
   public int getBatchSize() {

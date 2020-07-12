@@ -62,32 +62,25 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 
     public TPCCLoader(TPCCBenchmark benchmark) {
         super(benchmark);
-        numWarehouses = (int)Math.round(TPCCConfig.configWhseCount * this.scaleFactor);
-        if (numWarehouses <= 0) {
-            //where would be fun in that?
-            numWarehouses = 1;
-        }
     }
-
-    private int numWarehouses = 0;
     private static final int FIRST_UNPROCESSED_O_ID = 2101;
 
     @Override
     public List<LoaderThread> createLoaderThreads() throws SQLException {
         List<LoaderThread> threads = new ArrayList<LoaderThread>();
-        final CountDownLatch itemLatch = new CountDownLatch(1);
-        final CountDownLatch warehouseLatch = new CountDownLatch(numWarehouses);
+        final CountDownLatch warehouseLatch =	new CountDownLatch(numWarehouses);
 
         // ITEM
         // This will be invoked first and executed in a single thread.
         threads.add(new LoaderThread() {
             @Override
             public void load(Connection conn) throws SQLException {
-                if (!workConf.getEnableForeignKeysAfterLoad()) {
+                if (!workConf.getEnableForeignKeysAfterLoad() && workConf.getShouldEnableForeignKeys()) {
                     EnableForeignKeyConstraints(conn);
                 }
-                loadItems(conn, TPCCConfig.configItemCount);
-                itemLatch.countDown();
+                if (workConf.getStartWarehouseId() == 1) {
+                  loadItems(conn, TPCCConfig.configItemCount);
+                }
             }
         });
 
@@ -95,18 +88,11 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         // We use a separate thread per warehouse. Each thread will load
         // all of the tables that depend on that warehouse. They all have
         // to wait until the ITEM table is loaded first though.
-        for (int w = 1; w <= numWarehouses; w++) {
+        for (int w = workConf.getStartWarehouseId(); w < workConf.getStartWarehouseId() + numWarehouses; w++) {
             final int w_id = w;
             LoaderThread t = new LoaderThread() {
                 @Override
                 public void load(Connection conn) throws SQLException {
-                    // Make sure that we load the ITEM table first
-                    try {
-                        itemLatch.await();
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                        throw new RuntimeException(ex);
-                    }
 
                     if (LOG.isDebugEnabled()) LOG.debug("Starting to load WAREHOUSE " + w_id);
 
@@ -131,7 +117,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
             threads.add(t);
         } // FOR
 
-        if (workConf.getEnableForeignKeysAfterLoad()) {
+        if (workConf.getEnableForeignKeysAfterLoad() && workConf.getShouldEnableForeignKeys()) {
             threads.add(new LoaderThread() {
                 @Override
                 public void load(Connection conn) throws SQLException {
@@ -179,20 +165,24 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
             Statement st = conn.createStatement();
             String sql;
 
-            sql = "ALTER TABLE CUSTOMER ADD CONSTRAINT C_FKEY_D FOREIGN KEY (C_W_ID, C_D_ID) REFERENCES DISTRICT (D_W_ID, D_ID) NOT VALID";
-            st.execute(sql);
-            sql = "ALTER TABLE OORDER ADD CONSTRAINT O_FKEY_C FOREIGN KEY (O_W_ID, O_D_ID, O_C_ID) REFERENCES CUSTOMER (C_W_ID, C_D_ID, C_ID) NOT VALID";
-            st.execute(sql);
-            sql = "ALTER TABLE NEW_ORDER ADD CONSTRAINT NO_FKEY_O FOREIGN KEY (NO_W_ID, NO_D_ID, NO_O_ID) REFERENCES OORDER (O_W_ID, O_D_ID, O_ID) NOT VALID";
-            st.execute(sql);
-            sql = "ALTER TABLE HISTORY ADD CONSTRAINT H_FKEY_C FOREIGN KEY (H_C_W_ID, H_C_D_ID, H_C_ID) REFERENCES CUSTOMER (C_W_ID, C_D_ID, C_ID) NOT VALID";
-            st.execute(sql);
-            sql = "ALTER TABLE HISTORY ADD CONSTRAINT H_FKEY_D FOREIGN KEY (H_W_ID, H_D_ID) REFERENCES DISTRICT (D_W_ID, D_ID) NOT VALID";
-            st.execute(sql);
-            sql = "ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_O FOREIGN KEY (OL_W_ID, OL_D_ID, OL_O_ID) REFERENCES OORDER (O_W_ID, O_D_ID, O_ID) NOT VALID";
-            st.execute(sql);
-            sql = "ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_S FOREIGN KEY (OL_SUPPLY_W_ID, OL_I_ID) REFERENCES STOCK (S_W_ID, S_I_ID) NOT VALID";
-            st.execute(sql);
+            st.execute("ALTER TABLE CUSTOMER DROP CONSTRAINT IF EXISTS C_FKEY_D");
+            st.execute("ALTER TABLE CUSTOMER ADD CONSTRAINT C_FKEY_D FOREIGN KEY (C_W_ID, C_D_ID) REFERENCES DISTRICT (D_W_ID, D_ID) NOT VALID");
+
+            st.execute("ALTER TABLE OORDER DROP CONSTRAINT IF EXISTS O_FKEY_C");
+            st.execute("ALTER TABLE OORDER ADD CONSTRAINT O_FKEY_C FOREIGN KEY (O_W_ID, O_D_ID, O_C_ID) REFERENCES CUSTOMER (C_W_ID, C_D_ID, C_ID) NOT VALID");
+
+            st.execute("ALTER TABLE NEW_ORDER DROP CONSTRAINT IF EXISTS NO_FKEY_O");
+            st.execute("ALTER TABLE NEW_ORDER ADD CONSTRAINT NO_FKEY_O FOREIGN KEY (NO_W_ID, NO_D_ID, NO_O_ID) REFERENCES OORDER (O_W_ID, O_D_ID, O_ID) NOT VALID");
+
+            st.execute("ALTER TABLE HISTORY DROP CONSTRAINT IF EXISTS H_FKEY_C");
+            st.execute("ALTER TABLE HISTORY DROP CONSTRAINT IF EXISTS H_FKEY_D");
+            st.execute("ALTER TABLE HISTORY ADD CONSTRAINT H_FKEY_C FOREIGN KEY (H_C_W_ID, H_C_D_ID, H_C_ID) REFERENCES CUSTOMER (C_W_ID, C_D_ID, C_ID) NOT VALID");
+            st.execute("ALTER TABLE HISTORY ADD CONSTRAINT H_FKEY_D FOREIGN KEY (H_W_ID, H_D_ID) REFERENCES DISTRICT (D_W_ID, D_ID) NOT VALID");
+
+            st.execute("ALTER TABLE ORDER_LINE DROP CONSTRAINT IF EXISTS OL_FKEY_O");
+            st.execute("ALTER TABLE ORDER_LINE DROP CONSTRAINT IF EXISTS OL_FKEY_S");
+            st.execute("ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_O FOREIGN KEY (OL_W_ID, OL_D_ID, OL_O_ID) REFERENCES OORDER (O_W_ID, O_D_ID, O_ID) NOT VALID");
+            st.execute("ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_S FOREIGN KEY (OL_SUPPLY_W_ID, OL_I_ID) REFERENCES STOCK (S_W_ID, S_I_ID) NOT VALID");
 
             conn.commit();
         } catch (SQLException se) {

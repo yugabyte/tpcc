@@ -32,6 +32,7 @@ import com.oltpbenchmark.catalog.Table;
 import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.Histogram;
 import com.oltpbenchmark.util.SQLUtil;
+import org.hibernate.hql.ast.SqlASTFactory;
 
 /**
  * @author pavlo
@@ -41,7 +42,7 @@ public abstract class Loader<T extends BenchmarkModule> {
 
     protected final T benchmark;
     protected final WorkloadConfiguration workConf;
-    protected final double scaleFactor;
+    protected final int numWarehouses;
     private final Histogram<String> tableSizes = new Histogram<String>(true);
 
     /**
@@ -51,7 +52,7 @@ public abstract class Loader<T extends BenchmarkModule> {
      */
     public abstract class LoaderThread implements Runnable {
 
-        public LoaderThread() {
+        public LoaderThread() throws SQLException {
         }
 
         @Override
@@ -84,7 +85,7 @@ public abstract class Loader<T extends BenchmarkModule> {
     public Loader(T benchmark) {
         this.benchmark = benchmark;
         this.workConf = benchmark.getWorkloadConfiguration();
-        this.scaleFactor = workConf.getScaleFactor();
+        this.numWarehouses = workConf.getScaleFactor();
     }
 
     /**

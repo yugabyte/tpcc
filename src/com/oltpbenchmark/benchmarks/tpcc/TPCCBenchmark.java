@@ -71,7 +71,7 @@ public class TPCCBenchmark extends BenchmarkModule {
 
 		TPCCWorker[] terminals = new TPCCWorker[workConf.getTerminals()];
 
-		int numWarehouses = (int) workConf.getScaleFactor();//tpccConf.getNumWarehouses();
+		int numWarehouses = workConf.getScaleFactor();
 		if (numWarehouses <= 0) {
 			numWarehouses = 1;
 		}
@@ -92,7 +92,8 @@ public class TPCCBenchmark extends BenchmarkModule {
 				/ numWarehouses;
 		int workerId = 0;
 		assert terminalsPerWarehouse >= 1;
-		for (int w = 0; w < numWarehouses; w++) {
+		int k = 0;
+		for (int w = workConf.getStartWarehouseId() - 1; w < numWarehouses + workConf.getStartWarehouseId() - 1; w++) {
 			// Compute the number of terminals in *this* warehouse
 			int lowerTerminalId = (int) (w * terminalsPerWarehouse);
 			int upperTerminalId = (int) ((w + 1) * terminalsPerWarehouse);
@@ -122,9 +123,8 @@ public class TPCCBenchmark extends BenchmarkModule {
 				TPCCWorker terminal = new TPCCWorker(this, workerId++,
 						w_id, lowerDistrictId, upperDistrictId,
 						numWarehouses);
-				terminals[lowerTerminalId + terminalId] = terminal;
+				terminals[k++] = terminal;
 			}
-
 		}
 		assert terminals[terminals.length - 1] != null;
 
@@ -151,5 +151,10 @@ public class TPCCBenchmark extends BenchmarkModule {
         }
         return (timestamp);
     }
+
+    public void enableForeignKeys() throws Exception {
+    	TPCCLoader loader = new TPCCLoader(this);
+    	loader.EnableForeignKeyConstraints(makeConnection());
+		}
 
 }

@@ -474,6 +474,8 @@ public abstract class BenchmarkModule {
         return (proc_xref);
     }
 
+    public abstract void enableForeignKeys() throws Exception;
+
     /**
      *
      * @param procClass

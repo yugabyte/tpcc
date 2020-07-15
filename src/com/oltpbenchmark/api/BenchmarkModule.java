@@ -100,11 +100,13 @@ public abstract class BenchmarkModule {
         File xmlFile = this.getSQLDialect();
         this.dialects = new StatementDialects(this.workConf.getDBType(), xmlFile);
 
-        try {
-            createDataSource();
-        } catch (Exception e) {
-            LOG.error("Failed to create Data source", e);
-            throw e;
+        if (workConf.getNeedsExecution()) {
+            try {
+                createDataSource();
+            } catch (Exception e) {
+                LOG.error("Failed to create Data source", e);
+                throw e;
+            }
         }
     }
 
@@ -127,6 +129,20 @@ public abstract class BenchmarkModule {
             HikariConfig config = new HikariConfig(props);
             listDataSource.add(new HikariDataSource(config));
         }
+    }
+
+    public final Connection makeConnection() throws SQLException {
+        java.util.Properties props = new java.util.Properties();
+        props.put("user", workConf.getDBUsername());
+        props.put("password", workConf.getDBPassword());
+        props.put("reWriteBatchedInserts", "true");
+
+        int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
+
+        String connectStr = String.format("jdbc:postgresql://%s:%d/%s", workConf.getNodes().get(r),
+            workConf.getPort(),
+            workConf.getDBName());
+        return DriverManager.getConnection(connectStr, props);
     }
 
     private static AtomicInteger dataSourceCounter = new AtomicInteger(0);
@@ -258,7 +274,7 @@ public abstract class BenchmarkModule {
      */
     public final void createDatabase() {
         try {
-            Connection conn = listDataSource.get(0).getConnection();
+            Connection conn = makeConnection();
             this.createDatabase(this.workConf.getDBType(), conn);
             conn.close();
         } catch (SQLException ex) {

@@ -57,7 +57,7 @@ public abstract class Loader<T extends BenchmarkModule> {
         @Override
         public final void run() {
             try {
-                Connection conn = Loader.this.benchmark.getDataSource().getConnection();
+                Connection conn = Loader.this.benchmark.makeConnection();
                 conn.setAutoCommit(false);
 
                 this.load(conn);

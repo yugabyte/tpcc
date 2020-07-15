@@ -61,6 +61,7 @@ public class WorkloadConfiguration {
   private boolean enableForeignKeysAfterLoad = true;
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
+  private boolean needsExecution = false;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -358,6 +359,9 @@ public class WorkloadConfiguration {
   public void setBatchSize(int batchSize) {
     this.batchSize = batchSize;
   }
+
+  public void setNeedsExecution(boolean needsExecution) { this.needsExecution = needsExecution; }
+  public boolean getNeedsExecution() { return this.needsExecution; }
 
   @Override
   public String toString() {

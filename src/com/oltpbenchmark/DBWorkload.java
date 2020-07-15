@@ -289,6 +289,10 @@ public class DBWorkload {
                 wrkld.setNumDBConnections(wrkld.getLoaderThreads());
             }
 
+            if (isBooleanOptionSet(argsLine, "execute")) {
+                wrkld.setNeedsExecution(true);
+            }
+
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
             // ----------------------------------------------------------------

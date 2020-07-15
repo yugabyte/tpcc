@@ -69,9 +69,10 @@ public class TPCCBenchmark extends BenchmarkModule {
 
 	protected ArrayList<TPCCWorker> createTerminals() throws SQLException {
 
+		// The array 'terminals' contains a terminal associated to a {warehouse, district}.
 		TPCCWorker[] terminals = new TPCCWorker[workConf.getTerminals()];
 
-		int numWarehouses = workConf.getScaleFactor();
+		int numWarehouses = workConf.getNumWarehouses();
 		if (numWarehouses <= 0) {
 			numWarehouses = 1;
 		}
@@ -93,7 +94,7 @@ public class TPCCBenchmark extends BenchmarkModule {
 		int workerId = 0;
 		assert terminalsPerWarehouse >= 1;
 		int k = 0;
-		for (int w = workConf.getStartWarehouseId() - 1; w < numWarehouses + workConf.getStartWarehouseId() - 1; w++) {
+		for (int w = workConf.getStartWarehouseIdForShard() - 1; w < numWarehouses + workConf.getStartWarehouseIdForShard() - 1; w++) {
 			// Compute the number of terminals in *this* warehouse
 			int lowerTerminalId = (int) (w * terminalsPerWarehouse);
 			int upperTerminalId = (int) ((w + 1) * terminalsPerWarehouse);

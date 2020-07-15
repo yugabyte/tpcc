@@ -266,6 +266,39 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             pieceOfWork = wrkldState.fetchWork(this.id);
             preState = wrkldState.getGlobalState();
 
+            long start = System.nanoTime();
+
+            long keying_time_msecs = 0;
+            long think_time_msecs = 0;
+            if (this.wrkld.getUseKeyingTime()) {
+                // Wait for the keying time which is a fixed amount for each type of transaction.
+                keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+            }
+            if (this.wrkld.getUseThinkTime()) {
+                think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+            }
+
+            if (preState == State.WARMUP ) {
+                long operation_end_time = start + (keying_time_msecs + think_time_msecs + 1000) * 1000 * 1000;
+                long warmup_end_time = wrkldState.getPhaseStartTime() + phase.warmupTime * 1000000000L;
+
+                if (operation_end_time > warmup_end_time) {
+                    // Executing this transaction in the warmup period will overflow in to the execution time
+                    // and hence we will not execute this. Sleep until we can start the execution.
+                    long sleep_time = 10;
+                    if (start < warmup_end_time) {
+                        sleep_time = (warmup_end_time - start) / 1000 / 1000;
+                    }
+
+                    try {
+                        Thread.sleep(sleep_time);
+                    } catch (InterruptedException e) {
+                        LOG.error("Thread sleep interrupted");
+                    }
+                    continue;
+                }
+            }
+
             phase = this.wrkldState.getCurrentPhase();
             if (phase == null)
                 continue work;
@@ -284,23 +317,15 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
             // PART 3: Execute work
 
-            long start = System.nanoTime();
 
             // TODO: Measuring latency when not rate limited is ... a little
             // weird because if you add more simultaneous clients, you will
             // increase latency (queue delay) but we do this anyway since it is
             // useful sometimes
 
-            if (this.wrkld.getUseKeyingTime()) {
-                // Wait for the keying time which is a fixed amount for each type of transaction.
-                long keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+            if (keying_time_msecs > 0) {
                 try {
-                    long sleep_start = System.nanoTime();
                     Thread.sleep(keying_time_msecs);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                            " Keying time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
-                    }
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }
@@ -334,16 +359,10 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             }
             long endOperation = System.nanoTime();
 
-            if (this.wrkld.getUseThinkTime()) {
+            if (think_time_msecs > 0) {
                 // Sleep for the think time duration.
-                long think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
                 try {
-                    long sleep_start = System.nanoTime();
                     Thread.sleep(think_time_msecs);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                            " Think time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
-                    }
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }

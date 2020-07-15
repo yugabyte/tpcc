@@ -61,9 +61,10 @@ public class DBWorkload {
 
     private static int newOrderTxnId = -1;
     private static int numWarehouses = 10;
-    private static int startWarehouseId = -1;
-    private static int totalWarehousesAcrossExecutions = 10;
-    private static int time = -1;
+    private static int startWarehouseIdForShard = -1;
+    private static int totalWarehousesAcrossShards = 10;
+    private static int time = 0;
+    private static int warmupTime = 0;
 
     /**
      * @param args
@@ -155,6 +156,8 @@ public class DBWorkload {
         options.addOption(null, "loaderthreads", true, "Number of loader threads (default 10)");
         options.addOption(null, "enableforeignkeys", true, "Whether to enable foregin keys");
 
+        options.addOption(null, "warmuptime", true, "Warmup time in seconds for the benchmark");
+        options.addOption(null, "initialdelay", true, "Delay in seconds for starting the benchmark");
 
         // parse the command line arguments
         CommandLine argsLine = parser.parse(options, args);
@@ -183,13 +186,15 @@ public class DBWorkload {
         }
 
         if (argsLine.hasOption("startwarehouse")) {
-            startWarehouseId = Integer.parseInt(argsLine.getOptionValue("startwarehouse"));
+            startWarehouseIdForShard = Integer.parseInt(argsLine.getOptionValue("startwarehouse"));
         } else {
-            startWarehouseId = 1;
+            startWarehouseIdForShard = 1;
         }
 
         if (argsLine.hasOption("totalwarehouses")) {
-            totalWarehousesAcrossExecutions = Integer.parseInt(argsLine.getOptionValue("totalwarehouses"));
+            totalWarehousesAcrossShards = Integer.parseInt(argsLine.getOptionValue("totalwarehouses"));
+        } else {
+            totalWarehousesAcrossShards = numWarehouses;
         }
 
         int loaderThreads = min(10,numWarehouses);
@@ -255,9 +260,9 @@ public class DBWorkload {
             String isolationMode = xmlConfig.getString("isolation[not(@bench)]", "TRANSACTION_SERIALIZABLE");
             wrkld.setIsolationMode(xmlConfig.getString("isolation" + pluginTest, isolationMode));
 
-            wrkld.setScaleFactor(numWarehouses);
-            wrkld.setStartWarehouseId(startWarehouseId);
-            wrkld.setTotalWarehousesAcrossExecutions(totalWarehousesAcrossExecutions);
+            wrkld.setNumWarehouses(numWarehouses);
+            wrkld.setStartWarehouseIdForShard(startWarehouseIdForShard);
+            wrkld.setTotalWarehousesAcrossShards(totalWarehousesAcrossShards);
 
             wrkld.setRecordAbortMessages(xmlConfig.getBoolean("recordabortmessages", false));
             wrkld.setDataDir(xmlConfig.getString("datadir", "."));
@@ -297,8 +302,9 @@ public class DBWorkload {
 
             LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
                 ", port: " + wrkld.getPort() +
-                ", warehouses: " + wrkld.getScaleFactor() +
-                ", startWH: " + wrkld.getStartWarehouseId() +
+                ", startWH: " + wrkld.getStartWarehouseIdForShard() +
+                ", warehouses: " + wrkld.getNumWarehouses() +
+                ", total warehouses across shards: " + wrkld.getTotalWarehousesAcrossShards() +
                 ", terminals: " + wrkld.getTerminals() +
                 ", dbConnections: " + wrkld.getNumDBConnections() +
                 ", loaderThreads: " + wrkld.getLoaderThreads() );
@@ -333,7 +339,7 @@ public class DBWorkload {
             initDebug.put("Driver", wrkld.getDBDriver());
             initDebug.put("URL", wrkld.getNodes());
             initDebug.put("Isolation", wrkld.getIsolationString());
-            initDebug.put("Scale Factor", wrkld.getScaleFactor());
+            initDebug.put("Scale Factor", wrkld.getNumWarehouses());
 
             LOG.info(SINGLE_LINE + "\n\n" + StringUtil.formatMaps(initDebug));
             LOG.info(SINGLE_LINE);
@@ -514,7 +520,12 @@ public class DBWorkload {
                 }
 
                 time = work.getInt("/time", 0);
-                int warmup = work.getInt("/warmup", 0);
+
+                int warmup = 0;
+                if (argsLine.hasOption("warmuptime")) {
+                    warmupTime = Integer.parseInt(argsLine.getOptionValue("warmuptime"));
+                }
+
                 timed = (time > 0);
                 if (scriptRun) {
                     LOG.info("Running a script; ignoring timer, serial, and weight settings.");
@@ -540,14 +551,14 @@ public class DBWorkload {
                 else if (serial)
                     LOG.info("Timer enabled for serial run; will run queries"
                              + " serially in a loop until the timer expires.");
-                if (warmup < 0) {
+                if (warmupTime < 0) {
                     LOG.fatal("Must provide nonnegative time bound for"
                             + " warmup.");
                     System.exit(-1);
                 }
 
                 wrkld.addWork(time,
-                              warmup,
+                              warmupTime,
                               rate,
                               weight_strings,
                               rateLimited,
@@ -594,6 +605,11 @@ public class DBWorkload {
             throw new RuntimeException("No StatementDialects is available for " + bench);
         }
 
+        if (argsLine.hasOption("initialdelay")) {
+            int initialDelay = Integer.parseInt(argsLine.getOptionValue("initialdelay"));
+            LOG.info("Sleeping for " + initialDelay);
+            Thread.sleep(initialDelay * 1000);
+        }
 
         @Deprecated
         boolean verbose = argsLine.hasOption("v");
@@ -908,7 +924,7 @@ public class DBWorkload {
         List<WorkloadConfiguration> workConfs = new ArrayList<WorkloadConfiguration>();
 
         long start = System.nanoTime();
-        long end = start + Long.valueOf(time) * 1000 * 1000 * 1000;
+        long end = start + Long.valueOf(warmupTime + time) * 1000 * 1000 * 1000;
         for (BenchmarkModule bench : benchList) {
             LOG.info("Creating " + bench.getWorkloadConfiguration().getTerminals() + " virtual terminals...");
             workers.addAll(bench.makeWorkers(verbose));

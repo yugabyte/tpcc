@@ -78,7 +78,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
                 if (!workConf.getEnableForeignKeysAfterLoad() && workConf.getShouldEnableForeignKeys()) {
                     EnableForeignKeyConstraints(conn);
                 }
-                if (workConf.getStartWarehouseId() == 1) {
+                if (workConf.getStartWarehouseIdForShard() == 1) {
                   loadItems(conn, TPCCConfig.configItemCount);
                 }
             }
@@ -88,7 +88,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         // We use a separate thread per warehouse. Each thread will load
         // all of the tables that depend on that warehouse. They all have
         // to wait until the ITEM table is loaded first though.
-        for (int w = workConf.getStartWarehouseId(); w < workConf.getStartWarehouseId() + numWarehouses; w++) {
+        for (int w = workConf.getStartWarehouseIdForShard(); w < workConf.getStartWarehouseIdForShard() + numWarehouses; w++) {
             final int w_id = w;
             LoaderThread t = new LoaderThread() {
                 @Override

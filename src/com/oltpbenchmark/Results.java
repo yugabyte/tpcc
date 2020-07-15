@@ -157,11 +157,10 @@ public final class Results {
         };
         out.println(StringUtil.join(",", header));
         for (Sample s : latencySamples) {
-            double startUs = ((double) s.startNs / (double) 1000000000);
+            double startSec = ((double) s.startNs / (double) 1000000000);
             String row[] = {
                 activeTXTypes.get(s.tranType-1).getName(),
-                String.format("%10.6f", startUs - offset),
-                Integer.toString(s.operationLatencyUs),
+                String.format("%10.6f", startSec),
             };
             out.println(StringUtil.join(",", row));
         }

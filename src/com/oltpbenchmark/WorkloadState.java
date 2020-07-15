@@ -48,6 +48,8 @@ public class WorkloadState {
     private Phase currentPhase = null;
     private long phaseStartNs = 0;
     private TraceReader traceReader = null;
+
+    private long phaseStartTime = 0;
     
     public WorkloadState(BenchmarkState benchmarkState, List<Phase> works, int num_terminals, TraceReader traceReader) {
         this.benchmarkState = benchmarkState;
@@ -244,6 +246,9 @@ public class WorkloadState {
             this.notifyAll();
        }
    }
+
+   public void setPhaseStartTime(long startTime) { this.phaseStartTime = startTime; }
+   public long getPhaseStartTime() { return this.phaseStartTime; }
    
    /**
     * Delegates pre-start blocking to the global state handler

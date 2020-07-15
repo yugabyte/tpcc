@@ -85,7 +85,7 @@ public abstract class Loader<T extends BenchmarkModule> {
     public Loader(T benchmark) {
         this.benchmark = benchmark;
         this.workConf = benchmark.getWorkloadConfiguration();
-        this.numWarehouses = workConf.getScaleFactor();
+        this.numWarehouses = workConf.getNumWarehouses();
     }
 
     /**

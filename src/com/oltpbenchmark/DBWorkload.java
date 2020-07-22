@@ -17,9 +17,8 @@
 
 package com.oltpbenchmark;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
+import java.nio.file.Files;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -49,7 +48,10 @@ import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;
 import com.oltpbenchmark.util.TimeUtil;
 
+import javax.print.attribute.standard.PrinterLocation;
+
 import static java.lang.Integer.min;
+import static java.lang.StrictMath.max;
 
 public class DBWorkload {
     private static final Logger LOG = Logger.getLogger(DBWorkload.class);
@@ -65,6 +67,7 @@ public class DBWorkload {
     private static int totalWarehousesAcrossShards = 10;
     private static int time = 0;
     private static int warmupTime = 0;
+    private static final Map<Integer, String> transactionTypes = new HashMap<>();
 
     /**
      * @param args
@@ -159,6 +162,16 @@ public class DBWorkload {
         options.addOption(null, "warmup-time-secs", true, "Warmup time in seconds for the benchmark");
         options.addOption(null, "initial-delay-secs", true, "Delay in seconds for starting the benchmark");
         options.addOption(null, "num-connections", true, "Number of connections used");
+
+
+        options.addOption(null, "merge-results", true, "Merge results from various output files");
+        options.addOption(null, "dir", true, "Directory containing the csv files");
+
+        transactionTypes.put(1, "NewOrder");
+        transactionTypes.put(2, "Payment");
+        transactionTypes.put(3, "OrderStatus");
+        transactionTypes.put(4, "Delivery");
+        transactionTypes.put(5, "StockLevel");
 
 
         // parse the command line arguments
@@ -314,14 +327,16 @@ public class DBWorkload {
                 wrkld.setNeedsExecution(true);
             }
 
-            LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
-                ", port: " + wrkld.getPort() +
-                ", startWH: " + wrkld.getStartWarehouseIdForShard() +
-                ", warehouses: " + wrkld.getNumWarehouses() +
-                ", total warehouses across shards: " + wrkld.getTotalWarehousesAcrossShards() +
-                ", terminals: " + wrkld.getTerminals() +
-                ", dbConnections: " + wrkld.getNumDBConnections() +
-                ", loaderThreads: " + wrkld.getLoaderThreads() );
+            if (!argsLine.hasOption("merge-results")) {
+                LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
+                    ", port: " + wrkld.getPort() +
+                    ", startWH: " + wrkld.getStartWarehouseIdForShard() +
+                    ", warehouses: " + wrkld.getNumWarehouses() +
+                    ", total warehouses across shards: " + wrkld.getTotalWarehousesAcrossShards() +
+                    ", terminals: " + wrkld.getTerminals() +
+                    ", dbConnections: " + wrkld.getNumDBConnections() +
+                    ", loaderThreads: " + wrkld.getLoaderThreads() );
+            }
 
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
@@ -343,8 +358,10 @@ public class DBWorkload {
             initDebug.put("Isolation", wrkld.getIsolationString());
             initDebug.put("Scale Factor", wrkld.getNumWarehouses());
 
-            LOG.info(SINGLE_LINE + "\n\n" + StringUtil.formatMaps(initDebug));
-            LOG.info(SINGLE_LINE);
+            if (!argsLine.hasOption("merge-results")) {
+                LOG.info(SINGLE_LINE + "\n\n" + StringUtil.formatMaps(initDebug));
+                LOG.info(SINGLE_LINE);
+            }
 
             // ----------------------------------------------------------------
             // LOAD TRANSACTION DESCRIPTIONS
@@ -697,6 +714,13 @@ public class DBWorkload {
         } else {
             LOG.info("Skipping benchmark workload execution");
         }
+
+        if (isBooleanOptionSet(argsLine, "merge-results")) {
+            String dirPath = argsLine.getOptionValue("dir");
+            File dir = new File(dirPath);
+            String[] files = dir.list();
+            mergeResults(dirPath, files);
+        }
     }
 
     private static void writeHistograms(Results r) {
@@ -937,6 +961,8 @@ public class DBWorkload {
             workConfs.add(bench.getWorkloadConfiguration());
         }
         Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, intervalMonitor);
+        r.startTime = start;
+        r.endTime = end;
 
         long numNewOrderTransactions = 0;
         for (Worker<?> w : workers) {
@@ -957,12 +983,7 @@ public class DBWorkload {
         LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
         LOG.info("TPM-C: " + df.format(tpmc));
         LOG.info("Efficiency : " + df.format(efficiency) + "%");
-        printLatencies(workers, workConfs.get(0).getTransTypes());
-        return r;
-    }
 
-    private static void printLatencies(List<Worker<?>> workers, TransactionTypes transactionTypes) {
-        // TODO (Sudheer): Store this efficiently so as to avoid this expensive operation.
         List<List<Integer>> list_latencies = new ArrayList<>();
         for (int i = 0; i < 5; ++i) {
             list_latencies.add(new ArrayList<Integer>());
@@ -972,6 +993,11 @@ public class DBWorkload {
                 list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
             }
         }
+        printLatencies(list_latencies, transactionTypes);
+        return r;
+    }
+
+    private static void printLatencies(List<List<Integer>> list_latencies, Map<Integer, String> transactionTypes) {
         for (int i = 0; i < 5; ++i) {
             Collections.sort(list_latencies.get(i));
             long sum = 0;
@@ -981,10 +1007,80 @@ public class DBWorkload {
             double avgLatency = sum / list_latencies.get(i).size();
             int p99Index = (int)(list_latencies.get(i).size() * 0.99);
 
-            LOG.info(transactionTypes.getType(i+1).getName() +
-                     ", Avg Latency: " + avgLatency / 1000 +
-                     " msecs, p99 Latency: " + list_latencies.get(i).get(p99Index) * 1.0 / 1000 + " msecs");
+            LOG.info(transactionTypes.get(i+1) +
+                ", Avg Latency: " + avgLatency / 1000 +
+                " msecs, p99 Latency: " + list_latencies.get(i).get(p99Index) * 1.0 / 1000 + " msecs");
         }
+    }
+
+    public static void mergeResults(String dirPath, String[] fileNames) {
+        List<List<Integer>> list_latencies = new ArrayList<>();
+        for (int i = 0; i < 5; ++i) {
+            list_latencies.add(new ArrayList<>());
+        }
+
+        int  numNewOrderTransactions = 0;
+        for (String file : fileNames) {
+            if (!file.contains("csv")) {
+                continue;
+            }
+            BufferedReader br;
+            String line;
+            try {
+                br = new BufferedReader(new FileReader(dirPath + "/" + file));
+                long end = -1;
+                long start = -1;
+                while ((line = br.readLine()) != null) {
+                    if (line.contains("Transaction Name")) {
+                        continue;
+                    }
+
+                    String[] arr = line.split(",");
+                    if (line.contains("Start")) {
+                        start = Long.parseLong(arr[1]);
+                        continue;
+                    }
+
+                    if (line.contains("End")) {
+                        end = Long.parseLong(arr[1]);
+                      continue;
+                    }
+
+                    int idx = -1;
+                    if (arr[0].contains("NewOrder")) {
+                        idx = 0;
+                    } else if (arr[0].contains("Payment")) {
+                        idx = 1;
+                    } else if (arr[0].contains("OrderStatus")) {
+                        idx = 2;
+                    } else if (arr[0].contains("Delivery")) {
+                        idx = 3;
+                    } else if (arr[0].contains("StockLevel")) {
+                        idx = 4;
+                    }
+
+                    list_latencies.get(idx).add(Integer.parseInt(arr[3]));
+                    if (idx == 0) {
+                        long opEndTime = Long.parseLong(arr[1]) + Long.parseLong(arr[2]) * 1000;
+                        if (opEndTime < end) {
+                            ++numNewOrderTransactions;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
+        double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
+        DecimalFormat df = new DecimalFormat();
+        df.setMaximumFractionDigits(2);
+
+        LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
+        LOG.info("TPM-C: " + df.format(tpmc));
+        LOG.info("Efficiency : " + df.format(efficiency) + "%");
+        printLatencies(list_latencies, transactionTypes);
     }
 
     private static void printUsage(Options options) {

@@ -10,14 +10,13 @@
 
     <!--
     <terminals>100</terminals>
-    <numDBConnections>10</numDBConnections>
     -->
 
     <batchSize>128</batchSize>
     <useKeyingTime>true</useKeyingTime>
     <useThinkTime>true</useThinkTime>
     <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>
-    <hikariConnectionTimeoutMs>60000</hikariConnectionTimeoutMs>
+    <hikariConnectionTimeoutMs>180000</hikariConnectionTimeoutMs>
    	<transactiontypes>
     	<transactiontype>
     		<name>NewOrder</name>

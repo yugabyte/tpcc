@@ -278,27 +278,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
             }
 
-            if (preState == State.WARMUP ) {
-                long operation_end_time = start + (keying_time_msecs + think_time_msecs + 1000) * 1000 * 1000;
-                long warmup_end_time = wrkldState.getPhaseStartTime() + phase.warmupTime * 1000000000L;
-
-                if (operation_end_time > warmup_end_time) {
-                    // Executing this transaction in the warmup period will overflow in to the execution time
-                    // and hence we will not execute this. Sleep until we can start the execution.
-                    long sleep_time = 10;
-                    if (start < warmup_end_time) {
-                        sleep_time = (warmup_end_time - start) / 1000 / 1000;
-                    }
-
-                    try {
-                        Thread.sleep(sleep_time);
-                    } catch (InterruptedException e) {
-                        LOG.error("Thread sleep interrupted");
-                    }
-                    continue;
-                }
-            }
-
             phase = this.wrkldState.getCurrentPhase();
             if (phase == null)
                 continue work;

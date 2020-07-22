@@ -116,6 +116,10 @@ public abstract class BenchmarkModule {
         int numConnections =
             (workConf.getNumDBConnections() + workConf.getNodes().size() - 1) / workConf.getNodes().size();
         for (String ip : workConf.getNodes()) {
+            // Sleep for some time so as to allow the postgres process to cache the system information.
+            if (listDataSource.size() != 0) {
+                ThreadUtil.sleep(5000);
+            }
             Properties props = new Properties();
             props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
             props.setProperty("dataSource.serverName", ip);
@@ -473,6 +477,8 @@ public abstract class BenchmarkModule {
         }
         return (proc_xref);
     }
+
+    public abstract void enableForeignKeys() throws Exception;
 
     /**
      *

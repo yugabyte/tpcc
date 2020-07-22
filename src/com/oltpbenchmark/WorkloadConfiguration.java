@@ -48,7 +48,9 @@ public class WorkloadConfiguration {
   private String db_username;
   private String db_password;
   private String db_driver;
-  private double scaleFactor = 1.0;
+  private int numWarehouses = -1;
+  private int startWarehouseIdForShard = -1;
+  private int totalWarehousesAcrossShards = -1;
   private double selectivity = -1.0;
   private int terminals;
   private int numDBConnections = -1;
@@ -59,6 +61,7 @@ public class WorkloadConfiguration {
   private boolean useKeyingTime = true;
   private boolean useThinkTime = true;
   private boolean enableForeignKeysAfterLoad = true;
+  private boolean shouldEnableForeignKeys = true;
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
@@ -189,25 +192,11 @@ public class WorkloadConfiguration {
     return (this.recordAbortMessages);
   }
 
-  /**
-   * Set the scale factor for the database
-   * A value of 1 means the default size.
-   * A value greater than 1 means the database is larger
-   * A value less than 1 means the database is smaller
-   *
-   * @param scaleFactor
-   */
-  public void setScaleFactor(double scaleFactor) {
-    this.scaleFactor = scaleFactor;
+  public void setNumWarehouses(int warehouses) {
+    this.numWarehouses = warehouses;
   }
-
-  /**
-   * Return the scale factor of the database size
-   *
-   * @return
-   */
-  public double getScaleFactor() {
-    return this.scaleFactor;
+  public int getNumWarehouses() {
+    return this.numWarehouses;
   }
 
   /**
@@ -256,6 +245,20 @@ public class WorkloadConfiguration {
 
   public void setNumDBConnections(int numDBConnections) {
     this.numDBConnections = numDBConnections;
+  }
+
+  public void setStartWarehouseIdForShard(int startWarehoue) {
+    this.startWarehouseIdForShard = startWarehoue;
+  }
+  public int getStartWarehouseIdForShard() {
+    return this.startWarehouseIdForShard;
+  }
+
+  public void setTotalWarehousesAcrossShards(int totalWarehousesAcrossExecutions) {
+    this.totalWarehousesAcrossShards = totalWarehousesAcrossExecutions;
+  }
+  public int getTotalWarehousesAcrossShards() {
+    return this.totalWarehousesAcrossShards;
   }
 
   public int getNumDBConnections() {
@@ -350,6 +353,13 @@ public class WorkloadConfiguration {
 
   public void setEnableForeignKeysAfterLoad(boolean enableForeignKeysAfterLoad) {
     this.enableForeignKeysAfterLoad = enableForeignKeysAfterLoad;
+  }
+
+  public boolean getShouldEnableForeignKeys() {
+    return this.shouldEnableForeignKeys;
+  }
+  public void setShouldEnableForeignKeys(boolean shouldEnableForeignKeys) {
+    this.shouldEnableForeignKeys = shouldEnableForeignKeys;
   }
 
   public int getBatchSize() {

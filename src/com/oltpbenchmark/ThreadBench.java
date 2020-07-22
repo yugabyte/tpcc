@@ -337,6 +337,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
         for (WorkloadState workState : this.workStates) {
             workState.switchToNextPhase();
+            workState.setPhaseStartTime(start);
             phase = workState.getCurrentPhase();
             LOG.info(phase.currentPhaseString());
             if (phase.rate < lowestRate) {
@@ -436,6 +437,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                     for (WorkloadState workState : workStates) {
                         synchronized (workState) {
                             workState.switchToNextPhase();
+                            workState.setPhaseStartTime(now);
                             lowestRate = Integer.MAX_VALUE;
                             phase = workState.getCurrentPhase();
                             interruptWorkers();

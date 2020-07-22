@@ -85,7 +85,7 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
               lowDistrictId = 1;
               highDistrictId = TPCCConfig.configDistPerWhse;
             }
-            proc.run(conn, gen, terminalWarehouseID, numWarehouses,
+            proc.run(conn, gen, terminalWarehouseID, wrkld.getTotalWarehousesAcrossShards(),
                     lowDistrictId, highDistrictId, this);
         } catch (ClassCastException ex){
             //fail gracefully

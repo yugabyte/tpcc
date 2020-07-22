@@ -266,6 +266,18 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             pieceOfWork = wrkldState.fetchWork(this.id);
             preState = wrkldState.getGlobalState();
 
+            long start = System.nanoTime();
+
+            long keying_time_msecs = 0;
+            long think_time_msecs = 0;
+            if (this.wrkld.getUseKeyingTime()) {
+                // Wait for the keying time which is a fixed amount for each type of transaction.
+                keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+            }
+            if (this.wrkld.getUseThinkTime()) {
+                think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+            }
+
             phase = this.wrkldState.getCurrentPhase();
             if (phase == null)
                 continue work;
@@ -284,23 +296,15 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
             // PART 3: Execute work
 
-            long start = System.nanoTime();
 
             // TODO: Measuring latency when not rate limited is ... a little
             // weird because if you add more simultaneous clients, you will
             // increase latency (queue delay) but we do this anyway since it is
             // useful sometimes
 
-            if (this.wrkld.getUseKeyingTime()) {
-                // Wait for the keying time which is a fixed amount for each type of transaction.
-                long keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+            if (keying_time_msecs > 0) {
                 try {
-                    long sleep_start = System.nanoTime();
                     Thread.sleep(keying_time_msecs);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                            " Keying time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
-                    }
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }
@@ -334,16 +338,10 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             }
             long endOperation = System.nanoTime();
 
-            if (this.wrkld.getUseThinkTime()) {
+            if (think_time_msecs > 0) {
                 // Sleep for the think time duration.
-                long think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
                 try {
-                    long sleep_start = System.nanoTime();
                     Thread.sleep(think_time_msecs);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
-                            " Think time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
-                    }
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }

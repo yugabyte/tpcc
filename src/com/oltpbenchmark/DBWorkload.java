@@ -61,7 +61,10 @@ public class DBWorkload {
 
     private static int newOrderTxnId = -1;
     private static int numWarehouses = 10;
-    private static int time = -1;
+    private static int startWarehouseIdForShard = -1;
+    private static int totalWarehousesAcrossShards = 10;
+    private static int time = 0;
+    private static int warmupTime = 0;
 
     /**
      * @param args
@@ -148,7 +151,14 @@ public class DBWorkload {
 
         options.addOption(null, "nodes", true, "comma separated list of nodes (default 127.0.0.1)");
         options.addOption(null, "warehouses", true, "Number of warehouses (default 10)");
+        options.addOption(null, "start-warehouse-id", true, "Start warehouse id");
+        options.addOption(null, "total-warehouses", true, "Total number of warehouses across all executions");
         options.addOption(null, "loaderthreads", true, "Number of loader threads (default 10)");
+        options.addOption(null, "enable-foreign-keys", true, "Whether to enable foregin keys");
+
+        options.addOption(null, "warmup-time-secs", true, "Warmup time in seconds for the benchmark");
+        options.addOption(null, "initial-delay-secs", true, "Delay in seconds for starting the benchmark");
+        options.addOption(null, "num-connections", true, "Number of connections used");
 
 
         // parse the command line arguments
@@ -177,7 +187,19 @@ public class DBWorkload {
             numWarehouses = Integer.parseInt(argsLine.getOptionValue("warehouses"));
         }
 
-        int loaderThreads = 10;
+        if (argsLine.hasOption("start-warehouse-id")) {
+            startWarehouseIdForShard = Integer.parseInt(argsLine.getOptionValue("start-warehouse-id"));
+        } else {
+            startWarehouseIdForShard = 1;
+        }
+
+        if (argsLine.hasOption("total-warehouses")) {
+            totalWarehousesAcrossShards = Integer.parseInt(argsLine.getOptionValue("total-warehouses"));
+        } else {
+            totalWarehousesAcrossShards = numWarehouses;
+        }
+
+        int loaderThreads = min(10,numWarehouses);
         if (argsLine.hasOption("loaderthreads")) {
             loaderThreads = Integer.parseInt(argsLine.getOptionValue("loaderthreads"));
         }
@@ -185,8 +207,6 @@ public class DBWorkload {
         // -------------------------------------------------------------------
         // GET PLUGIN LIST
         // -------------------------------------------------------------------
-
-
 
         String targetBenchmarks = "tpcc";
 
@@ -241,7 +261,11 @@ public class DBWorkload {
 
             String isolationMode = xmlConfig.getString("isolation[not(@bench)]", "TRANSACTION_SERIALIZABLE");
             wrkld.setIsolationMode(xmlConfig.getString("isolation" + pluginTest, isolationMode));
-            wrkld.setScaleFactor(numWarehouses);
+
+            wrkld.setNumWarehouses(numWarehouses);
+            wrkld.setStartWarehouseIdForShard(startWarehouseIdForShard);
+            wrkld.setTotalWarehousesAcrossShards(totalWarehousesAcrossShards);
+
             wrkld.setRecordAbortMessages(xmlConfig.getBoolean("recordabortmessages", false));
             wrkld.setDataDir(xmlConfig.getString("datadir", "."));
 
@@ -255,6 +279,9 @@ public class DBWorkload {
             if (xmlConfig.containsKey("enableForeignKeysAfterLoad")) {
                 wrkld.setEnableForeignKeysAfterLoad(xmlConfig.getBoolean("enableForeignKeysAfterLoad"));
             }
+            if (argsLine.hasOption("start-warehouse-id")) {
+                wrkld.setShouldEnableForeignKeys(false);
+            }
 
             if (xmlConfig.containsKey("batchSize")) {
                 wrkld.setBatchSize(xmlConfig.getInt("batchSize"));
@@ -264,8 +291,8 @@ public class DBWorkload {
                 wrkld.setPort(xmlConfig.getInt("port"));
             }
 
-            if (xmlConfig.containsKey("numDBConnections")) {
-                wrkld.setNumDBConnections(xmlConfig.getInt("numDBConnections"));
+            if (argsLine.hasOption("num-connections")) {
+                 wrkld.setNumDBConnections(Integer.parseInt(argsLine.getOptionValue("num-connections")));
             } else {
                 // We use a max of 200 connections per node so as to not overwhelm the DB cluster.
                 wrkld.setNumDBConnections(min(numWarehouses, wrkld.getNodes().size() * 200));
@@ -274,13 +301,6 @@ public class DBWorkload {
             if (xmlConfig.containsKey("hikariConnectionTimeoutMs")) {
                 wrkld.setHikariConnectionTimeout(xmlConfig.getInt("hikariConnectionTimeoutMs"));
             }
-
-            LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
-                ", port: " + wrkld.getPort() +
-                ", warehouses: " + wrkld.getScaleFactor() +
-                ", terminals: " + wrkld.getTerminals() +
-                ", dbConnections: " + wrkld.getNumDBConnections() +
-                ", loaderThreads: " + wrkld.getLoaderThreads() );
 
             if (wrkld.getNumDBConnections() <= 0) {
                 wrkld.setNumDBConnections(wrkld.getTerminals());
@@ -293,6 +313,15 @@ public class DBWorkload {
             if (isBooleanOptionSet(argsLine, "execute")) {
                 wrkld.setNeedsExecution(true);
             }
+
+            LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
+                ", port: " + wrkld.getPort() +
+                ", startWH: " + wrkld.getStartWarehouseIdForShard() +
+                ", warehouses: " + wrkld.getNumWarehouses() +
+                ", total warehouses across shards: " + wrkld.getTotalWarehousesAcrossShards() +
+                ", terminals: " + wrkld.getTerminals() +
+                ", dbConnections: " + wrkld.getNumDBConnections() +
+                ", loaderThreads: " + wrkld.getLoaderThreads() );
 
             // ----------------------------------------------------------------
             // CREATE BENCHMARK MODULE
@@ -312,7 +341,7 @@ public class DBWorkload {
             initDebug.put("Driver", wrkld.getDBDriver());
             initDebug.put("URL", wrkld.getNodes());
             initDebug.put("Isolation", wrkld.getIsolationString());
-            initDebug.put("Scale Factor", wrkld.getScaleFactor());
+            initDebug.put("Scale Factor", wrkld.getNumWarehouses());
 
             LOG.info(SINGLE_LINE + "\n\n" + StringUtil.formatMaps(initDebug));
             LOG.info(SINGLE_LINE);
@@ -493,7 +522,11 @@ public class DBWorkload {
                 }
 
                 time = work.getInt("/time", 0);
-                int warmup = work.getInt("/warmup", 0);
+
+                if (argsLine.hasOption("warmup-time-secs")) {
+                    warmupTime = Integer.parseInt(argsLine.getOptionValue("warmup-time-secs"));
+                }
+
                 timed = (time > 0);
                 if (scriptRun) {
                     LOG.info("Running a script; ignoring timer, serial, and weight settings.");
@@ -519,14 +552,14 @@ public class DBWorkload {
                 else if (serial)
                     LOG.info("Timer enabled for serial run; will run queries"
                              + " serially in a loop until the timer expires.");
-                if (warmup < 0) {
+                if (warmupTime < 0) {
                     LOG.fatal("Must provide nonnegative time bound for"
                             + " warmup.");
                     System.exit(-1);
                 }
 
                 wrkld.addWork(time,
-                              warmup,
+                              warmupTime,
                               rate,
                               weight_strings,
                               rateLimited,
@@ -573,6 +606,11 @@ public class DBWorkload {
             throw new RuntimeException("No StatementDialects is available for " + bench);
         }
 
+        if (argsLine.hasOption("initial-delay-secs")) {
+            int initialDelay = Integer.parseInt(argsLine.getOptionValue("initial-delay-secs"));
+            LOG.info("Delaying execution of workload for " + initialDelay + " seconds");
+            Thread.sleep(initialDelay * 1000);
+        }
 
         @Deprecated
         boolean verbose = argsLine.hasOption("v");
@@ -616,6 +654,12 @@ public class DBWorkload {
         } else if (LOG.isDebugEnabled()) {
             LOG.debug("Skipping loading benchmark database records");
             LOG.info(SINGLE_LINE);
+        }
+
+        if (isBooleanOptionSet(argsLine, "enable-foreign-keys")) {
+            for (BenchmarkModule benchmark : benchList) {
+                benchmark.enableForeignKeys();
+            }
         }
 
         // Execute a Script
@@ -881,7 +925,7 @@ public class DBWorkload {
         List<WorkloadConfiguration> workConfs = new ArrayList<WorkloadConfiguration>();
 
         long start = System.nanoTime();
-        long end = start + Long.valueOf(time) * 1000 * 1000 * 1000;
+        long end = start + Long.valueOf(warmupTime + time) * 1000 * 1000 * 1000;
         for (BenchmarkModule bench : benchList) {
             LOG.info("Creating " + bench.getWorkloadConfiguration().getTerminals() + " virtual terminals...");
             workers.addAll(bench.makeWorkers(verbose));

@@ -17,6 +17,9 @@
 
 package com.oltpbenchmark;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,6 +36,8 @@ import com.oltpbenchmark.util.StringUtil;
 public final class Results {
     public final long nanoSeconds;
     public final int measuredRequests;
+    public long startTime;
+    public long endTime;
     public final DistributionStatistics latencyDistribution;
     final Histogram<TransactionType> txnSuccess = new Histogram<TransactionType>(true);
     final Histogram<TransactionType> txnAbort = new Histogram<TransactionType>(true);
@@ -141,26 +146,32 @@ public final class Results {
         }
     }
 
+
+
     public void writeAllCSVAbsoluteTiming(List<TransactionType> activeTXTypes, PrintStream out) {
 
         // This is needed because nanTime does not guarantee offset... we
         // ground it (and round it) to ms from 1970-01-01 like currentTime
         double x = ((double) System.nanoTime() / (double) 1000000000);
         double y = ((double) System.currentTimeMillis() / (double) 1000);
-        double offset = x - y;
+
+        out.println("Start," + startTime);
+        out.println("End," + endTime);
 
         // long startNs = latencySamples.get(0).startNs;
         String header[] = {
             "Transaction Name",
-            "Start Time (microseconds)",
-            "Latency (microseconds)"
+            "Start Time (nanoseconds)",
+            "Latency (microseconds)",
+            "OperationLatency (microseconds)"
         };
         out.println(StringUtil.join(",", header));
         for (Sample s : latencySamples) {
-            double startSec = ((double) s.startNs / (double) 1000000000);
             String row[] = {
                 activeTXTypes.get(s.tranType-1).getName(),
-                String.format("%10.6f", startSec),
+                Long.toString(s.startNs),
+                Integer.toString(s.latencyUs),
+                Integer.toString(s.operationLatencyUs),
             };
             out.println(StringUtil.join(",", row));
         }

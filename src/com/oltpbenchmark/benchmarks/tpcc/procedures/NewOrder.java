@@ -22,6 +22,8 @@ import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -65,11 +67,6 @@ public class NewOrder extends TPCCProcedure {
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public final SQLStmt  stmtInsertOOrderSQL = new SQLStmt(
-      "INSERT INTO " + TPCCConstants.TABLENAME_OPENORDER +
-      " (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_OL_CNT, O_ALL_LOCAL)" +
-      " VALUES (?, ?, ?, ?, ?, ?, ?)");
-
   public final SQLStmt  stmtGetItemSQL = new SQLStmt(
       "SELECT I_PRICE, I_NAME , I_DATA " +
       "  FROM " + TPCCConstants.TABLENAME_ITEM +
@@ -81,6 +78,11 @@ public class NewOrder extends TPCCProcedure {
       "  FROM " + TPCCConstants.TABLENAME_STOCK +
       " WHERE S_I_ID = ? " +
       "   AND S_W_ID = ? FOR UPDATE");
+
+  public final SQLStmt  stmtInsertOOrderSQL = new SQLStmt(
+      "INSERT INTO " + TPCCConstants.TABLENAME_OPENORDER +
+      " (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_OL_CNT, O_ALL_LOCAL)" +
+      " VALUES (?, ?, ?, ?, ?, ?, ?)");
 
   public final SQLStmt  stmtUpdateStockSQL = new SQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_STOCK +
@@ -96,6 +98,13 @@ public class NewOrder extends TPCCProcedure {
       " (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, " +
       "OL_AMOUNT, OL_DIST_INFO)  VALUES (?,?,?,?,?,?,?,?,?)");
 
+  // We will have multiple statements for selecting from the ITEM table or STOCK table as also for
+  // inserting into the ORDER_LINE tables based on the O_OL_CNT that is part of the NewOrder
+  // transaction. These statements are created dynamically.
+  public SQLStmt[] stmtGetItemSQLArr;
+  public SQLStmt[] stmtGetStockSQLArr;
+  public SQLStmt[] stmtInsertOrderLineSQLArr;
+
   // NewOrder Txn
   private PreparedStatement stmtGetCust = null;
   private PreparedStatement stmtGetWhse = null;
@@ -108,26 +117,76 @@ public class NewOrder extends TPCCProcedure {
   private PreparedStatement stmtUpdateStock = null;
   private PreparedStatement stmtInsertOrderLine = null;
 
-  public ResultSet run(Connection conn, Random gen,
-    int terminalWarehouseID, int numWarehouses,
-    int terminalDistrictLowerID, int terminalDistrictUpperID,
-      TPCCWorker w) throws SQLException {
+  public NewOrder() {
+    stmtGetItemSQLArr = new SQLStmt[15];
+    stmtGetStockSQLArr = new SQLStmt[15];
+    stmtInsertOrderLineSQLArr = new SQLStmt[11];
 
-    //initializing all prepared statements
-    stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
-    stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
-    stmtGetDist=this.getPreparedStatement(conn, stmtGetDistSQL);
-    stmtInsertNewOrder=this.getPreparedStatement(conn, stmtInsertNewOrderSQL);
-    stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
-    stmtInsertOOrder =this.getPreparedStatement(conn, stmtInsertOOrderSQL);
-    stmtGetItem =this.getPreparedStatement(conn, stmtGetItemSQL);
-    stmtGetStock =this.getPreparedStatement(conn, stmtGetStockSQL);
-    stmtUpdateStock =this.getPreparedStatement(conn, stmtUpdateStockSQL);
-    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQL);
+    // We create 15 statements for selecting rows from the `ITEM` table with varying number of ITEM
+    // ids.  Each string looks like:
+    // SELECT I_ID, I_PRICE, I_NAME , I_DATA
+    // FROM ITEM
+    // WHERE I_ID IN (?, ? ..);
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("SELECT I_ID, I_PRICE, I_NAME , I_DATA FROM %s WHERE I_ID IN (",
+                            TPCCConstants.TABLENAME_ITEM));
+    for (int i = 1; i <= 15; ++i) {
+      if (i == 1) {
+        sb.append("?");
+      } else {
+        sb.append(",?");
+      }
+      stmtGetItemSQLArr[i - 1] = new SQLStmt(sb.toString() + ")");
+    }
+
+    // We create 15 statements for selecting rows from the `STOCK` table with varying number of
+    // ITEM ids and a fixed WAREHOUSE id. Each string looks like:
+    // SELECT I_I, I_NAME , I_DATA
+    // FROM STOCK
+    // WHERE S_W_ID = ? AND S_I_ID IN (?, ? ..);
+    sb = new StringBuilder();
+    sb.append(
+      String.format("SELECT S_W_ID, S_I_ID, S_QUANTITY, S_DATA, S_YTD, S_REMOTE_CNT, S_DIST_01, " +
+                    "S_DIST_02, S_DIST_03, S_DIST_04, S_DIST_05, S_DIST_06, S_DIST_07, S_DIST_08, " +
+                    "S_DIST_09, S_DIST_10 FROM %s WHERE S_W_ID = ? AND S_I_ID IN (",
+                    TPCCConstants.TABLENAME_STOCK));
+    for (int i = 1; i <= 15; ++i) {
+      if (i == 1) {
+        sb.append("?");
+      } else {
+        sb.append(",?");
+      }
+      stmtGetStockSQLArr[i - 1] = new SQLStmt(sb.toString() + ") FOR UPDATE");
+    }
+
+    // We create 11 statements that insert into `ORDERLINE`. Each string looks like:
+    // INSERT INTO ORDERLINE
+    // (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT,
+    //  OL_DIST_INFO)
+    // VALUES (?,?,?,?,?,?,?,?,?), (?,?,?,?,?,?,?,?,?) ..
+    sb = new StringBuilder();
+    sb.append(String.format("INSERT INTO %s (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, " +
+                            "OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES",
+                            TPCCConstants.TABLENAME_ORDERLINE));
+    for (int i = 1; i <= 15; ++i) {
+      if (i == 1) {
+        sb.append("(?,?,?,?,?,?,?,?,?)");
+      } else {
+        sb.append(", (?,?,?,?,?,?,?,?,?)");
+      }
+      if (i >= 5) {
+        stmtInsertOrderLineSQLArr[i - 5] = new SQLStmt(sb.toString());
+      }
+    }
+  }
+
+  public ResultSet run(Connection conn, Random gen,
+                       int terminalWarehouseID, int numWarehouses,
+                       int terminalDistrictLowerID, int terminalDistrictUpperID,
+                       TPCCWorker w) throws SQLException {
 
     int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
     int customerID = TPCCUtil.getCustomerID(gen);
-
     int numItems = (int) TPCCUtil.randomNumber(5, 15, gen);
     int[] itemIDs = new int[numItems];
     int[] supplierWarehouseIDs = new int[numItems];
@@ -152,10 +211,19 @@ public class NewOrder extends TPCCProcedure {
     if (TPCCUtil.randomNumber(1, 100, gen) == 1)
       itemIDs[numItems - 1] = TPCCConfig.INVALID_ITEM_ID;
 
+    // Initializing all prepared statements.
+    stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
+    stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
+    stmtGetDist=this.getPreparedStatement(conn, stmtGetDistSQL);
+    stmtInsertNewOrder=this.getPreparedStatement(conn, stmtInsertNewOrderSQL);
+    stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
+    stmtUpdateStock =this.getPreparedStatement(conn, stmtUpdateStockSQL);
+    stmtInsertOOrder =this.getPreparedStatement(conn, stmtInsertOOrderSQL);
+    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[numItems - 5]);
 
     newOrderTransaction(terminalWarehouseID, districtID,
-            customerID, numItems, allLocal, itemIDs,
-            supplierWarehouseIDs, orderQuantities, conn, w);
+                        customerID, numItems, allLocal, itemIDs,
+                        supplierWarehouseIDs, orderQuantities, conn, w);
     return null;
   }
 
@@ -163,11 +231,11 @@ public class NewOrder extends TPCCProcedure {
                                    int o_ol_cnt, int o_all_local, int[] itemIDs,
                                    int[] supplierWarehouseIDs, int[] orderQuantities,
                                    Connection conn, TPCCWorker w) throws SQLException {
+
     float c_discount, w_tax, d_tax = 0, i_price;
     int d_next_o_id, o_id = -1, s_quantity;
     String c_last = null, c_credit = null, i_name, i_data, s_data;
-    String s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05;
-    String s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, ol_dist_info = null;
+    String ol_dist_info = null;
     float[] itemPrices = new float[o_ol_cnt];
     float[] orderLineAmounts = new float[o_ol_cnt];
     String[] itemNames = new String[o_ol_cnt];
@@ -243,165 +311,299 @@ public class NewOrder extends TPCCProcedure {
       stmtInsertNewOrder.executeUpdate();
       /*TODO: add error checking */
 
+      float[] i_price_arr = new float[o_ol_cnt];
+      String[] i_name_arr = new String[o_ol_cnt];
+      String[] i_data_arr = new String[o_ol_cnt];
 
-      /* woonhak, [[change order
-      stmtInsertOOrder.setInt(1, o_id);
-      stmtInsertOOrder.setInt(2, d_id);
-      stmtInsertOOrder.setInt(3, w_id);
-      stmtInsertOOrder.setInt(4, c_id);
-      stmtInsertOOrder.setTimestamp(5,
-          new Timestamp(System.currentTimeMillis()));
-      stmtInsertOOrder.setInt(6, o_ol_cnt);
-      stmtInsertOOrder.setInt(7, o_all_local);
-      stmtInsertOOrder.executeUpdate();
-      change order]]*/
+      int[] s_qty_arr = new int[o_ol_cnt];
+      String[] s_data_arr = new String[o_ol_cnt];
+      String[] ol_dist_info_arr = new String[o_ol_cnt];
+      int[] ytd_arr = new int[o_ol_cnt];
+      int[] remote_cnt_arr = new int[o_ol_cnt];
 
-      Set<Integer> itemSet = new HashSet<Integer>();
-      for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
-        ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
-        ol_i_id = itemIDs[ol_number - 1];
+      getItemsAndStock(o_ol_cnt, w_id, d_id,
+                       itemIDs, supplierWarehouseIDs, orderQuantities,
+                       i_price_arr, i_name_arr, i_data_arr,
+                       s_qty_arr, s_data_arr, ol_dist_info_arr,
+                       ytd_arr, remote_cnt_arr, conn);
 
-        // If the item is present multiple times in the list, flush the outstanding updates/inserts
-        // so that this update can use the correct values.
-        if (itemSet.contains(ol_i_id)) {
-          stmtInsertOrderLine.executeBatch();
-          stmtUpdateStock.executeBatch();
+      updateStock(o_ol_cnt, w_id, itemIDs, supplierWarehouseIDs,
+                  orderQuantities, s_qty_arr, ytd_arr, remote_cnt_arr, conn);
+
+      total_amount = insertOrderLines(o_id, w_id, d_id, o_ol_cnt, itemIDs,
+                                      supplierWarehouseIDs, orderQuantities,
+                                      i_price_arr, i_data_arr, s_data_arr,
+                                      ol_dist_info_arr, orderLineAmounts,
+                                      brandGeneric);
+      total_amount *= (1 + w_tax + d_tax) * (1 - c_discount);
+    } catch(UserAbortException userEx) {
+        LOG.debug("Caught an expected error in New Order");
+        throw userEx;
+    } finally {
+        if (stmtInsertOrderLine != null)
+            stmtInsertOrderLine.clearBatch();
+        if (stmtUpdateStock != null)
+            stmtUpdateStock.clearBatch();
+    }
+  }
+
+  // This function queries the ITEM and the STOCK table to get the information pertaining to the
+  // items that are part of this order. The state is saved in the corresponding arrays.
+  void getItemsAndStock(int o_ol_cnt, int w_id, int d_id,
+                        int[] itemIDs, int[] supplierWarehouseIDs, int[] orderQuantities,
+                        float[] i_price_arr, String[] i_name_arr, String[] i_data_arr,
+                        int[] s_qty_arr, String[] s_data_arr, String[] ol_dist_info_arr,
+                        int[] ytd_arr, int[] remote_cnt_arr,
+                        Connection conn) throws  SQLException {
+
+    Map<Integer, HashSet<Integer>> input = new HashMap<>();
+    for (int i = 0; i < o_ol_cnt; ++i) {
+      int itemId = itemIDs[i];
+      int supplierWh = supplierWarehouseIDs[i];
+      if (!input.containsKey(supplierWh)) {
+        input.put(supplierWh, new HashSet<>());
+      }
+      input.get(supplierWh).add(itemId);
+    }
+
+    for (Map.Entry<Integer, HashSet<Integer>> entry : input.entrySet()) {
+      stmtGetItem = this.getPreparedStatement(conn, stmtGetItemSQLArr[entry.getValue().size() - 1]);
+      int k = 1;
+      for (int itemId : entry.getValue()) {
+        stmtGetItem.setInt(k++,  itemId);
+      }
+      ResultSet rs1 = stmtGetItem.executeQuery();
+
+      stmtGetStock =
+        this.getPreparedStatement(conn, stmtGetStockSQLArr[entry.getValue().size() - 1]);
+      k = 1;
+      stmtGetStock.setInt(k++, entry.getKey() /* supplier WH */);
+      for (int itemId: entry.getValue()) {
+        stmtGetStock.setInt(k++, itemId);
+      }
+      ResultSet rs2 = stmtGetStock.executeQuery();
+
+      Map<Integer, Integer> m = new HashMap<>();
+      for (int i = 0; i < itemIDs.length; ++i) {
+        int expected = itemIDs[i];
+        if (m.containsKey(expected)) {
+          continue;
+                }
+        if (!rs1.next()) {
+          throw new UserAbortException("EXPECTED new order rollback: I_ID=" +
+                                       TPCCConfig.INVALID_ITEM_ID + "not found");
         }
-        itemSet.add(ol_i_id);
-        ol_quantity = orderQuantities[ol_number - 1];
-        stmtGetItem.setInt(1, ol_i_id);
-        rs = stmtGetItem.executeQuery();
-        if (!rs.next()) {
-          // This is (hopefully) an expected error: this is an
-          // expected new order rollback
-          assert ol_number == o_ol_cnt;
-          assert ol_i_id == TPCCConfig.INVALID_ITEM_ID;
-          rs.close();
-          throw new UserAbortException(
-              "EXPECTED new order rollback: I_ID=" + ol_i_id
-                  + " not found!");
+        if (!rs2.next()) {
+          throw new UserAbortException("EXPECTED new order rollback: I_ID=" +
+                                       TPCCConfig.INVALID_ITEM_ID + "not found");
         }
 
-        i_price = rs.getFloat("I_PRICE");
-        i_name = rs.getString("I_NAME");
-        i_data = rs.getString("I_DATA");
-        rs.close();
-        rs = null;
+        int itemId = rs1.getInt("I_ID");
+        assert (itemId == expected);
+        itemId = rs2.getInt("S_I_ID");
+        assert (itemId == expected);
 
-        itemPrices[ol_number - 1] = i_price;
-        itemNames[ol_number - 1] = i_name;
+        float price = rs1.getFloat("I_PRICE");
+        String name = rs1.getString("I_NAME");
+        String data = rs1.getString("I_DATA");
 
+        int s_quantity = rs2.getInt("S_QUANTITY");
+        String s_data = rs2.getString("S_DATA");
+        String ol_dist_info = getDistInfo(rs2, d_id);
+        int supplierWh = rs2.getInt("S_W_ID");
 
-        stmtGetStock.setInt(1, ol_i_id);
-        stmtGetStock.setInt(2, ol_supply_w_id);
-        rs = stmtGetStock.executeQuery();
-        if (!rs.next())
-          throw new RuntimeException("I_ID=" + ol_i_id
-              + " not found!");
-        s_quantity = rs.getInt("S_QUANTITY");
-        s_data = rs.getString("S_DATA");
-        s_dist_01 = rs.getString("S_DIST_01");
-        s_dist_02 = rs.getString("S_DIST_02");
-        s_dist_03 = rs.getString("S_DIST_03");
-        s_dist_04 = rs.getString("S_DIST_04");
-        s_dist_05 = rs.getString("S_DIST_05");
-        s_dist_06 = rs.getString("S_DIST_06");
-        s_dist_07 = rs.getString("S_DIST_07");
-        s_dist_08 = rs.getString("S_DIST_08");
-        s_dist_09 = rs.getString("S_DIST_09");
-        s_dist_10 = rs.getString("S_DIST_10");
-        rs.close();
-        rs = null;
+        int ytd = rs2.getInt("S_YTD");
+        int remote_cnt = rs2.getInt("S_REMOTE_CNT");
 
-        stockQuantities[ol_number - 1] = s_quantity;
+        storeInfo(itemIDs, supplierWarehouseIDs, orderQuantities,
+                  itemId, w_id, supplierWh,
+                  price, name, data, s_quantity, s_data, ol_dist_info,
+                  ytd, remote_cnt,
+                  i_price_arr, i_name_arr, i_data_arr,
+                  s_qty_arr, s_data_arr, ol_dist_info_arr,
+                  ytd_arr, remote_cnt_arr);
+      }
+      rs1.close();
+      rs2.close();
+    }
+  }
 
-        if (s_quantity - ol_quantity >= 10) {
-          s_quantity -= ol_quantity;
+  // Returns the district information based on the district id from a row in the STOCK table.
+  String getDistInfo(ResultSet rs, int d_id) throws SQLException {
+    switch (d_id) {
+      case 1:
+        return rs.getString("S_DIST_01");
+      case 2:
+        return rs.getString("S_DIST_02");
+      case 3:
+        return rs.getString("S_DIST_03");
+      case 4:
+        return rs.getString("S_DIST_04");
+      case 5:
+        return rs.getString("S_DIST_05");
+      case 6:
+        return rs.getString("S_DIST_06");
+      case 7:
+        return rs.getString("S_DIST_07");
+      case 8:
+        return rs.getString("S_DIST_08");
+      case 9:
+        return rs.getString("S_DIST_09");
+      case 10:
+        return rs.getString("S_DIST_10");
+    }
+    return "";
+  }
+
+  // Stores the different states in the various arrays.
+  void storeInfo(int[] itemIDs, int[] supplierWhs, int[] orderQuantities,
+                 int itemId, int w_id, int supplierWh,
+                 float price, String name, String i_data,
+                 int qty, String s_data, String dist_info,
+                 int ytd, int remote_cnt,
+                 float[] i_price_arr, String[] i_name_arr, String[] i_data_arr,
+                 int[] qty_arr, String[] data_arr, String[] dist_info_arr,
+                 int[] ytd_arr, int[] remote_cnt_arr) {
+    for (int i = 0; i < itemIDs.length; ++i) {
+      if (itemId == itemIDs[i] && supplierWh == supplierWhs[i]) {
+        i_price_arr[i] = price;
+        i_name_arr[i] = name;
+        i_data_arr[i] = i_data;
+
+        qty_arr[i] = qty;
+        data_arr[i] = s_data;
+        dist_info_arr[i]= dist_info;
+        ytd_arr[i] = ytd;
+        remote_cnt_arr[i] = remote_cnt;
+
+        // Note that the same item could be present in the itemID multiple times. So adjust the new
+        // quantity for the next time accordingly.
+        if (qty - orderQuantities[i] >= 10) {
+          qty -= orderQuantities[i];
         } else {
-          s_quantity += -ol_quantity + 91;
+          qty += (91 - orderQuantities[i]);
         }
+        ytd = ytd + orderQuantities[i];
 
-        if (ol_supply_w_id == w_id) {
+        int s_remote_cnt_increment;
+        if (supplierWh == w_id) {
           s_remote_cnt_increment = 0;
         } else {
           s_remote_cnt_increment = 1;
         }
-
-        stmtUpdateStock.setInt(1, s_quantity);
-        stmtUpdateStock.setInt(2, ol_quantity);
-        stmtUpdateStock.setInt(3, s_remote_cnt_increment);
-        stmtUpdateStock.setInt(4, ol_i_id);
-        stmtUpdateStock.setInt(5, ol_supply_w_id);
-        stmtUpdateStock.addBatch();
-
-        ol_amount = ol_quantity * i_price;
-        orderLineAmounts[ol_number - 1] = ol_amount;
-        total_amount += ol_amount;
-
-        if (i_data.indexOf("ORIGINAL") != -1
-            && s_data.indexOf("ORIGINAL") != -1) {
-          brandGeneric[ol_number - 1] = 'B';
-        } else {
-          brandGeneric[ol_number - 1] = 'G';
-        }
-
-        switch ((int) d_id) {
-          case 1:
-            ol_dist_info = s_dist_01;
-            break;
-          case 2:
-            ol_dist_info = s_dist_02;
-            break;
-          case 3:
-            ol_dist_info = s_dist_03;
-            break;
-          case 4:
-            ol_dist_info = s_dist_04;
-            break;
-          case 5:
-            ol_dist_info = s_dist_05;
-            break;
-          case 6:
-            ol_dist_info = s_dist_06;
-            break;
-          case 7:
-            ol_dist_info = s_dist_07;
-            break;
-          case 8:
-            ol_dist_info = s_dist_08;
-            break;
-          case 9:
-            ol_dist_info = s_dist_09;
-            break;
-          case 10:
-            ol_dist_info = s_dist_10;
-            break;
-        }
-        stmtInsertOrderLine.setInt(1, o_id);
-        stmtInsertOrderLine.setInt(2, d_id);
-        stmtInsertOrderLine.setInt(3, w_id);
-        stmtInsertOrderLine.setInt(4, ol_number);
-        stmtInsertOrderLine.setInt(5, ol_i_id);
-        stmtInsertOrderLine.setInt(6, ol_supply_w_id);
-        stmtInsertOrderLine.setInt(7, ol_quantity);
-        stmtInsertOrderLine.setDouble(8, ol_amount);
-        stmtInsertOrderLine.setString(9, ol_dist_info);
-        stmtInsertOrderLine.addBatch();
-      } // end-for
-
-      stmtInsertOrderLine.executeBatch();
-      stmtUpdateStock.executeBatch();
-      total_amount *= (1 + w_tax + d_tax) * (1 - c_discount);
-    } catch(UserAbortException userEx)
-    {
-      LOG.debug("Caught an expected error in New Order");
-      throw userEx;
-    } finally {
-      if (stmtInsertOrderLine != null)
-        stmtInsertOrderLine.clearBatch();
-      if (stmtUpdateStock != null)
-        stmtUpdateStock.clearBatch();
+        remote_cnt = remote_cnt + s_remote_cnt_increment;
+      }
     }
+  }
+
+  // Updates the STOCK table with the new values for the quantity, ytd, remote_cnt and
+  // operation_count.
+  void updateStock(int o_ol_cnt, int w_id,
+                   int[] itemIDs, int[] supplierWarehouseIDs,
+                   int[] orderQuantities, int[] s_qty_arr,
+                   int[] ytd_arr, int[] remote_cnt_arr,
+                   Connection conn) throws  SQLException {
+
+    Map<Integer, HashSet<Integer>> input = new HashMap<>();
+    for (int i = 0; i < o_ol_cnt; ++i) {
+      int itemId = itemIDs[i];
+      int whId = supplierWarehouseIDs[i];
+
+      int index = getIndex(itemId, itemIDs);
+      int s_quantity = s_qty_arr[index];
+      int ol_quantity = getOrderQts(itemId, itemIDs, orderQuantities);
+
+      if (s_quantity - ol_quantity >= 10) {
+        s_quantity -= ol_quantity;
+      } else {
+        s_quantity += -ol_quantity + 91;
+      }
+      int s_remote_cnt_increment;
+      if (whId == w_id) {
+        s_remote_cnt_increment = 0;
+      } else {
+        s_remote_cnt_increment = 1;
+      }
+
+      int k = 1;
+      stmtUpdateStock.setInt(k++, s_quantity);
+      stmtUpdateStock.setInt(k++, ytd_arr[index] + ol_quantity);
+      stmtUpdateStock.setInt(k++, remote_cnt_arr[index] + s_remote_cnt_increment);
+      stmtUpdateStock.setInt(k++, whId);
+      stmtUpdateStock.setInt(k++, itemId);
+      stmtUpdateStock.addBatch();
+    }
+    stmtUpdateStock.executeBatch();
+  }
+
+  // Returns the index of the item in the array.
+  int getIndex(int itemId, int[] itemIDs) {
+    int idx = -1;
+    for (int i = 0; i < itemIDs.length; ++i) {
+      int v = itemIDs[i];
+      if (v == itemId) {
+        idx = i;
+      }
+    }
+    return idx;
+  }
+
+  // Returns the order quantiry of the item.
+  int getOrderQts(int itemID, int[] itemIDs, int[] orderQts) {
+    int out = 0;
+    for (int i = 0; i < itemIDs.length; ++i) {
+      int v = itemIDs[i];
+      if (itemID == v) {
+        out += orderQts[i];
+      }
+    }
+    return out;
+  }
+
+  // Inserts the order lines for the order.
+  int insertOrderLines(int o_id, int w_id, int d_id,
+                       int o_ol_cnt, int[] itemIDs,
+                       int[] supplierWarehouseIDs, int[] orderQuantities,
+                       float[] i_price_arr, String[] i_data_arr,
+                       String[] s_data_arr, String[] ol_dist_info_arr,
+                       float[] orderLineAmounts, char[] brandGeneric) throws SQLException {
+
+    int total_amount = 0;
+    int k = 1;
+    for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
+      int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
+      int ol_i_id = itemIDs[ol_number - 1];
+      int ol_quantity = orderQuantities[ol_number - 1];
+
+      float i_price = i_price_arr[ol_number - 1];
+      String i_data = i_data_arr[ol_number - 1];
+
+      String s_data = s_data_arr[ol_number - 1];
+      String ol_dist_info = ol_dist_info_arr[ol_number - 1];
+
+      float ol_amount = ol_quantity * i_price;
+      orderLineAmounts[ol_number - 1] = ol_amount;
+      total_amount += ol_amount;
+
+      if (i_data.indexOf("ORIGINAL") != -1
+          && s_data.indexOf("ORIGINAL") != -1) {
+        brandGeneric[ol_number - 1] = 'B';
+      } else {
+        brandGeneric[ol_number - 1] = 'G';
+      }
+
+      stmtInsertOrderLine.setInt(k++, o_id);
+      stmtInsertOrderLine.setInt(k++, d_id);
+      stmtInsertOrderLine.setInt(k++, w_id);
+      stmtInsertOrderLine.setInt(k++, ol_number);
+      stmtInsertOrderLine.setInt(k++, ol_i_id);
+      stmtInsertOrderLine.setInt(k++, ol_supply_w_id);
+      stmtInsertOrderLine.setInt(k++, ol_quantity);
+      stmtInsertOrderLine.setDouble(k++, ol_amount);
+      stmtInsertOrderLine.setString(k++, ol_dist_info);
+    }
+    stmtInsertOrderLine.execute();
+    return total_amount;
   }
 
   public void test(Connection conn, TPCCWorker w) throws Exception {

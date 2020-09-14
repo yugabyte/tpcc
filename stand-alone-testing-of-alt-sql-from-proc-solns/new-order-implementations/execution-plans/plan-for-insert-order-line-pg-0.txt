@@ -1,0 +1,16 @@
+ Plan for insert_order_line
+
+ Insert on order_line  (cost=2.84..813.46 rows=100 width=83)
+   ->  Subquery Scan on "*SELECT*"  (cost=2.84..813.46 rows=100 width=83)
+         ->  Nested Loop  (cost=2.84..811.46 rows=100 width=89)
+               Join Filter: ((u.i_id)::integer = i.i_id)
+               CTE order_lines
+                 ->  WindowAgg  (cost=0.00..2.25 rows=100 width=20)
+                       ->  Function Scan on unnest u_1  (cost=0.00..1.00 rows=100 width=12)
+               ->  Nested Loop  (cost=0.29..770.00 rows=100 width=49)
+                     ->  CTE Scan on order_lines u  (cost=0.00..2.00 rows=100 width=20)
+                     ->  Index Scan using s_fkey_i on stock s  (cost=0.29..7.67 rows=1 width=29)
+                           Index Cond: (s_i_id = (u.i_id)::integer)
+               ->  Index Scan using item_pkey on item i  (cost=0.29..0.37 rows=1 width=10)
+                     Index Cond: (i_id = s.s_i_id)
+

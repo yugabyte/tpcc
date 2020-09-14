@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="4a7cdbd4-92ec-4a22-bb03-311c3b4dc267" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/0-test-on-real-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/1-test-on-mini-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/3-test-prepared-insert-order-and-update-stock.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/4-timing-test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/8-do-cr-insert-real-result-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/9-do-cr-insert-mini-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/check-versus-real-data-results/cr-assert-results-as-expected.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/check-versus-real-data-results/cr-diff-views.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/check-versus-real-data-results/do-report-changes.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/check-versus-real-data-results/select-from-diff-views.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/cr-indexes-and-constraints-pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/cr-indexes-and-constraints-yb.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/cr-insert-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/cr-tables-pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/cr-tables-yb.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/insert-data.dump" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/mini-data/insert-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/cr-new-order-for-loop.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/cr-new-order-parameters.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/cr-new-order-pure-sql.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/cr-new-order-sudheer.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/cr-report-new-order-timing-results.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/cr-time-new-order.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/prepare-insert-order-line-bad-row-number-semantics.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/prepare-insert-order-line-slow-generate-subscripts.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/prepare-insert-order-line.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/prepare-insert-order-lineprelimi-version-terrible-plan.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/prepare-update-stock.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/qa-query.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/new-order-implementations/single-row-plans.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data-results/cr-indexes-and-constraints-pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data-results/cr-insert-data-dump/cr-insert-data-dump.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data-results/cr-insert-data-dump/do-insert-to-result-tables.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data-results/cr-tables-pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data-results/insert-data.dump" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data-results/pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data/cr-indexes-and-constraints-pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data/cr-indexes-and-constraints-yb.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data/cr-tables-pg.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data/cr-tables-yb.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data/insert-data.dump" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/real-data/insert-data.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/cr-is-yb.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/cr-new-order-parameters.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/cr-time-to-be-timed.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/cr-to-be-timed.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/demo.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/do-timing-test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/report-to-be-timed-timing-results.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing harness-sanity-tests/t.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/timing-test-no-of-iterations-10000-pg.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/utils/cr-clock.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../bllewell-new-order-plpgsql-implementations/utils/cr-is-yb.sql" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectId" id="1hOK9dRcYshJmAIZ1nGb9GG7QHt" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PythonContentEntriesConfigurable" />
+  </component>
+  <component name="RunManager" selected="Python.single-table">
+    <configuration name="cmn" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="python" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/cmn.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="single-table" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="python" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/proc-vs-top-level-sql-for-multi-stmt-txns" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/proc-vs-top-level-sql-for-multi-stmt-txns/single-table.py" />
+      <option name="PARAMETERS" value="--db=pg --mode=do_timings_report --report_name='dog-house'" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.cmn" />
+      <item itemvalue="Python.single-table" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.single-table" />
+        <item itemvalue="Python.cmn" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="4a7cdbd4-92ec-4a22-bb03-311c3b4dc267" name="Default Changelist" comment="" />
+      <created>1599876547805</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1599876547805</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="424" y="202" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1599936977083">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state x="424" y="202" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1080@0.0.1920.1080" timestamp="1599936977083" />
+    <state width="1899" height="376" key="GridCell.Tab.0.bottom" timestamp="1599940908659">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.0.bottom/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908659" />
+    <state width="1899" height="376" key="GridCell.Tab.0.center" timestamp="1599940908658">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.0.center/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908658" />
+    <state width="1899" height="376" key="GridCell.Tab.0.left" timestamp="1599940908657">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.0.left/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908657" />
+    <state width="1899" height="376" key="GridCell.Tab.0.right" timestamp="1599940908658">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.0.right/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908658" />
+    <state width="1899" height="376" key="GridCell.Tab.1.bottom" timestamp="1599940908661">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.1.bottom/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908661" />
+    <state width="1899" height="376" key="GridCell.Tab.1.center" timestamp="1599940908660">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.1.center/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908660" />
+    <state width="1899" height="376" key="GridCell.Tab.1.left" timestamp="1599940908660">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.1.left/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908660" />
+    <state width="1899" height="376" key="GridCell.Tab.1.right" timestamp="1599940908661">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state width="1899" height="376" key="GridCell.Tab.1.right/0.0.1920.1080@0.0.1920.1080" timestamp="1599940908661" />
+    <state x="469" y="179" key="SettingsEditor" timestamp="1599876648146">
+      <screen x="0" y="0" width="1920" height="1080" />
+    </state>
+    <state x="469" y="179" key="SettingsEditor/0.0.1920.1080@0.0.1920.1080" timestamp="1599876648146" />
+  </component>
+</project>

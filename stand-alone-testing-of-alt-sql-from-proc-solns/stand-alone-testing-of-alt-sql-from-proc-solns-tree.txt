@@ -7,6 +7,7 @@ stand-alone-testing-of-alt-sql-from-proc-solns
 ├── 5-test-select-from-item-stock-inner-join.sql
 ├── 8-do-cr-insert-real-expected-result.sql
 ├── 9-do-cr-insert-mini-data.sql
+├── README.md
 ├── check-real-data-versus-expected-results
 │   ├── cr-assert-results-as-expected.sql
 │   └── ...

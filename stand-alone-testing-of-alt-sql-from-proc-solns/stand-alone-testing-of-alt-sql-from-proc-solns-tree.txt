@@ -1,0 +1,87 @@
+stand-alone-testing-of-alt-sql-from-proc-solns
+├── 0-test-on-real-data.sql
+├── 1-test-on-mini-data.sql
+├── 2-test-prepared-insert-order-and-update-stock.sql
+├── 3-do-new-order-timing-test.sql
+├── 4-do-stand-alone-sqls-timing-test.sql
+├── 5-test-select-from-item-stock-inner-join.sql
+├── 8-do-cr-insert-real-expected-result.sql
+├── 9-do-cr-insert-mini-data.sql
+├── README.md
+├── check-real-data-versus-expected-results
+│   ├── cr-assert-results-as-expected.sql
+│   └── ...
+├── mini-data
+│   └── ...
+├── new-order-implementations
+│   ├── cr-new-order-1-sudheer.sql
+│   ├── cr-new-order-2-for-loop.sql
+│   ├── cr-new-order-3-pure-sql.sql
+│   ├── cr-new-order-parameters.sql
+│   ├── cr-stand-alone-insert-order-line.sql
+│   ├── cr-stand-alone-update-stock.sql
+│   ├── cr-time-new-order.sql
+│   ├── cr-time-stand-alone-sqls.sql
+│   ├── cr-timing_experiments-and-times-tables.sql
+│   ├── do-print-plans-for-set-based-sqls.sql
+│   ├── do-report-timing-results.sql
+│   ├── do-set_bind-variables-from-new-order-parameters.sql
+│   ├── execution-plans
+│   │   ├── plan-for-insert-order-line-PG.txt
+│   │   ├── plan-for-insert-order-line-YB.txt
+│   │   ├── plan-for-update-stock-PG.txt
+│   │   ├── plan-for-update-stock-YB.txt
+│   │   └── ...
+│   ├── ...
+│   ├── timing-results
+│   │   └── timing-test-no-of-iterations-10000-pg.log
+│   └── yb-server-log.txt
+├── python
+│   ├── README.md
+│   ├── new-order-client-side-implementations
+│   │   ├── manual-prepare-and-execute-sql-scripts-from-server-log
+│   │   │   ├── new-order-common-prepare-stmts-sql-script.sql
+│   │   │   ├── new-order-for-loop-sql-script.sql
+│   │   │   ├── new-order-pure-sql-sql-script.sql
+│   │   │   └── test-clock.sql
+│   │   └── new-order.py
+│   ├── proc-vs-top-level-sql-for-multi-stmt-txns
+│   │   ├── __pycache__
+│   │   ├── all-six-pg.sh
+│   │   ├── all-six-yb.sh
+│   │   ├── cmn.py
+│   │   ├── many-tables.py
+│   │   ├── single-table.py
+│   │   └── timing-results
+│   │       ├── run-1
+│   │       │   └── ...
+│   │       └── run-2
+│   │           └── ...
+├── real-data
+│   ├── cr-indexes-and-constraints-pg.sql
+│   ├── cr-indexes-and-constraints-yb.sql
+│   ├── cr-tables-pg.sql
+│   ├── cr-tables-yb.sql
+│   ├── insert-data.dump
+│   ├── insert-data.sql
+│   └── restore-new_order-affected-tables-to-starting-state.sql
+├── real-data-expected-results
+│   ├── cr-indexes-and-constraints-pg.sql
+│   ├── cr-insert-data-dump
+│   │   ├── cr-insert-data-dump.sql
+│   │   └── do-insert-to-expected-result-tables.sql
+│   ├── cr-tables-pg.sql
+│   ├── insert-data.dump
+│   └── pg.sql
+├── stand-alone-testing-of-alt-sql-from-proc-solns-tree.txt
+├── timing-harness-sanity-tests
+│   ├── cr-is-yb.sql
+│   ├── cr-new-order-parameters.sql
+│   ├── cr-time-to-be-timed.sql
+│   ├── cr-to-be-timed.sql
+│   ├── demo.sql
+│   ├── do-timing-test.sql
+│   └── ...
+└── utils
+    ├── cr-clock.sql
+    └── cr-is-yb.sql

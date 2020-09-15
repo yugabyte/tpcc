@@ -1,0 +1,15 @@
+ Plan for update_stock
+
+ Update on stock  (cost=769.57..777.63 rows=1 width=407)
+   CTE v
+     ->  Nested Loop  (cost=0.29..769.27 rows=1 width=48)
+           ->  Function Scan on unnest u  (cost=0.00..1.00 rows=100 width=12)
+           ->  Index Scan using s_fkey_i on stock s  (cost=0.29..7.67 rows=1 width=13)
+                 Index Cond: (s_i_id = (u.i_id)::integer)
+                 Filter: ((u.w_id)::integer = s_w_id)
+   ->  Nested Loop  (cost=0.29..8.36 rows=1 width=407)
+         ->  CTE Scan on v  (cost=0.00..0.02 rows=1 width=120)
+         ->  Index Scan using s_fkey_i on stock  (cost=0.29..8.31 rows=1 width=312)
+               Index Cond: (s_i_id = (v.o_i_id)::integer)
+               Filter: ((v.o_w_id)::integer = s_w_id)
+

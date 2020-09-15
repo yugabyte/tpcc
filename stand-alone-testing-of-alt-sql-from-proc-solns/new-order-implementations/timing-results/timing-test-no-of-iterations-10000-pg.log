@@ -1,0 +1,17 @@
+2020-08-16 17:32:39.992 PDT [43523] LOG:  statement: call start_clock();
+2020-08-16 17:32:39.992 PDT [43523] LOG:  statement: set client_min_messages = error;
+2020-08-16 17:32:39.992 PDT [43523] LOG:  statement: drop table if exists new_order_timings;
+2020-08-16 17:32:39.995 PDT [43523] LOG:  statement: create table new_order_timings(
+...
+2020-08-16 17:32:39.998 PDT [43523] LOG:  statement: create or replace procedure time_new_order(
+...
+2020-08-16 17:32:39.999 PDT [43523] LOG:  statement: create or replace procedure new_order(no in new_order_parameters_t)
+...
+2020-08-16 17:32:40.000 PDT [43523] LOG:  statement: call time_new_order('sudheer',   10,  10000);
+2020-08-16 17:35:33.272 PDT [43523] LOG:  statement: create or replace procedure new_order(no in new_order_parameters_t)
+...
+2020-08-16 17:35:33.274 PDT [43523] LOG:  statement: call time_new_order('for-loop',  10,  10000);
+2020-08-16 17:38:27.834 PDT [43523] LOG:  statement: create or replace procedure new_order(no in new_order_parameters_t)
+...
+2020-08-16 17:38:27.835 PDT [43523] LOG:  statement: call time_new_order('pure-sql',  10,  10000);
+2020-08-16 17:41:21.151 PDT [43523] LOG:  statement: select 'Elapsed time for timing experiment: '||elapsed_time();

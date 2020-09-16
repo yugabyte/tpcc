@@ -1,0 +1,36 @@
+      method      | no_of_repeats | env | elapsed_time | min | avg | max | stddev 
+------------------+---------------+-----+--------------+-----+-----+-----+--------
+ insert-new-order |            10 | YB  |            0 |  16 |  20 |  29 |   4.37
+ insert-new-order |            11 | YB  |            0 |  16 |  17 |  18 |   0.65
+ insert-new-order |            12 | YB  |            0 |  16 |  17 |  19 |   0.90
+ insert-new-order |            13 | YB  |            0 |  16 |  18 |  21 |   1.80
+ insert-new-order |            13 | YB  |            0 |  17 |  18 |  21 |   1.36
+ insert-new-order |            15 | YB  |            0 |  16 |  17 |  18 |   0.52
+ insert-new-order |            20 | YB  |            0 |  16 |  17 |  19 |   0.77
+ insert-new-order |           100 | YB  |            2 |  16 |  17 |  22 |   1.43
+ insert-new-order |           101 | YB  |            2 |  16 |  17 |  24 |   1.41
+ insert-new-order |           101 | YB  |            2 |  16 |  17 |  23 |   0.95
+ insert-new-order |           102 | YB  |            2 |  17 |  18 |  23 |   1.22
+ insert-new-order |           500 | YB  |           10 |  17 |  18 |  24 |   1.32
+ insert-new-order |           501 | YB  |           11 |  18 |  20 |  25 |   1.57
+ insert-new-order |          1000 | YB  |           25 |  19 |  23 |  44 |   1.39
+ insert-new-order |          1001 | YB  |           27 |  21 |  26 |  32 |   1.22
+ insert-new-order |          5000 | YB  |            0 |  25 |  34 |  63 |   4.20
+ insert-new-order |          5001 | YB  |            6 |  38 |  47 | 840 |  12.08
+ insert-new-order |          5002 | YB  |            1 |  42 |  58 | 952 |  17.73
+
+NOTE:
+There seems to be no way to explain the plan here because the SQL comes out of PL/pgSQL.
+
+However, preparing the stand-alone SQL and then exectution it
+(using "3-test-prepared-insert-order-and-update-stock.sql")
+show a HUGE difference now w.r.t. the result before the mechanical timing test.
+
+
+The first by-hand execution was 500 ms. Then it fell to ~40 ms on repeats.
+
+Before starting the mechanical test, and after warming up, it settled at ~20.0 MS!
+
+Exiting ysql and re-starting doesn't change this.
+
+Bouncing with yb-ctl DOES return the times to ~20 MS after a bit of warm-up.

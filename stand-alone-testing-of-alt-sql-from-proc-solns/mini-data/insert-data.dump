@@ -1,0 +1,58 @@
+ delete from district;
+ delete from stock;
+ delete from item;
+ delete from new_order;
+ delete from oorder;
+ delete from order_line;
+ delete from warehouse;
+ 
+ insert into district(d_w_id, d_id, d_next_o_id)
+ values (1,4,3001);
+ 
+ insert into item(
+   i_id,
+   i_price,
+   i_im_id,
+   i_name,
+   i_data)
+ values
+   (54379,36.41,1208,'scvljpdeyclxanvo','lgimvtviidsoxgdgkjpawejlodzydpeeuwiargmsjofq'),
+   (79076,26.27,8657,'wydgxvgamjvnytpmcwkbpnf','ywqlsqaxrvcqoacxpdfkgdjgwgtspsloamyxvze'),
+   (70079,52.59,9813,'cstqjhmermlkq','veyawryvoxhjzjcvwvuvdtiwpmotmwtnskhmheej'),
+   (854,16.37,6543,'tvzbphyrdrwcrpuqdgnrf','vwfrtfutglkhaocynzwmvglznmcauwiptenau'),
+   (24685,79.90,1856,'wsrmjsreefhml','ugvtiukhwjgorssgswqbatlcvuwdfdgcoylrfblr'),
+   (91121,37.74,4130,'ddjhqovrlbdrjysyxcuvns','ygrrbigcstohfqsxdfpwrpndkpjepmpjslsadotticcj'),
+   (17012,30.94,478,'igwwybhaocmig','vxfiktxrynwuwgzupuwkwzrucxbhqirvelseqirwz'),
+   (37330,55.93,3049,'nehigzjxtbsoaldxsoe','mhzlcbmnedpzdhydxivbwaqdgirehkalalxupglzcyrrniaav'),
+   (10244,90.29,10000,'gdmxrktvyhauehsrxnche','tkqawzcquuORIGINALvvdbfa'),
+   (57757,3.42,3408,'akhgfdyltausli','ifnlyypfawjouojidlpzuddfbybusp');
+ 
+ insert into stock(
+   s_w_id,
+   s_i_id,
+   s_quantity,
+   s_ytd,
+   s_order_cnt,
+   s_remote_cnt,
+   s_dist_01,
+   s_dist_02,
+   s_dist_03,
+   s_dist_04,
+   s_dist_05,
+   s_dist_06,
+   s_dist_07,
+   s_dist_08,
+   s_dist_09,
+   s_dist_10)
+ values
+   (1,54379,54,0.00,0,0,'urzzzqdeyvuvykfosstqqwh','ikmobblipyoklpxyilmperb','zhxspcvueceyroqytokkjud','debubhniqntqgdfbmkxtmfw','xnfxrkxeqwfeybocufgjyzp','vztjojhumofltcicnohrbjn','tympmndjimhqcbqnfzmejjx','zajyrsakwadmefkbsfcteaq','btkrvacavyhagynzppwnoop','omisaovfwovlrtkuuusuvzq'),
+   (1,79076,50,0.00,0,0,'xfoyngudqrtvjlpjylxxwwz','fwocioalugktsmxjlhqvsco','voetifsrpaogvtkzjrxykkc','ntyzrppyfyectbelfnzwkiy','euppuozjqroepeolkuzugqp','retclthfagcovgrescjjpoz','ohunvgfdfbwsdmfaxbullih','lwkcrciznpzxqoybxlfzzyd','vrocpsdfslmmoyovfbcitju','samfvoewnuppvxwinddkfjj'),
+   (1,70079,82,0.00,0,0,'xjftselamnxchnpwdlksqcb','qslxsxdhsnrjxdxdonjjxre','afekilujpyrmcxlgkwqixwb','rtfkmykfjpzpulnafmqizwl','rmbtgqqzhdxzxckgwfdsyia','tfmwkhyaulqopixbrbniukd','wdarbjmqhhnqmbkinioifjn','ealoyuszyqhtohjpxgvdnmy','xbbybzkcjorysyouiiazcji','rqieobrupyddpteydcxycdp'),
+   (1,854,11,0.00,0,0,'qkyoozvmtdgnavdoacjechk','vvtlspdjdjhrbrgsxnxmzzu','gonerafialhhyxfsjjkxjoa','yyhobsnwshxiachwxmqbvwx','yykdedtfgdmhqcieowncvap','pjomxpkhqyenbekxclckgug','anwuymknxcnkdwyhtduhgsq','sxuxyjipkdoeswykvpmgcun','tfupyuqrmczssrcnoxpinvu','jtcvvjjnzoohoeppisozzas'),
+   (1,24685,30,0.00,0,0,'pqxyslbvtdmwyvsoduyfzfi','jqlcucllonoqrkuzhhmzpvz','pxrpbkrlqzjpkhhpuosqvfh','lrftrclydajxkfqehocvhfj','fdtonzeyxaquzfdxztphdkx','rthzvzpkrixjktvbsgsllnz','pefozlvpigbbifqaqvnwxcx','ythbypvyajaodnkkscdzrce','hmgeajwhdbscrmpxoezbueo','dduflsjpxwuohbasccgaenl'),
+   (1,91121,43,0.00,0,0,'trigoufyasdfcurlesidvtk','qyuieawgjuqytxynxfbtbnd','zdiysavjbrjlrttfqjwajxo','ynakviijdcxbqqmkodxhqcp','knjqpvgmhevgjgsatnphyqk','gaiwtdopecijvmoxfgbjthl','fidxwfphpceesbbiwkkeyag','mzxbadurztpmqibvdblxhmo','yfeojegbqdkmjixlwmhbtyb','usoznvvmfbvbzwiwkrgclgk'),
+   (1,17012,27,0.00,0,0,'rgmqdipbeisxmfvftnygceo','bvxtxfjbzhevdtfmqmfgjoi','xheftehinosdwxskrdqpwni','atvgnfqghleskscmcynmcwq','syvykkwebnubufxqjendlse','poegxalctglobzjuqrgryww','frkrvnxidlwnclreyilkvev','xcsysgznrpnqzrxiwrzxydy','nyxbytioolkydagpqmuvdqw','fppfjvdmvcmrunqugzmkjer'),
+   (1,37330,89,0.00,0,0,'ueawconzwuzxghjtrojqwoa','xfzgzotjkhtdkwtvjegvhfy','frchvvhxmfirktjvjzansza','jftiphcrxklvtlbrwqhnhov','umcjilbtonswhjftlpalzwp','sgewxgdgjjprnaetqbhbgsb','bxddzkjhtdxjyzojlufqcet','eznviyewgmyswyuqpebmhvv','ehvzonuuyfeeozkfuuwdktx','fkkzbjqrajrskiikbeifzkh'),
+   (1,10244,94,0.00,0,0,'jtynfqipltepjxydbwkwfbb','pcoodgndjcxddeoiyddgsuv','mibhoqyjowbdgutyqcacjbh','uduhxprcyxixatlnncinhat','sncafpeidgtpmomvrpganbb','czcqnlrszxlyiizjztprrco','qiwomlwxzaybfzbhkmqqexz','jiattpkaqohnrelglaviicy','qwetbgethmgrmeloxbnvjhy','zrovjtoalrkhukotooqhfhb'),
+   (1,57757,80,0.00,0,0,'sakfsulwpjbtogpmbchvvuo','azceertznxdytsfnepfohde','vhmrmbvzxrlzyqxfgclepjy','fuhfutquamvuureviacwymh','lgnjmooesqgdoxeihjpggoi','lgfptctsilsbfdeouhrddks','foggrczqenrzlarfufnrotn','wvhnklqieljpktpstzttdvl','hwienyzyicssznsroihvjuf','tigvkzzcvikqbrtnksbijnu');
+

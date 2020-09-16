@@ -1,0 +1,51 @@
+        ?column?        
+------------------------
+ idx_s_i_id not present
+
+ i_price | s_quantity |       ol_dist_info       
+---------+------------+--------------------------
+   30.94 |         27 | atvgnfqghleskscmcynmcwq 
+
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ LockRows  (cost=0.00..8.25 rows=1 width=188)
+   ->  Nested Loop  (cost=0.00..8.24 rows=1 width=188)
+         ->  Index Scan using item_pkey on item i  (cost=0.00..4.11 rows=1 width=48)
+               Index Cond: (i_id = 17012)
+         ->  Index Scan using stock_pkey on stock s  (cost=0.00..4.12 rows=1 width=148)
+               Index Cond: ((s_w_id = 1) AND (s_i_id = 17012))
+
+        ?column?         
+-------------------------
+ unique index idx_s_i_id
+
+ i_price | s_quantity |       ol_dist_info       
+---------+------------+--------------------------
+   30.94 |         27 | atvgnfqghleskscmcynmcwq 
+
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ LockRows  (cost=0.00..8.25 rows=1 width=188)
+   ->  Nested Loop  (cost=0.00..8.24 rows=1 width=188)
+         ->  Index Scan using item_pkey on item i  (cost=0.00..4.11 rows=1 width=48)
+               Index Cond: (i_id = 17012)
+         ->  Index Scan using stock_pkey on stock s  (cost=0.00..4.12 rows=1 width=148)
+               Index Cond: ((s_w_id = 1) AND (s_i_id = 17012))
+
+          ?column?           
+-----------------------------
+ non-unique index idx_s_i_id
+
+ i_price | s_quantity |       ol_dist_info       
+---------+------------+--------------------------
+   30.94 |         27 | atvgnfqghleskscmcynmcwq 
+
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ LockRows  (cost=0.00..8.25 rows=1 width=188)
+   ->  Nested Loop  (cost=0.00..8.24 rows=1 width=188)
+         ->  Index Scan using item_pkey on item i  (cost=0.00..4.11 rows=1 width=48)
+               Index Cond: (i_id = 17012)
+         ->  Index Scan using stock_pkey on stock s  (cost=0.00..4.12 rows=1 width=148)
+               Index Cond: ((s_w_id = 1) AND (s_i_id = 17012))
+

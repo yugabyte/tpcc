@@ -31,4 +31,5 @@ public abstract class TPCCProcedure extends Procedure {
                                 int terminalDistrictLowerID, int terminalDistrictUpperID,
                                 TPCCWorker w) throws SQLException;
 
+  public void test(Connection conn, TPCCWorker w) throws Exception {}
 }

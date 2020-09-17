@@ -18,6 +18,7 @@ package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -400,6 +401,256 @@ public class NewOrder extends TPCCProcedure {
         stmtInsertOrderLine.clearBatch();
       if (stmtUpdateStock != null)
         stmtUpdateStock.clearBatch();
+    }
+  }
+
+  public void test(Connection conn, TPCCWorker w) throws Exception {
+    //initializing all prepared statements
+    stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
+    stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
+    stmtGetDist=this.getPreparedStatement(conn, stmtGetDistSQL);
+    stmtInsertNewOrder=this.getPreparedStatement(conn, stmtInsertNewOrderSQL);
+    stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
+    stmtInsertOOrder =this.getPreparedStatement(conn, stmtInsertOOrderSQL);
+    stmtGetItem =this.getPreparedStatement(conn, stmtGetItemSQL);
+    stmtGetStock =this.getPreparedStatement(conn, stmtGetStockSQL);
+    stmtUpdateStock =this.getPreparedStatement(conn, stmtUpdateStockSQL);
+    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQL);
+
+    int count = 10;
+    int wId = 1;
+    int dId = 1;
+    int cId = 1;
+
+    int[] itemIDs = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int[] supplierWhIds = {1, 2, 1, 1, 1, 1, 1, 1, 1, 1};
+    int[] initialQty = {20, 20, 20, 20, 20, 11, 11, 11, 11, 11};
+    InitializeStockValues(conn, count, itemIDs, supplierWhIds, initialQty);
+    int nextOid = GetNextOid(conn, wId, dId);
+
+    int[] orderQts =   { 1,  2,  3,  4,  5,  6,  7,  8,  9, 10};
+    int[] qtyArr = {19, 18, 17, 16, 15, 96, 95, 94, 93, 92};
+    int[] orderCntArr = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    int[] remoteCntArr = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    // TPC-C spec v5.11.0 section 4.2 describes the NewOrder transaction.
+    // 1. wId is the Warehouse Id used for the transaction.
+    // 2. dId is the District Id used for the transaction.
+    // 3. cId is the customer Id used for the transaction.
+    // 4. nextOid is the Order Id used for the next transaction. This is used in the OORDER table as
+    //    well as the ORDER_LINE table.
+    // 5. itemIDs are the items being worked on by this transaction.
+    // 6. supplierWHIds are the corresponding Warehouse IDs. The combination of itemId and
+    //    supplierWhId is used to figure out the STOCK table row to be modified. We also need to
+    //    ensure that the ORDER_LINE table is populated with the same number of rows with the
+    //    corresponding {itemId, supplierWhId} combination.
+    // 7. orderQts is the quantity of each item that needs to be part of the order. This quantity
+    //    needs to be reflected in every row in ORDER_LINE.
+    // 8. qtyArr is the final expected value for `S_QUANTITY` in the STOCK table for the
+    //    corresponding items. This value is calculated using the specification in section 2.4.2.2.
+    // 9. ytdArr is the final expected value for `S_YTD` in the STOCK table for the corresponding
+    //    items.
+    // 10. orderCntArr is the final expected value for `S_ORDER_CNT` in the STOCK table for the
+    //     corresponding items.
+    // 11. remoteCntArr is the final expected value for `S_REMOTE_CNT` in the STOCK table for the
+    //     corresponding items.
+    AssertNewOrderTransaction(conn, w, count, wId, dId, cId, nextOid,
+                              itemIDs, supplierWhIds,
+                              new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} /* orderQts */,
+                              new int[]{19, 18, 17, 16, 15, 96, 95, 94, 93, 92} /* qtyArr */,
+                              new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} /* ytdArr */,
+                              new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1} /* orderCntArr */,
+                              new int[]{0, 1, 0, 0, 0, 0, 0, 0, 0, 0} /* remoteCntArr */);
+
+    AssertNewOrderTransaction(conn, w, count, wId, dId, cId, nextOid + 1,
+                              itemIDs, supplierWhIds,
+                              new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} /* orderQts */,
+                              new int[]{18, 16, 14, 12, 10, 90, 88, 86, 84, 82} /* qtyArr */,
+                              new int[]{2, 4, 6, 8, 10, 12, 14, 16, 18, 20} /* ytdArr */,
+                              new int[]{2, 2, 2, 2, 2, 2, 2, 2, 2, 2} /* orderCntArr */,
+                              new int[]{0, 2, 0, 0, 0, 0, 0, 0, 0, 0} /* remoteCntArr */);
+
+    // Test same item being present twice in the list of items.
+    AssertNewOrderTransaction(conn, w, count, wId, dId, cId, nextOid + 2,
+                              new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 1} /* itemIDs */,
+                              supplierWhIds,
+                              new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} /* orderQts */,
+                              new int[]{98, 14, 11, 99, 96, 84, 81, 78, 75, 98} /* qtyArr */,
+                              new int[]{13, 6, 9, 12, 15, 18, 21, 24, 27, 13} /* ytdArr */,
+                              new int[]{4, 3, 3, 3, 3, 3, 3, 3, 3, 4} /* orderCntArr */,
+                              new int[]{0, 3, 0, 0, 0, 0, 0, 0, 0, 0} /* remoteCntArr */);
+
+  }
+
+  void AssertNewOrderTransaction(Connection conn, TPCCWorker w,
+                                 int count, int wId, int dId, int cId, int nextOid,
+                                 int[] itemIDs, int[] supplierWhIds, int[] orderQts,
+                                 int[] qtyArr, int[] ytdArr,
+                                 int[] orderCntArr, int[] remoteCntArr) throws Exception {
+    try{
+      newOrderTransaction(wId, dId, cId, count, 0 /* o_all_local */, itemIDs, supplierWhIds,
+                          orderQts, conn, w);
+    } catch (Exception e) {
+      LOG.error("Execution of the new order transaction failed" + e);
+      throw e;
+    }
+
+    AssertDistValues(conn, wId, dId, nextOid + 1);
+    LOG.info("Done asserting District");
+    AssertStockValues(conn, count, itemIDs, supplierWhIds, qtyArr, ytdArr, orderCntArr,
+                      remoteCntArr);
+    LOG.info("Done asserting STOCK");
+    AssertOOrderValues(conn, nextOid, wId, dId);
+    LOG.info("Done asserting OORDER");
+    AssertOrderLineValues(conn, count, nextOid, wId, dId, itemIDs, supplierWhIds, orderQts);
+    LOG.info("Done asserting ORDERLINE");
+  }
+
+  // Initializes the stock quantity with the specified values and sets the S_YTD, S_ORDER_CNT and
+  // S_REMOTE_CNT to 0.
+  void InitializeStockValues(Connection conn,int count,
+                             int[] itemIDs, int[] supplierWhIds, int [] qtyArr) throws Exception {
+    try {
+      Statement stmt = conn.createStatement();
+      for (int i = 0; i < count; ++i) {
+        stmt.execute(
+          String.format("UPDATE STOCK SET S_QUANTITY = %d, S_YTD = 0, " +
+                        "S_ORDER_CNT = 0, S_REMOTE_CNT = 0 WHERE S_W_ID = %d AND S_I_ID = %d",
+                        qtyArr[i], supplierWhIds[i], itemIDs[i]));
+      }
+    } catch (Exception e) {
+      LOG.error("Initializing rows in STOCK table failed " + e);
+      throw e;
+    }
+  }
+
+  // Returns the next OID specified in the DISTRICT table.
+  int GetNextOid(Connection conn, int wId, int dId) throws Exception {
+    try {
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery(
+          String.format("SELECT * FROM DISTRICT WHERE D_W_ID = %d AND D_ID = %d", wId, dId));
+      if (!rs.next()) {
+        throw new Exception("Reading rows from DISTRICT table failed");
+      }
+      return rs.getInt("D_NEXT_O_ID");
+    } catch (Exception e) {
+      LOG.error("Reading rows from DISTRICT table failed " + e);
+      throw e;
+    }
+  }
+
+  // Ensures that the DISTRICT table is updated with the proper OID.
+  void AssertDistValues(Connection conn, int wId, int dId, int nextOId) throws Exception {
+    try {
+      Statement stmt = conn.createStatement();
+
+      ResultSet rs = stmt.executeQuery(
+          String.format("SELECT * FROM DISTRICT WHERE D_W_ID = %d AND D_ID = %d", wId, dId));
+      if (!rs.next()) {
+        throw new Exception("Reading row from DISTRICT table failed");
+      }
+      if (rs.getInt("D_NEXT_O_ID") != nextOId) {
+          throw new Exception(String.format("Values not expected for DISTRICT (%d) (%d)",
+                                            rs.getInt("D_NEXT_O_ID"), nextOId));
+      }
+    } catch (Exception e) {
+      LOG.error("Reading rows from DISTRICT table failed " + e);
+      throw e;
+    }
+  }
+
+  // Ensures that the STOCK table is updated with the proper values of quantity, ytd, order_cnt and
+  // remote_cnt values.
+  void AssertStockValues(Connection conn, int count,
+                         int[] itemIDs, int[] supplierWhIds,
+                         int[] qtyArr, int[] ytdArr,
+                         int[] orderCntArr, int[] remoteCntArr) throws Exception {
+    try {
+      Statement stmt = conn.createStatement();
+      for (int i = 0; i < count; ++i) {
+        int itemId = itemIDs[i];
+        int supplierWhId = supplierWhIds[i];
+
+        ResultSet rs = stmt.executeQuery(
+            String.format("SELECT * FROM STOCK WHERE S_W_ID = %d AND S_I_ID = %d",
+                          supplierWhId, itemId));
+        if (!rs.next()) {
+          throw new Exception("Reading row from STOCK table failed");
+        }
+
+        if (rs.getInt("S_QUANTITY") != qtyArr[i] ||
+            rs.getInt("S_YTD") != ytdArr[i] ||
+            rs.getInt("S_ORDER_CNT") != orderCntArr[i] ||
+            rs.getInt("S_REMOTE_CNT") != remoteCntArr[i]) {
+          throw new Exception(String.format(
+              "Values not expected for STOCK (%d %d %d %d) (%d %d %d %d)",
+              rs.getInt("S_QUANTITY"), rs.getInt("S_YTD"), rs.getInt("S_ORDER_CNT"),
+              rs.getInt("S_REMOTE_CNT"), qtyArr[i], ytdArr[i], orderCntArr[i], remoteCntArr[i]));
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("Reading rows from STOCK table failed " + e);
+      throw e;
+    }
+  }
+
+  // Ensures that the OORDER table is populated with the correct row corresponding to the new
+  // order_id.
+  void AssertOOrderValues(Connection conn, int oId, int wId, int dId) throws Exception {
+    try {
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery(
+          String.format("SELECT * FROM OORDER WHERE O_ID = %d AND O_W_ID = %d AND O_D_ID = %d",
+                        oId, wId, dId));
+      if (!rs.next()) {
+        throw new Exception("Reading row from OORDER table failed");
+      }
+      if (rs.getInt("O_ID") != oId ||
+          rs.getInt("O_W_ID") != wId ||
+          rs.getInt("O_D_ID") != dId) {
+        throw new Exception(String.format("Values not expected for OORDER (%d %d %d) (%d %d %d)",
+                                          rs.getInt("O_ID"), rs.getInt("O_W_ID"),
+                                          rs.getInt("O_D_ID"), oId, wId, dId));
+      }
+    } catch (Exception e) {
+      LOG.error("Reading rows from OORDER table failed " + e);
+      throw e;
+    }
+  }
+
+  // Ensures that the ORDER_LINE table is populated with the correct rows corresponding to the new
+  // order_id.
+  void AssertOrderLineValues(Connection conn, int count,
+                             int oId, int wId, int dId,
+                             int[] itemIDs, int[] supplierWhIds,
+                             int[] qtyArr) throws Exception {
+    try {
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery(String.format(
+          "SELECT * FROM ORDER_LINE WHERE OL_O_ID = %d AND OL_W_ID = %d AND OL_D_ID = %d",
+          oId, wId, dId));
+      for (int i = 0; i < count; ++i) {
+        if (!rs.next()) {
+          throw new Exception("Reading row from ORDER_LINE table failed");
+        }
+        if (rs.getInt("OL_O_ID") != oId ||
+            rs.getInt("OL_W_ID") != wId ||
+            rs.getInt("OL_D_ID") != dId ||
+            rs.getInt("OL_NUMBER") != (i + 1) ||
+            rs.getInt("OL_I_ID") != itemIDs[i] ||
+            rs.getInt("OL_SUPPLY_W_ID") != supplierWhIds[i] ||
+            rs.getInt("OL_QUANTITY") != qtyArr[i]) {
+        throw new Exception(String.format(
+            "Values not expected for ORDERLINE (%d %d %d %d %d %d %d) (%d %d %d %d %d %d %d)",
+            rs.getInt("OL_O_ID"), rs.getInt("OL_W_ID"), rs.getInt("OL_D_ID"),
+            rs.getInt("OL_NUMBER"), rs.getInt("OL_I_ID"), rs.getInt("OL_SUPPLY_W_ID"),
+            rs.getInt("OL_QUANTITY"), oId, wId, dId, i, itemIDs[i],  supplierWhIds[i], qtyArr[i]));
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("Reading rows from ORDER_LINE table failed " + e);
+      throw e;
     }
   }
 }

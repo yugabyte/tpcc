@@ -31,19 +31,19 @@ import org.apache.log4j.Logger;
  * @author breilly
  */
 public class SubmittedProcedure {
-    private final int type;
-    private final long startTime;
+  private final int type;
+  private final long startTime;
 
-    SubmittedProcedure(int type) {
-        this.type = type;
-        this.startTime = System.nanoTime();
-    }
+  SubmittedProcedure(int type) {
+    this.type = type;
+    this.startTime = System.nanoTime();
+  }
 
-    SubmittedProcedure(int type, long startTime) {
-        this.type = type;
-        this.startTime = startTime;
-    }
+  SubmittedProcedure(int type, long startTime) {
+    this.type = type;
+    this.startTime = startTime;
+  }
 
-    public int getType() { return type; }
-    public long getStartTime() { return startTime; }
+  public int getType() { return type; }
+  public long getStartTime() { return startTime; }
 }

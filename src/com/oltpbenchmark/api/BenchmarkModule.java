@@ -488,4 +488,5 @@ public abstract class BenchmarkModule {
         this.supplementalProcedures.add(procClass);
     }
 
+    public void test() throws Exception {}
 }

@@ -124,6 +124,11 @@ public class DBWorkload {
             "Execute the benchmark workload");
     options.addOption(
             null,
+            "test",
+            true,
+            "Test the benchmark procedure execution");
+    options.addOption(
+            null,
             "runscript",
             true,
             "Run an SQL script");
@@ -328,7 +333,7 @@ public class DBWorkload {
         wrkld.setNumDBConnections(wrkld.getLoaderThreads());
       }
 
-      if (isBooleanOptionSet(argsLine, "execute")) {
+      if (isBooleanOptionSet(argsLine, "execute") || isBooleanOptionSet(argsLine, "test")) {
         wrkld.setNeedsExecution(true);
       }
 
@@ -695,6 +700,12 @@ public class DBWorkload {
         LOG.info("Finished!");
         LOG.info(SINGLE_LINE);
       }
+    }
+
+    if (isBooleanOptionSet(argsLine, "test")) {
+        for (BenchmarkModule benchmark : benchList) {
+            benchmark.test();
+        }
     }
 
     // Execute Workload

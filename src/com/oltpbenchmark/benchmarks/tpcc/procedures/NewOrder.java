@@ -20,7 +20,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -253,9 +255,18 @@ public class NewOrder extends TPCCProcedure {
       stmtInsertOOrder.executeUpdate();
       change order]]*/
 
+      Set<Integer> itemSet = new HashSet<Integer>();
       for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
         ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
         ol_i_id = itemIDs[ol_number - 1];
+
+        // If the item is present multiple times in the list, flush the outstanding updates/inserts
+        // so that this update can use the correct values.
+        if (itemSet.contains(ol_i_id)) {
+          stmtInsertOrderLine.executeBatch();
+          stmtUpdateStock.executeBatch();
+        }
+        itemSet.add(ol_i_id);
         ol_quantity = orderQuantities[ol_number - 1];
         stmtGetItem.setInt(1, ol_i_id);
         rs = stmtGetItem.executeQuery();

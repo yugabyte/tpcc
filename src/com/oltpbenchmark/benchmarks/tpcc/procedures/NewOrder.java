@@ -24,6 +24,8 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
@@ -103,6 +105,7 @@ public class NewOrder extends TPCCProcedure {
   // transaction. These statements are created dynamically.
   public SQLStmt[] stmtGetItemSQLArr;
   public SQLStmt[] stmtGetStockSQLArr;
+  public SQLStmt[] stmtUpdateStockProcedureSQL;
   public SQLStmt[] stmtInsertOrderLineSQLArr;
 
   // NewOrder Txn
@@ -115,11 +118,13 @@ public class NewOrder extends TPCCProcedure {
   private PreparedStatement stmtGetItem = null;
   private PreparedStatement stmtGetStock = null;
   private PreparedStatement stmtUpdateStock = null;
+  private PreparedStatement stmtUpdateStockProcedure = null;
   private PreparedStatement stmtInsertOrderLine = null;
 
   public NewOrder() {
     stmtGetItemSQLArr = new SQLStmt[15];
     stmtGetStockSQLArr = new SQLStmt[15];
+    stmtUpdateStockProcedureSQL = new SQLStmt[15];
     stmtInsertOrderLineSQLArr = new SQLStmt[11];
 
     // We create 15 statements for selecting rows from the `ITEM` table with varying number of ITEM
@@ -159,6 +164,15 @@ public class NewOrder extends TPCCProcedure {
       stmtGetStockSQLArr[i - 1] = new SQLStmt(sb.toString() + ") FOR UPDATE");
     }
 
+    // We create 15 statements to update the rows in `STOCK` table. Each string looks like:
+    // CALL updatestock[0-9]*(?, ? ...)
+    sb = new StringBuilder();
+    sb.append("?");
+    for (int i = 1; i <= 15; ++i) {
+      sb.append(", ?, ?, ?, ?");
+      stmtUpdateStockProcedureSQL[i - 1] = new SQLStmt(String.format("CALL updatestock%d(%s)",
+                                                                      i, sb.toString()));
+    }
     // We create 11 statements that insert into `ORDERLINE`. Each string looks like:
     // INSERT INTO ORDERLINE
     // (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT,
@@ -219,7 +233,6 @@ public class NewOrder extends TPCCProcedure {
     stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
     stmtUpdateStock =this.getPreparedStatement(conn, stmtUpdateStockSQL);
     stmtInsertOOrder =this.getPreparedStatement(conn, stmtInsertOOrderSQL);
-    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[numItems - 5]);
 
     newOrderTransaction(terminalWarehouseID, districtID,
                         customerID, numItems, allLocal, itemIDs,
@@ -327,14 +340,19 @@ public class NewOrder extends TPCCProcedure {
                        s_qty_arr, s_data_arr, ol_dist_info_arr,
                        ytd_arr, remote_cnt_arr, conn);
 
-      updateStock(o_ol_cnt, w_id, itemIDs, supplierWarehouseIDs,
-                  orderQuantities, s_qty_arr, ytd_arr, remote_cnt_arr, conn);
+      if (w.getBenchmarkModule().getWorkloadConfiguration().getUseStoredProcedures()) {
+        updateStockUsingProcedures(o_ol_cnt, w_id, itemIDs, supplierWarehouseIDs,
+                                   orderQuantities, s_qty_arr, ytd_arr, remote_cnt_arr, conn);
+      } else {
+        updateStock(o_ol_cnt, w_id, itemIDs, supplierWarehouseIDs,
+                    orderQuantities, s_qty_arr, ytd_arr, remote_cnt_arr, conn);
+      }
 
       total_amount = insertOrderLines(o_id, w_id, d_id, o_ol_cnt, itemIDs,
                                       supplierWarehouseIDs, orderQuantities,
                                       i_price_arr, i_data_arr, s_data_arr,
                                       ol_dist_info_arr, orderLineAmounts,
-                                      brandGeneric);
+                                      brandGeneric, conn);
       total_amount *= (1 + w_tax + d_tax) * (1 - c_discount);
     } catch(UserAbortException userEx) {
         LOG.debug("Caught an expected error in New Order");
@@ -384,11 +402,10 @@ public class NewOrder extends TPCCProcedure {
       ResultSet rs2 = stmtGetStock.executeQuery();
 
       Map<Integer, Integer> m = new HashMap<>();
-      for (int i = 0; i < itemIDs.length; ++i) {
-        int expected = itemIDs[i];
+      for (int expected: entry.getValue()) {
         if (m.containsKey(expected)) {
           continue;
-                }
+        }
         if (!rs1.next()) {
           throw new UserAbortException("EXPECTED new order rollback: I_ID=" +
                                        TPCCConfig.INVALID_ITEM_ID + "not found");
@@ -496,6 +513,57 @@ public class NewOrder extends TPCCProcedure {
     }
   }
 
+  void updateStockUsingProcedures(int o_ol_cnt, int w_id,
+                                  int[] itemIDs, int[] supplierWarehouseIDs,
+                                  int[] orderQuantities, int[] s_qty_arr,
+                                  int[] ytd_arr, int[] remote_cnt_arr,
+                                  Connection conn) throws  SQLException {
+
+    Map<Integer, List<Integer>> input = new HashMap<>();
+    for (int i = 0; i < o_ol_cnt; ++i) {
+      int itemId = itemIDs[i];
+      int supplierWh = supplierWarehouseIDs[i];
+      if (!input.containsKey(supplierWh)) {
+        input.put(supplierWh, new ArrayList<>());
+      }
+      input.get(supplierWh).add(itemId);
+    }
+
+    for (Map.Entry<Integer, List<Integer>> entry : input.entrySet()) {
+      int whId = entry.getKey();
+      int numEntries = entry.getValue().size();
+      stmtUpdateStockProcedure =
+        this.getPreparedStatement(conn, stmtUpdateStockProcedureSQL[numEntries - 1]);
+
+      int i = 1;
+      stmtUpdateStockProcedure.setInt(i++, whId);
+      for (int itemId : entry.getValue()) {
+        int index = getIndex(itemId, itemIDs);
+        int s_quantity = s_qty_arr[index];
+        int ol_quantity = orderQuantities[index];
+
+        if (s_quantity - ol_quantity >= 10) {
+          s_quantity -= ol_quantity;
+        } else {
+          s_quantity += -ol_quantity + 91;
+        }
+
+        int s_remote_cnt_increment;
+        if (whId == w_id) {
+          s_remote_cnt_increment = 0;
+        } else {
+          s_remote_cnt_increment = 1;
+        }
+
+        stmtUpdateStockProcedure.setInt(i++, itemId);
+        stmtUpdateStockProcedure.setInt(i++, s_quantity);
+        stmtUpdateStockProcedure.setInt(i++, ytd_arr[index] + ol_quantity);
+        stmtUpdateStockProcedure.setInt(i++, remote_cnt_arr[index] + s_remote_cnt_increment);
+      }
+      stmtUpdateStockProcedure.execute();
+    }
+  }
+
   // Updates the STOCK table with the new values for the quantity, ytd, remote_cnt and
   // operation_count.
   void updateStock(int o_ol_cnt, int w_id,
@@ -504,20 +572,20 @@ public class NewOrder extends TPCCProcedure {
                    int[] ytd_arr, int[] remote_cnt_arr,
                    Connection conn) throws  SQLException {
 
-    Map<Integer, HashSet<Integer>> input = new HashMap<>();
     for (int i = 0; i < o_ol_cnt; ++i) {
       int itemId = itemIDs[i];
       int whId = supplierWarehouseIDs[i];
 
       int index = getIndex(itemId, itemIDs);
       int s_quantity = s_qty_arr[index];
-      int ol_quantity = getOrderQts(itemId, itemIDs, orderQuantities);
+      int ol_quantity = orderQuantities[index];
 
       if (s_quantity - ol_quantity >= 10) {
         s_quantity -= ol_quantity;
       } else {
         s_quantity += -ol_quantity + 91;
       }
+
       int s_remote_cnt_increment;
       if (whId == w_id) {
         s_remote_cnt_increment = 0;
@@ -566,10 +634,12 @@ public class NewOrder extends TPCCProcedure {
                        int[] supplierWarehouseIDs, int[] orderQuantities,
                        float[] i_price_arr, String[] i_data_arr,
                        String[] s_data_arr, String[] ol_dist_info_arr,
-                       float[] orderLineAmounts, char[] brandGeneric) throws SQLException {
+                       float[] orderLineAmounts, char[] brandGeneric,
+                       Connection conn) throws SQLException {
 
     int total_amount = 0;
     int k = 1;
+    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5]);
     for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
       int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
       int ol_i_id = itemIDs[ol_number - 1];
@@ -630,7 +700,7 @@ public class NewOrder extends TPCCProcedure {
     InitializeStockValues(conn, count, itemIDs, supplierWhIds, initialQty);
     int nextOid = GetNextOid(conn, wId, dId);
 
-    int[] orderQts =   { 1,  2,  3,  4,  5,  6,  7,  8,  9, 10};
+    int[] orderQts = { 1,  2,  3,  4,  5,  6,  7,  8,  9, 10};
     int[] qtyArr = {19, 18, 17, 16, 15, 96, 95, 94, 93, 92};
     int[] orderCntArr = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     int[] remoteCntArr = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0};

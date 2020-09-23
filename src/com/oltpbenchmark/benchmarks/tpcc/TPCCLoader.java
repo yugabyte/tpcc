@@ -118,20 +118,24 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
       threads.add(t);
     } // FOR
 
-    if (workConf.getEnableForeignKeysAfterLoad() && workConf.getShouldEnableForeignKeys()) {
-      threads.add(new LoaderThread() {
-          @Override
-          public void load(Connection conn) throws SQLException {
-              try {
-                  warehouseLatch.await();
-              } catch (InterruptedException ex) {
-                  ex.printStackTrace();
-                  throw new RuntimeException(ex);
-              }
+    threads.add(new LoaderThread() {
+        @Override
+        public void load(Connection conn) throws SQLException {
+            try {
+                warehouseLatch.await();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+                throw new RuntimeException(ex);
+            }
+            if (workConf.getEnableForeignKeysAfterLoad() &&
+                workConf.getShouldEnableForeignKeys()) {
               EnableForeignKeyConstraints(conn);
-          }
-      });
-    }
+            }
+            if (workConf.getUseStoredProcedures()) {
+              CreateSqlProcedures(conn);
+            }
+        }
+    });
     return (threads);
   }
 
@@ -207,6 +211,35 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
     } catch (SQLException se) {
       LOG.debug(se.getMessage());
       transRollback(conn);
+    }
+  }
+
+  // This function creates SQL procedures that the execution would need. Currently we have
+  // procedures only to update the Stock table.
+  protected void CreateSqlProcedures(Connection conn) throws SQLException {
+    try {
+      Statement st = conn.createStatement();
+
+      StringBuilder argsSb = new StringBuilder();
+      StringBuilder updateStatements = new StringBuilder();
+
+      argsSb.append("wid int");
+      for (int i = 1; i <= 15; ++i) {
+        argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));
+        updateStatements.append(String.format(
+          "UPDATE STOCK SET S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
+          "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d;",
+          i, i, i, i));
+        String updateStmt =
+          String.format("CREATE PROCEDURE updatestock%d (%s) AS '%s' LANGUAGE SQL;",
+                        i, argsSb.toString(), updateStatements.toString());
+
+        st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d", i));
+        st.execute(updateStmt);
+      }
+    } catch (SQLException se) {
+      LOG.error(se.getMessage());
+      throw se;
     }
   }
 

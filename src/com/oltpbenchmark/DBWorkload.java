@@ -337,6 +337,10 @@ public class DBWorkload {
         wrkld.setNeedsExecution(true);
       }
 
+      if (xmlConfig.containsKey("useStoredProcedures")) {
+        wrkld.setUseStoredProcedures(xmlConfig.getBoolean("useStoredProcedures"));
+      }
+
       if (!argsLine.hasOption("merge-results")) {
         LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
                  ", port: " + wrkld.getPort() +

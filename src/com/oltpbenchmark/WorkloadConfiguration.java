@@ -65,6 +65,7 @@ public class WorkloadConfiguration {
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
+  private boolean useStoredProcedures = true;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -375,6 +376,11 @@ public class WorkloadConfiguration {
 
   public void setNeedsExecution(boolean needsExecution) { this.needsExecution = needsExecution; }
   public boolean getNeedsExecution() { return this.needsExecution; }
+
+  public void setUseStoredProcedures(boolean useStoredProcedures) {
+    this.useStoredProcedures = useStoredProcedures;
+  }
+  public boolean getUseStoredProcedures() { return this.useStoredProcedures; }
 
   @Override
   public String toString() {

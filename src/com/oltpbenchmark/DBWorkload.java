@@ -333,7 +333,8 @@ public class DBWorkload {
         wrkld.setNumDBConnections(wrkld.getLoaderThreads());
       }
 
-      if (isBooleanOptionSet(argsLine, "execute") || isBooleanOptionSet(argsLine, "test")) {
+      if (isBooleanOptionSet(argsLine, "execute") || isBooleanOptionSet(argsLine, "test") ||
+          isBooleanOptionSet(argsLine, "clear")) {
         wrkld.setNeedsExecution(true);
       }
 

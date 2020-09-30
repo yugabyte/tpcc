@@ -48,6 +48,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.Loader;
+import com.oltpbenchmark.catalog.Catalog;
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.*;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
@@ -754,5 +755,22 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
     }
     return (k);
   } // end loadOrder()
+
+  @Override
+  public void unload(Connection conn, Catalog catalog) throws SQLException {
+    conn.setAutoCommit(false);
+    conn.setTransactionIsolation(workConf.getIsolationMode());
+    Statement st = conn.createStatement();
+
+    st.execute("DROP TABLE IF EXISTS NEW_ORDER CASCADE");
+    st.execute("DROP TABLE IF EXISTS ORDER_LINE CASCADE");
+    st.execute("DROP TABLE IF EXISTS OORDER CASCADE");
+    st.execute("DROP TABLE IF EXISTS HISTORY CASCADE");
+    st.execute("DROP TABLE IF EXISTS STOCK CASCADE");
+    st.execute("DROP TABLE IF EXISTS ITEM CASCADE");
+    st.execute("DROP TABLE IF EXISTS CUSTOMER CASCADE");
+    st.execute("DROP TABLE IF EXISTS DISTRICT CASCADE");
+    st.execute("DROP TABLE IF EXISTS WAREHOUSE CASCADE");
+  }
 
 } // end LoadData Class

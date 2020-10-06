@@ -167,6 +167,7 @@ public class DBWorkload {
                       "Total number of warehouses across all executions");
     options.addOption(null, "loaderthreads", true, "Number of loader threads (default 10)");
     options.addOption(null, "enable-foreign-keys", true, "Whether to enable foregin keys");
+    options.addOption(null, "create-sql-procedures", true, "Creates the SQL procedures");
 
     options.addOption(null, "warmup-time-secs", true, "Warmup time in seconds for the benchmark");
     options.addOption(null, "initial-delay-secs", true,
@@ -693,6 +694,12 @@ public class DBWorkload {
     if (isBooleanOptionSet(argsLine, "enable-foreign-keys")) {
       for (BenchmarkModule benchmark : benchList) {
         benchmark.enableForeignKeys();
+      }
+    }
+
+    if (isBooleanOptionSet(argsLine, "create-sql-procedures")) {
+      for (BenchmarkModule benchmark : benchList) {
+        benchmark.createSqlProcedures();
       }
     }
 

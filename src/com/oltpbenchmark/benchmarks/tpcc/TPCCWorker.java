@@ -105,5 +105,9 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
     TPCCProcedure proc = (TPCCProcedure) this.getProcedure(
         this.transactionTypes.getType("NewOrder").getProcedureClass());
     proc.test(conn, this);
+
+    proc = (TPCCProcedure) this.getProcedure(
+        this.transactionTypes.getType("StockLevel").getProcedureClass());
+    proc.test(conn, this);
   }
 }

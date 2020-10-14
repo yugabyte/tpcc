@@ -162,6 +162,11 @@ public class TPCCBenchmark extends BenchmarkModule {
       loader.EnableForeignKeyConstraints(makeConnection());
     }
 
+    public void createSqlProcedures() throws Exception {
+      TPCCLoader loader = new TPCCLoader(this);
+      loader.CreateSqlProcedures(makeConnection());
+    }
+
     public void test() throws Exception {
       int wId = 1;
       TPCCWorker worker = new TPCCWorker(this, 1 /* worker_id */, 1, 1, 1, 2);

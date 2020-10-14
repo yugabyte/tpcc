@@ -481,6 +481,8 @@ public abstract class BenchmarkModule {
 
     public abstract void enableForeignKeys() throws Exception;
 
+    public abstract void createSqlProcedures() throws Exception;
+
     /**
      *
      * @param procClass

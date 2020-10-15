@@ -18,6 +18,8 @@
     <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>
     <hikariConnectionTimeoutMs>180000</hikariConnectionTimeoutMs>
     <useStoredProcedures>true</useStoredProcedures>
+    <displayEnhancedLatencyMetrics>false</displayEnhancedLatencyMetrics>
+
    	<transactiontypes>
     	<transactiontype>
     		<name>NewOrder</name>

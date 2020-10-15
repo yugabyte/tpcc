@@ -47,6 +47,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     private static WorkloadState wrkldState;
     private LatencyRecord latencies;
+    private LatencyRecord wholeOperationLatencies;
+    private LatencyRecord acqConnectionLatencies;
     private Statement currStatement;
 
     // Interval requests used by the monitor
@@ -137,6 +139,14 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         return latencies;
     }
 
+    public final Iterable<LatencyRecord.Sample> getWholeOperationLatencyRecords() {
+        return wholeOperationLatencies;
+    }
+
+    public final Iterable<LatencyRecord.Sample> getAcqConnectionLatencyRecords() {
+        return acqConnectionLatencies;
+    }
+
     @SuppressWarnings("unchecked")
     public final <P extends Procedure> P getProcedure(Class<P> procClass) {
         return (P) (this.class_procedures.get(procClass));
@@ -205,6 +215,60 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         }
     }
 
+    class TransactionExecutionState {
+      private long startOperation = 0;
+      private long endOperation = 0;
+      private long startConnection = 0;
+      private long endConnection = 0;
+      private TransactionType type;
+
+      public TransactionExecutionState() {
+        this.startOperation = 0;
+        this.endOperation = 0;
+        this.startConnection = 0;
+        this.endConnection = 0;
+        this.type = TransactionType.INVALID;
+      }
+
+      public TransactionExecutionState(long startOperation, long endOperation,
+                                       long startConnection, long endConnection,
+                                       TransactionType type) {
+        this.startOperation = startOperation;
+        this.endOperation = endOperation;
+        this.startConnection = startConnection;
+        this.endConnection = endConnection;
+        this.type = type;
+      }
+
+      public long getStartOperation() {
+        return startOperation;
+      }
+
+      public long getEndOperation() {
+        return endOperation;
+      }
+
+      public long getStartConnection() {
+        return startConnection;
+      }
+
+      public long getEndConnection() {
+        return endConnection;
+      }
+
+      public TransactionType getTransactionType() {
+        return type;
+      }
+
+      public void setEndOperation(long endOperation) {
+        this.endOperation = endOperation;
+      }
+
+      public void setEndConnection(long endConnection) {
+        this.endConnection = endConnection;
+      }
+    }
+
     @Override
     public final void run() {
         Thread t = Thread.currentThread();
@@ -213,6 +277,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
         // In case of reuse reset the measurements
         latencies = new LatencyRecord(wrkldState.getTestStartNs());
+        wholeOperationLatencies = new LatencyRecord(wrkldState.getTestStartNs());
+        acqConnectionLatencies = new LatencyRecord(wrkldState.getTestStartNs());
 
         // Invoke the initialize callback
         try {
@@ -310,10 +376,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 }
             }
 
-            long startOperation = System.nanoTime();
-            TransactionType type = invalidTT;
+            TransactionExecutionState executionState = new TransactionExecutionState();
             try {
-                type = doWork(preState == State.MEASURE, pieceOfWork);
+                executionState = doWork(preState == State.MEASURE, pieceOfWork);
             } catch (IndexOutOfBoundsException e) {
                 if (phase.isThroughputRun()) {
                     LOG.error("Thread tried executing disabled phase!");
@@ -336,7 +401,13 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     }
                 }
             }
-            long endOperation = System.nanoTime();
+            // In case of transaction failures, the end times will not be populated.
+            if (executionState.getEndOperation() == 0) {
+              executionState.setEndOperation(System.nanoTime());
+            }
+            if (executionState.getEndConnection() == 0) {
+              executionState.setEndConnection(System.nanoTime());
+            }
 
             if (think_time_msecs > 0) {
                 // Sleep for the think time duration.
@@ -359,8 +430,27 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // changed, otherwise we're recording results for a query
                     // that either started during the warmup phase or ended
                     // after the timer went off.
-                    if (preState == State.MEASURE && type != null && this.wrkldState.getCurrentPhase().id == phase.id) {
-                        latencies.addLatency(type.getId(), start, end, startOperation, endOperation, this.id, phase.id);
+                    if (preState == State.MEASURE && executionState.getTransactionType() != null &&
+                        this.wrkldState.getCurrentPhase().id == phase.id) {
+                        latencies.addLatency(
+                          executionState.getTransactionType().getId(),
+                          start, end,
+                          executionState.getStartOperation(), executionState.getEndOperation(),
+                          this.id, phase.id);
+                        acqConnectionLatencies.addLatency(
+                          1, start, end,
+                          executionState.getStartConnection(),executionState.getEndOperation(),
+                          this.id, phase.id);
+
+                        // The latency of the whole operation can be obtained by evaluating the
+                        // time from the acquisition of the connection to the completion of the
+                        // operation.
+                        wholeOperationLatencies.addLatency(
+                          executionState.getTransactionType().getId(),
+                          start, end,
+                          executionState.getStartConnection(), executionState.getEndOperation(),
+                          this.id, phase.id);
+
                         intervalRequests.incrementAndGet();
                     }
                     if (phase.isLatencyRun())
@@ -390,8 +480,13 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      *
      * @param llr
      */
-    protected final TransactionType doWork(boolean measure, SubmittedProcedure pieceOfWork) {
+    protected final TransactionExecutionState doWork(boolean measure, SubmittedProcedure pieceOfWork) {
         TransactionType next = null;
+        long startOperation = 0;
+        long endOperation = 0;
+        long startConnection = 0;
+        long endConnection = 0;
+
         TransactionStatus status = TransactionStatus.RETRY;
         Savepoint savepoint = null;
         final DatabaseType dbType = wrkld.getDBType();
@@ -400,9 +495,13 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
         Connection conn = null;
         try {
+            startConnection = System.nanoTime();
+
             conn = dataSource.getConnection();
             conn.setAutoCommit(false);
             conn.setTransactionIsolation(this.wrkld.getIsolationMode());
+
+            endConnection = System.nanoTime();
 
             while (status == TransactionStatus.RETRY && this.wrkldState.getGlobalState() != State.DONE) {
                 if (next == null) {
@@ -420,7 +519,10 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // }
 
                     status = TransactionStatus.UNKNOWN;
+
+                    startOperation = System.nanoTime();
                     status = this.executeWork(conn, next);
+                    endOperation = System.nanoTime();
 
                 // User Abort Handling
                 // These are not errors
@@ -517,7 +619,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             }
         }
 
-        return (next);
+        return new TransactionExecutionState(startOperation, endOperation,
+                                             startConnection, endConnection,
+                                             next);
     }
 
     /**

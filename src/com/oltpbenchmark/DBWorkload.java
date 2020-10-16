@@ -725,7 +725,7 @@ public class DBWorkload {
       // Bombs away!
       Results r = null;
       try {
-        r = runWorkload(benchList, verbose, intervalMonitor);
+        r = runWorkload(benchList, verbose, intervalMonitor, xmlConfig);
       } catch (Throwable ex) {
         LOG.error("Unexpected error when running benchmarks.", ex);
         System.exit(1);
@@ -976,7 +976,7 @@ public class DBWorkload {
   }
 
   private static Results runWorkload(List<BenchmarkModule> benchList, boolean verbose,
-                                     int intervalMonitor) throws QueueLimitException, IOException {
+                                     int intervalMonitor, XMLConfiguration xmlConfig) throws QueueLimitException, IOException {
     List<Worker<?>> workers = new ArrayList<Worker<?>>();
     List<WorkloadConfiguration> workConfs = new ArrayList<WorkloadConfiguration>();
 
@@ -1017,34 +1017,74 @@ public class DBWorkload {
     LOG.info("TPM-C: " + df.format(tpmc));
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
 
+    boolean displayEnhancedLatencyMetrics =
+      xmlConfig.containsKey("displayEnhancedLatencyMetrics") &&
+      xmlConfig.getBoolean("displayEnhancedLatencyMetrics");
+    PrintLatencies(workers, displayEnhancedLatencyMetrics);
+
+    return r;
+  }
+
+  private static void PrintLatencies(List<Worker<?>> workers,
+                                     boolean displayEnhancedLatencyMetrics) {
     List<List<Integer>> list_latencies = new ArrayList<>();
+    List<List<Integer>> list_enhanced_latencies = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
       list_latencies.add(new ArrayList<Integer>());
+      list_enhanced_latencies.add(new ArrayList<Integer>());
     }
+
     for (Worker<?> w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
       }
+
+      if (displayEnhancedLatencyMetrics) {
+        for (LatencyRecord.Sample sample : w.getWholeOperationLatencyRecords()) {
+          list_enhanced_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
+        }
+      }
     }
-    printLatencies(list_latencies, transactionTypes);
-    return r;
+
+    if (!displayEnhancedLatencyMetrics) {
+      for (int i = 0; i < list_latencies.size(); ++i) {
+        LOG.info(getOperationLatencyString(transactionTypes.get(i+1).toString(),
+                                           list_latencies.get(i)));
+      }
+      return;
+    }
+
+    for (int i = 0; i < list_latencies.size(); ++i) {
+      LOG.info(getOperationLatencyString(transactionTypes.get(i+1).toString(),
+                                         list_latencies.get(i)) +
+               getOperationLatencyString(", Whole operation",
+                                         list_enhanced_latencies.get(i)));
+    }
+
+    List<Integer> acqConnectionLatency = new ArrayList<Integer>();
+    for (Worker<?> w : workers) {
+      for (LatencyRecord.Sample sample : w.getAcqConnectionLatencyRecords()) {
+        acqConnectionLatency.add(sample.operationLatencyUs);
+      }
+    }
+    LOG.info(getOperationLatencyString("Acquire Connection", acqConnectionLatency));
   }
 
-  private static void printLatencies(List<List<Integer>> list_latencies, Map<Integer,
-                                     String> transactionTypes) {
-    for (int i = 0; i < 5; ++i) {
-      Collections.sort(list_latencies.get(i));
-      long sum = 0;
-      for (int val : list_latencies.get(i)) {
-        sum += val;
-      }
-      double avgLatency = sum / list_latencies.get(i).size();
-      int p99Index = (int)(list_latencies.get(i).size() * 0.99);
-
-      LOG.info(transactionTypes.get(i+1) +
-          ", Avg Latency: " + avgLatency / 1000 +
-          " msecs, p99 Latency: " + list_latencies.get(i).get(p99Index) * 1.0 / 1000 + " msecs");
+  private static String getOperationLatencyString(String operation, List<Integer> latencies) {
+    if (latencies.size() == 0) {
+      return "";
     }
+    Collections.sort(latencies);
+    long sum = 0;
+    for (int val : latencies) {
+      sum += val;
+    }
+    double avgLatency = sum * 1.0 / latencies.size() / 1000;
+    int p99Index = (int)(latencies.size() * 0.99);
+    double p99Latency = latencies.get(p99Index) * 1.0 / 1000;
+
+    return operation + ", Avg Latency: " + avgLatency +
+           " msecs, p99 Latency: " + p99Latency + " msecs";
   }
 
   public static void mergeResults(String dirPath, String[] fileNames) {
@@ -1113,7 +1153,10 @@ public class DBWorkload {
     LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
     LOG.info("TPM-C: " + df.format(tpmc));
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
-    printLatencies(list_latencies, transactionTypes);
+    for (int i = 0; i < list_latencies.size(); ++i) {
+      LOG.info(getOperationLatencyString(transactionTypes.get(i+1).toString(),
+                                         list_latencies.get(i)));
+    }
   }
 
   private static void printUsage(Options options) {

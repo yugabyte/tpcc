@@ -19,6 +19,8 @@ package com.oltpbenchmark.benchmarks.tpcc;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -162,9 +164,34 @@ public class TPCCBenchmark extends BenchmarkModule {
       loader.EnableForeignKeyConstraints(makeConnection());
     }
 
+    // This function creates SQL procedures that the execution would need. Currently we have
+    // procedures only to update the Stock table.
     public void createSqlProcedures() throws Exception {
-      TPCCLoader loader = new TPCCLoader(this);
-      loader.CreateSqlProcedures(makeConnection());
+      try {
+        Connection conn = makeConnection();
+        Statement st = conn.createStatement();
+
+        StringBuilder argsSb = new StringBuilder();
+        StringBuilder updateStatements = new StringBuilder();
+
+        argsSb.append("wid int");
+        for (int i = 1; i <= 15; ++i) {
+          argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));
+          updateStatements.append(String.format(
+            "UPDATE STOCK SET S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
+            "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d;",
+            i, i, i, i));
+          String updateStmt =
+            String.format("CREATE PROCEDURE updatestock%d (%s) AS '%s' LANGUAGE SQL;",
+                          i, argsSb.toString(), updateStatements.toString());
+
+          st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d", i));
+          st.execute(updateStmt);
+        }
+      } catch (SQLException se) {
+        LOG.error(se.getMessage());
+        throw se;
+      }
     }
 
     public void test() throws Exception {

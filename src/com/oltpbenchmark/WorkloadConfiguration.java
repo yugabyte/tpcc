@@ -62,6 +62,7 @@ public class WorkloadConfiguration {
   private boolean useThinkTime = true;
   private boolean enableForeignKeysAfterLoad = true;
   private boolean shouldEnableForeignKeys = true;
+  private boolean createSQLProcedures = true;
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
@@ -364,6 +365,13 @@ public class WorkloadConfiguration {
   }
   public void setShouldEnableForeignKeys(boolean shouldEnableForeignKeys) {
     this.shouldEnableForeignKeys = shouldEnableForeignKeys;
+  }
+
+  public boolean getCreateSQLProcedures() {
+    return createSQLProcedures;
+  }
+  public void setCreateSQLProcedures(boolean createSQLProcedures) {
+    this.createSQLProcedures = createSQLProcedures;
   }
 
   public int getBatchSize() {

@@ -305,6 +305,7 @@ public class DBWorkload {
       }
       if (argsLine.hasOption("start-warehouse-id")) {
           wrkld.setShouldEnableForeignKeys(false);
+          wrkld.setCreateSQLProcedures(false);
       }
 
       if (xmlConfig.containsKey("batchSize")) {
@@ -655,6 +656,7 @@ public class DBWorkload {
       for (BenchmarkModule benchmark : benchList) {
         LOG.info("Creating new " + benchmark.getBenchmarkName().toUpperCase() + " database...");
         runCreator(benchmark, verbose);
+        benchmark.createSqlProcedures();
         LOG.info("Finished!");
         LOG.info(SINGLE_LINE);
       }

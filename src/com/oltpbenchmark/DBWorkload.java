@@ -277,6 +277,13 @@ public class DBWorkload {
       wrkld.setDBUsername(xmlConfig.getString("username"));
       wrkld.setDBPassword(xmlConfig.getString("password"));
 
+      if (xmlConfig.containsKey("sslCert") && xmlConfig.getString("sslCert").length() > 0) {
+        wrkld.setSslCert(xmlConfig.getString("sslCert"));
+      }
+      if (xmlConfig.containsKey("sslKey") && xmlConfig.getString("sslKey").length() > 0) {
+        wrkld.setSslKey(xmlConfig.getString("sslKey"));
+      }
+
       int terminals = xmlConfig.getInt("terminals[not(@bench)]", numWarehouses * 10);
       terminals = xmlConfig.getInt("terminals" + pluginTest, terminals);
       wrkld.setTerminals(terminals);

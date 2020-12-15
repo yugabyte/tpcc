@@ -8,6 +8,9 @@
     <password></password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
+    <sslCert></sslCert>
+    <sslKey></sslKey>
+
     <!--
     <terminals>100</terminals>
     -->

@@ -48,6 +48,8 @@ public class WorkloadConfiguration {
   private String db_username;
   private String db_password;
   private String db_driver;
+  private String sslCert;
+  private String sslKey;
   private int numWarehouses = -1;
   private int startWarehouseIdForShard = -1;
   private int totalWarehousesAcrossShards = -1;
@@ -184,6 +186,24 @@ public class WorkloadConfiguration {
   public String getDBDriver() {
     return this.db_driver;
   }
+
+  public void setSslCert(String sslCert) {
+    this.sslCert = sslCert;
+  }
+
+  public String getSslCert() {
+    return this.sslCert;
+  }
+
+
+  public void setSslKey(String sslKey) {
+    this.sslKey = sslKey;
+  }
+
+  public String getSslKey() {
+    return this.sslKey;
+  }
+
 
   public void setRecordAbortMessages(boolean recordAbortMessages) {
     this.recordAbortMessages = recordAbortMessages;

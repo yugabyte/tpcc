@@ -130,6 +130,12 @@ public abstract class BenchmarkModule {
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
+            if (workConf.getSslCert().length() > 0) {
+              assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
+              props.put("dataSource.sslmode", "require");
+              props.put("dataSource.sslcert", workConf.getSslCert());
+              props.put("dataSource.sslkey", workConf.getSslKey());
+            }
 
             HikariConfig config = new HikariConfig(props);
             listDataSource.add(new HikariDataSource(config));
@@ -141,12 +147,19 @@ public abstract class BenchmarkModule {
         props.put("user", workConf.getDBUsername());
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
+        if (workConf.getSslCert().length() > 0) {
+          assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
+          props.put("sslmode", "require");
+          props.put("sslcert", workConf.getSslCert());
+          props.put("sslkey", workConf.getSslKey());
+        }
 
         int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
 
-        String connectStr = String.format("jdbc:postgresql://%s:%d/%s", workConf.getNodes().get(r),
-            workConf.getPort(),
-            workConf.getDBName());
+        String connectStr = String.format("jdbc:postgresql://%s:%d/%s",
+                                          workConf.getNodes().get(r),
+                                          workConf.getPort(),
+                                          workConf.getDBName());
         return DriverManager.getConnection(connectStr, props);
     }
 

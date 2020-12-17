@@ -136,8 +136,10 @@ public abstract class BenchmarkModule {
               props.put("dataSource.sslcert", workConf.getSslCert());
               props.put("dataSource.sslkey", workConf.getSslKey());
             }
-
             HikariConfig config = new HikariConfig(props);
+            if (workConf.getJdbcURL().length()>0) {
+              config.setJdbcUrl(workConf.getJdbcURL());
+            }
             listDataSource.add(new HikariDataSource(config));
         }
     }
@@ -155,11 +157,15 @@ public abstract class BenchmarkModule {
         }
 
         int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
-
-        String connectStr = String.format("jdbc:postgresql://%s:%d/%s",
-                                          workConf.getNodes().get(r),
-                                          workConf.getPort(),
-                                          workConf.getDBName());
+        String connectStr = null;
+        if (workConf.getJdbcURL().length()>0) {
+            connectStr=workConf.getJdbcURL();
+        } else {
+            connectStr = String.format("jdbc:postgresql://%s:%d/%s",
+                workConf.getNodes().get(r),
+                workConf.getPort(),
+                workConf.getDBName());
+        }
         return DriverManager.getConnection(connectStr, props);
     }
 

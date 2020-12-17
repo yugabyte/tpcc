@@ -284,6 +284,10 @@ public class DBWorkload {
         wrkld.setSslKey(xmlConfig.getString("sslKey"));
       }
 
+      if (xmlConfig.containsKey("jdbcURL") && xmlConfig.getString("jdbcURL").length() > 0) {
+        wrkld.setJdbcURL(xmlConfig.getString("jdbcURL"));
+      }
+
       int terminals = xmlConfig.getInt("terminals[not(@bench)]", numWarehouses * 10);
       terminals = xmlConfig.getInt("terminals" + pluginTest, terminals);
       wrkld.setTerminals(terminals);

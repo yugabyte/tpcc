@@ -48,8 +48,8 @@ public class WorkloadConfiguration {
   private String db_username;
   private String db_password;
   private String db_driver;
-  private String sslCert;
-  private String sslKey;
+  private String sslCert = "";
+  private String sslKey = "";
   private int numWarehouses = -1;
   private int startWarehouseIdForShard = -1;
   private int totalWarehousesAcrossShards = -1;

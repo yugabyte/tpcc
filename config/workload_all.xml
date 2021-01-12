@@ -10,6 +10,7 @@
 
     <sslCert></sslCert>
     <sslKey></sslKey>
+    <jdbcURL></jdbcURL>
 
     <!--
     <terminals>100</terminals>

@@ -130,14 +130,14 @@ public abstract class BenchmarkModule {
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
-            if (workConf.getSslCert().length() > 0) {
+            if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
               assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
               props.put("dataSource.sslmode", "require");
               props.put("dataSource.sslcert", workConf.getSslCert());
               props.put("dataSource.sslkey", workConf.getSslKey());
             }
             HikariConfig config = new HikariConfig(props);
-            if (workConf.getJdbcURL().length()>0) {
+            if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
               config.setJdbcUrl(workConf.getJdbcURL());
             }
             listDataSource.add(new HikariDataSource(config));
@@ -149,7 +149,7 @@ public abstract class BenchmarkModule {
         props.put("user", workConf.getDBUsername());
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
-        if (workConf.getSslCert().length() > 0) {
+        if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
           assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
           props.put("sslmode", "require");
           props.put("sslcert", workConf.getSslCert());
@@ -158,7 +158,7 @@ public abstract class BenchmarkModule {
 
         int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
         String connectStr = null;
-        if (workConf.getJdbcURL().length()>0) {
+        if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
             connectStr=workConf.getJdbcURL();
         } else {
             connectStr = String.format("jdbc:postgresql://%s:%d/%s",

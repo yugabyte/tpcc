@@ -17,13 +17,12 @@
 
 package com.oltpbenchmark.benchmarks.tpcc;
 
-import java.io.IOException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
@@ -39,8 +38,8 @@ import com.oltpbenchmark.types.DatabaseType;
 public class TPCCBenchmark extends BenchmarkModule {
   private static final Logger LOG = Logger.getLogger(TPCCBenchmark.class);
 
-  public TPCCBenchmark(WorkloadConfiguration workConf) throws Exception {
-    super("tpcc", workConf, true);
+  public TPCCBenchmark(WorkloadConfiguration workConf) {
+    super("tpcc", workConf);
   }
 
   @Override
@@ -48,15 +47,10 @@ public class TPCCBenchmark extends BenchmarkModule {
     return (NewOrder.class.getPackage());
   }
 
-  /**
-   * @param Bool
-   */
   @Override
-  protected List<Worker<? extends BenchmarkModule>> makeWorkersImpl(
-      boolean verbose) throws IOException {
+  protected List<Worker<? extends BenchmarkModule>> makeWorkersImpl() {
 
-    ArrayList<Worker<? extends BenchmarkModule>> workers =
-      new ArrayList<Worker<? extends BenchmarkModule>>();
+    ArrayList<Worker<? extends BenchmarkModule>> workers = new ArrayList<>();
     try {
       List<TPCCWorker> terminals = createTerminals();
       workers.addAll(terminals);
@@ -68,11 +62,11 @@ public class TPCCBenchmark extends BenchmarkModule {
   }
 
   @Override
-  protected Loader<TPCCBenchmark> makeLoaderImpl() throws SQLException {
+  protected Loader<TPCCBenchmark> makeLoaderImpl() {
     return new TPCCLoader(this);
   }
 
-  protected ArrayList<TPCCWorker> createTerminals() throws SQLException {
+  protected ArrayList<TPCCWorker> createTerminals() {
 
     // The array 'terminals' contains a terminal associated to a {warehouse, district}.
     TPCCWorker[] terminals = new TPCCWorker[workConf.getTerminals()];
@@ -129,23 +123,21 @@ public class TPCCBenchmark extends BenchmarkModule {
         lowerDistrictId += 1;
 
         TPCCWorker terminal = new TPCCWorker(this, workerId++,
-                                             w_id, lowerDistrictId, upperDistrictId,
-                                             numWarehouses);
+                                             w_id, lowerDistrictId, upperDistrictId);
         terminals[k++] = terminal;
       }
     }
     assert terminals[terminals.length - 1] != null;
 
-    ArrayList<TPCCWorker> ret = new ArrayList<TPCCWorker>();
-    for (TPCCWorker w : terminals)
-      ret.add(w);
+    ArrayList<TPCCWorker> ret = new ArrayList<>();
+    Collections.addAll(ret, terminals);
     return ret;
   }
 
    /**
      * Hack to support postgres-specific timestamps
-     * @param time
-     * @return
+     * @param time - millis since epoch
+     * @return Timestamp
      */
     public Timestamp getTimestamp(long time) {
       Timestamp timestamp;
@@ -198,8 +190,7 @@ public class TPCCBenchmark extends BenchmarkModule {
     }
 
     public void test() throws Exception {
-      int wId = 1;
-      TPCCWorker worker = new TPCCWorker(this, 1 /* worker_id */, 1, 1, 1, 2);
+      TPCCWorker worker = new TPCCWorker(this, 1 /* worker_id */, 1, 1, 1);
       worker.test(makeConnection());
     }
 }

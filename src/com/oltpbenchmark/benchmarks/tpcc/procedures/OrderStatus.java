@@ -75,9 +75,9 @@ public class OrderStatus extends TPCCProcedure {
   private PreparedStatement payGetCust = null;
   private PreparedStatement customerByName = null;
 
-  public ResultSet run(Connection conn, Random gen, int w_id, int numWarehouses,
-                       int terminalDistrictLowerID, int terminalDistrictUpperID,
-                       TPCCWorker w) throws SQLException {
+  public void run(Connection conn, Random gen, int w_id, int numWarehouses,
+                  int terminalDistrictLowerID, int terminalDistrictUpperID,
+                  TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
 
     // initializing all prepared statements
@@ -87,32 +87,19 @@ public class OrderStatus extends TPCCProcedure {
     ordStatGetOrderLines = this.getPreparedStatement(conn, ordStatGetOrderLinesSQL);
 
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
-    boolean c_by_name = false;
     int y = TPCCUtil.randomNumber(1, 100, gen);
-    String c_last = null;
-    int c_id = -1;
-    if (y <= 60) {
-      c_by_name = true;
-      c_last = TPCCUtil.getNonUniformRandomLastNameForRun(gen);
-    } else {
-      c_by_name = false;
-      c_id = TPCCUtil.getCustomerID(gen);
-    }
-
-    int o_id = -1, o_carrier_id = -1;
-    Timestamp o_entry_d;
-    ArrayList<String> orderLines = new ArrayList<String>();
-
     Customer c;
-    if (c_by_name) {
-      assert c_id <= 0;
-      // TODO: This only needs c_balance, c_first, c_middle, c_id
-      // only fetch those columns?
+    if (y <= 60) {
+      String c_last = TPCCUtil.getNonUniformRandomLastNameForRun(gen);
       c = getCustomerByName(w_id, d_id, c_last);
     } else {
-      assert c_last == null;
-      c = getCustomerById(w_id, d_id, c_id, conn);
+      int c_id = TPCCUtil.getCustomerID(gen);
+      c = getCustomerById(w_id, d_id, c_id);
     }
+
+    int o_id, o_carrier_id;
+    Timestamp o_entry_d;
+    ArrayList<String> orderLines = new ArrayList<>();
 
     // find the newest order for the customer
     // retrieve the carrier & order date for the most recent order.
@@ -162,7 +149,6 @@ public class OrderStatus extends TPCCProcedure {
       orderLines.add(sb.toString());
     }
     rs.close();
-    rs = null;
 
     // commit the transaction
     conn.commit();
@@ -219,13 +205,11 @@ public class OrderStatus extends TPCCProcedure {
       LOG.trace(sb.toString());
     }
 
-    return null;
   }
 
   // attention duplicated code across trans... ok for now to maintain separate
   // prepared statements
-  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id,
-                                  Connection conn) throws SQLException {
+  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
 
     payGetCust.setInt(1, c_w_id);
@@ -251,7 +235,7 @@ public class OrderStatus extends TPCCProcedure {
   // attention this code is repeated in other transacitons... ok for now to
   // allow for separate statements.
   public Customer getCustomerByName(int c_w_id, int c_d_id, String c_last) throws SQLException {
-    ArrayList<Customer> customers = new ArrayList<Customer>();
+    ArrayList<Customer> customers = new ArrayList<>();
     boolean trace = LOG.isDebugEnabled();
 
     customerByName.setInt(1, c_w_id);

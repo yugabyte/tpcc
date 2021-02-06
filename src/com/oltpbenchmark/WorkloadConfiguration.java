@@ -22,7 +22,6 @@ import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.StringUtil;
 import com.oltpbenchmark.util.ThreadUtil;
 import org.apache.commons.collections15.map.ListOrderedMap;
-import org.apache.commons.configuration.XMLConfiguration;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -34,10 +33,6 @@ public class WorkloadConfiguration {
 
   private DatabaseType db_type;
   private String benchmarkName;
-
-  public String getBenchmarkName() {
-    return benchmarkName;
-  }
 
   public void setBenchmarkName(String benchmarkName) {
     this.benchmarkName = benchmarkName;
@@ -54,7 +49,6 @@ public class WorkloadConfiguration {
   private int numWarehouses = -1;
   private int startWarehouseIdForShard = -1;
   private int totalWarehousesAcrossShards = -1;
-  private double selectivity = -1.0;
   private int terminals;
   private int numDBConnections = -1;
   private int port = 5433;
@@ -62,10 +56,9 @@ public class WorkloadConfiguration {
   private int numTxnTypes;
   private TraceReader traceReader = null;
   private boolean useKeyingTime = true;
-  private boolean useThinkTime = true;
+  private final boolean useThinkTime = true;
   private boolean enableForeignKeysAfterLoad = true;
   private boolean shouldEnableForeignKeys = true;
-  private boolean createSQLProcedures = true;
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
@@ -80,9 +73,7 @@ public class WorkloadConfiguration {
     this.traceReader = traceReader;
   }
 
-  private XMLConfiguration xmlConfig = null;
-
-  private final List<Phase> works = new ArrayList<Phase>();
+  private final List<Phase> works = new ArrayList<>();
   private WorkloadState workloadState;
 
   public WorkloadState getWorkloadState() {
@@ -101,8 +92,6 @@ public class WorkloadConfiguration {
   private int numberOfPhases = 0;
   private TransactionTypes transTypes = null;
   private int isolationMode = Connection.TRANSACTION_SERIALIZABLE;
-  private boolean recordAbortMessages = false;
-  private String dataDir = null;
 
   public void addWork(int time, int warmup, int rate, List<String> weights, boolean rateLimited,
                       boolean disabled, boolean serial, boolean timed, int active_terminals,
@@ -138,8 +127,6 @@ public class WorkloadConfiguration {
 
   /**
    * The number of loader threads that the framework is allowed to use.
-   *
-   * @return
    */
   public int getLoaderThreads() {
     return this.loaderThreads;
@@ -171,14 +158,6 @@ public class WorkloadConfiguration {
 
   public String getDBPassword() {
     return this.db_password;
-  }
-
-  public void setSelectivity(double selectivity) {
-    this.selectivity = selectivity;
-  }
-
-  public double getSelectivity() {
-    return this.selectivity;
   }
 
   public void setDBDriver(String driver) {
@@ -214,19 +193,6 @@ public class WorkloadConfiguration {
     this.jdbcURL = jdbcURL;
   }
 
-
-  public void setRecordAbortMessages(boolean recordAbortMessages) {
-    this.recordAbortMessages = recordAbortMessages;
-  }
-
-  /**
-   * Whether each worker should record the transaction's UserAbort messages
-   * This primarily useful for debugging a benchmark
-   */
-  public boolean getRecordAbortMessages() {
-    return (this.recordAbortMessages);
-  }
-
   public void setNumWarehouses(int warehouses) {
     this.numWarehouses = warehouses;
   }
@@ -236,27 +202,9 @@ public class WorkloadConfiguration {
 
   /**
    * Return the number of phases specified in the config file
-   *
-   * @return
    */
   public int getNumberOfPhases() {
     return this.numberOfPhases;
-  }
-
-  /**
-   * Set the directory in which we can find the data files (for example, CSV
-   * files) for loading the database.
-   */
-  public void setDataDir(String dir) {
-    this.dataDir = dir;
-  }
-
-  /**
-   * Return the directory in which we can find the data files (for example, CSV
-   * files) for loading the database.
-   */
-  public String getDataDir() {
-    return this.dataDir;
   }
 
   /**
@@ -328,14 +276,6 @@ public class WorkloadConfiguration {
     return works;
   }
 
-  public void setXmlConfig(XMLConfiguration xmlConfig) {
-    this.xmlConfig = xmlConfig;
-  }
-
-  public XMLConfiguration getXmlConfig() {
-    return xmlConfig;
-  }
-
   public int getIsolationMode() {
     return isolationMode;
   }
@@ -378,10 +318,6 @@ public class WorkloadConfiguration {
     return useThinkTime;
   }
 
-  public void setUseThinkTime(boolean useThinkTime) {
-    this.useThinkTime = useThinkTime;
-  }
-
   public boolean getEnableForeignKeysAfterLoad() {
     return enableForeignKeysAfterLoad;
   }
@@ -395,13 +331,6 @@ public class WorkloadConfiguration {
   }
   public void setShouldEnableForeignKeys(boolean shouldEnableForeignKeys) {
     this.shouldEnableForeignKeys = shouldEnableForeignKeys;
-  }
-
-  public boolean getCreateSQLProcedures() {
-    return createSQLProcedures;
-  }
-  public void setCreateSQLProcedures(boolean createSQLProcedures) {
-    this.createSQLProcedures = createSQLProcedures;
   }
 
   public int getBatchSize() {
@@ -431,15 +360,13 @@ public class WorkloadConfiguration {
   @Override
   public String toString() {
     Class<?> confClass = this.getClass();
-    Map<String, Object> m = new ListOrderedMap<String, Object>();
+    Map<String, Object> m = new ListOrderedMap<>();
     for (Field f : confClass.getDeclaredFields()) {
-      Object obj = null;
       try {
-        obj = f.get(this);
+        m.put(f.getName().toUpperCase(), f.get(this));
       } catch (IllegalAccessException ex) {
         throw new RuntimeException(ex);
       }
-      m.put(f.getName().toUpperCase(), obj);
     } // FOR
     return StringUtil.formatMaps(m);
   }

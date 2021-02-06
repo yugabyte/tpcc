@@ -18,8 +18,6 @@
 package com.oltpbenchmark;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -63,24 +61,18 @@ public class DistributionStatistics {
       long[] percentiles = new long[PERCENTILES.length];
       Arrays.fill(percentiles, -1);
       return new DistributionStatistics(0, percentiles, -1, -1);
-
-    // long[] percentiles = new long[PERCENTILES.length];
-    // for (int i = 0; i < percentiles.length; ++i) {
-    //   percentiles[i] = -1;
-    // }
-    // return new DistributionStatistics(values.length, percentiles, 0,0);
     }
     Arrays.sort(values);
 
     double sum = 0;
-    for (int i = 0; i < values.length; ++i) {
-      sum += values[i];
+    for (int value : values) {
+      sum += value;
     }
     double average = sum / values.length;
 
     double sumDiffsSquared = 0;
-    for (int i = 0; i < values.length; ++i) {
-      double v = values[i] - average;
+    for (int value : values) {
+      double v = value - average;
       sumDiffsSquared += v * v;
     }
     double standardDeviation = 0;
@@ -156,19 +148,5 @@ public class DistributionStatistics {
         + get90thPercentile() / 1e6 + ", " + "95th="
         + get95thPercentile() / 1e6 + ", " + "99th="
         + get99thPercentile() / 1e6 + ", " + "max=" + getMaximum() / 1e6 + "]";
-  }
-
-  public Map<String, Integer> toMap() {
-    Map<String, Integer> distMap = new LinkedHashMap<String, Integer>();
-    distMap.put("Minimum Latency (microseconds)", (int) getMinimum());
-    distMap.put("25th Percentile Latency (microseconds)", (int) get25thPercentile());
-    distMap.put("Median Latency (microseconds)", (int) getMedian());
-    distMap.put("Average Latency (microseconds)", (int) getAverage());
-    distMap.put("75th Percentile Latency (microseconds)", (int) get75thPercentile());
-    distMap.put("90th Percentile Latency (microseconds)", (int) get90thPercentile());
-    distMap.put("95th Percentile Latency (microseconds)", (int) get95thPercentile());
-    distMap.put("99th Percentile Latency (microseconds)", (int) get99thPercentile());
-    distMap.put("Maximum Latency (microseconds)", (int) getMaximum());
-    return distMap;
   }
 }

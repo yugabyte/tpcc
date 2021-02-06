@@ -93,10 +93,10 @@ public class Delivery extends TPCCProcedure {
   private PreparedStatement delivUpdateCustBalDelivCnt = null;
 
 
-  public ResultSet run(Connection conn, Random gen,
-                       int w_id, int numWarehouses,
-                       int terminalDistrictLowerID, int terminalDistrictUpperID,
-                       TPCCWorker w) throws SQLException {
+  public void run(Connection conn, Random gen,
+                  int w_id, int numWarehouses,
+                  int terminalDistrictLowerID, int terminalDistrictUpperID,
+                  TPCCWorker w) throws SQLException {
 
     boolean trace = LOG.isDebugEnabled();
     int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);
@@ -110,7 +110,6 @@ public class Delivery extends TPCCProcedure {
     delivUpdateCustBalDelivCnt = this.getPreparedStatement(conn, delivUpdateCustBalDelivCntSQL);
 
     int d_id, c_id;
-    float ol_total = 0;
     int[] orderIDs;
 
     orderIDs = new int[10];
@@ -130,7 +129,6 @@ public class Delivery extends TPCCProcedure {
       int no_o_id = rs.getInt("NO_O_ID");
       orderIDs[d_id - 1] = no_o_id;
       rs.close();
-      rs = null;
 
       delivDeleteNewOrder.setInt(1, no_o_id);
       delivDeleteNewOrder.setInt(2, d_id);
@@ -208,14 +206,14 @@ public class Delivery extends TPCCProcedure {
         if (trace) LOG.warn(msg);
         throw new RuntimeException(msg);
       }
-      ol_total = rs.getFloat("OL_TOTAL");
+      float ol_total = rs.getFloat("OL_TOTAL");
       rs.close();
 
-      int idx = 1; // HACK: So that we can debug this query
-      delivUpdateCustBalDelivCnt.setDouble(idx++, ol_total);
-      delivUpdateCustBalDelivCnt.setInt(idx++, w_id);
-      delivUpdateCustBalDelivCnt.setInt(idx++, d_id);
-      delivUpdateCustBalDelivCnt.setInt(idx++, c_id);
+      int idx = 0; // HACK: So that we can debug this query
+      delivUpdateCustBalDelivCnt.setDouble(++idx, ol_total);
+      delivUpdateCustBalDelivCnt.setInt(++idx, w_id);
+      delivUpdateCustBalDelivCnt.setInt(++idx, d_id);
+      delivUpdateCustBalDelivCnt.setInt(++idx, c_id);
       if (trace) LOG.trace("delivUpdateCustBalDelivCnt START");
       result = delivUpdateCustBalDelivCnt.executeUpdate();
       if (trace) LOG.trace("delivUpdateCustBalDelivCnt END");
@@ -254,6 +252,5 @@ public class Delivery extends TPCCProcedure {
       terminalMessage.append("+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
-    return null;
   }
 }

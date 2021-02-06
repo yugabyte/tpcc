@@ -17,52 +17,35 @@
 
 package com.oltpbenchmark;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.oltpbenchmark.LatencyRecord.Sample;
 import com.oltpbenchmark.ThreadBench.TimeBucketIterable;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.util.Histogram;
-import com.oltpbenchmark.util.StringUtil;
 
 public final class Results {
   public final long nanoSeconds;
   public final int measuredRequests;
   public long startTime;
   public long endTime;
-  public final DistributionStatistics latencyDistribution;
-  final Histogram<TransactionType> txnSuccess = new Histogram<TransactionType>(true);
-  final Histogram<TransactionType> txnAbort = new Histogram<TransactionType>(true);
-  final Histogram<TransactionType> txnRetry = new Histogram<TransactionType>(true);
-  final Histogram<TransactionType> txnErrors = new Histogram<TransactionType>(true);
+  final Histogram<TransactionType> txnSuccess = new Histogram<>();
+  final Histogram<TransactionType> txnAbort = new Histogram<>();
+  final Histogram<TransactionType> txnRetry = new Histogram<>();
+  final Histogram<TransactionType> txnErrors = new Histogram<>();
   final Map<TransactionType, Histogram<String>> txnAbortMessages =
-    new HashMap<TransactionType, Histogram<String>>();
+          new HashMap<>();
 
   public final List<LatencyRecord.Sample> latencySamples;
 
-  public Results(long nanoSeconds, int measuredRequests, DistributionStatistics latencyDistribution,
-                 final List<LatencyRecord.Sample> latencySamples) {
+  public Results(long nanoSeconds, int measuredRequests, final List<LatencyRecord.Sample> latencySamples) {
     this.nanoSeconds = nanoSeconds;
     this.measuredRequests = measuredRequests;
-    this.latencyDistribution = latencyDistribution;
 
-    if (latencyDistribution == null) {
-      assert latencySamples == null;
-      this.latencySamples = null;
-    } else {
       // defensive copy
-      this.latencySamples =
-        Collections.unmodifiableList(new ArrayList<LatencyRecord.Sample>(latencySamples));
+      this.latencySamples = Collections.unmodifiableList(new ArrayList<>(latencySamples));
       assert !this.latencySamples.isEmpty();
-    }
   }
 
   /**
@@ -99,17 +82,19 @@ public final class Results {
   }
 
   public void writeCSV(int windowSizeSeconds, PrintStream out, TransactionType txType) {
-    out.println("time(sec), throughput(req/sec), avg_lat(ms), min_lat(ms), 25th_lat(ms), " +
+    out.println("time(sec), throughput(req/sec), avg_lat(ms), sd_lat(ms), min_lat(ms), 25th_lat(ms), " +
                 "median_lat(ms), 75th_lat(ms), 90th_lat(ms), 95th_lat(ms), 99th_lat(ms), " +
                 "max_lat(ms), tp (req/s) scaled");
     int i = 0;
     for (DistributionStatistics s :
          new TimeBucketIterable(latencySamples, windowSizeSeconds, txType)) {
       final double MILLISECONDS_FACTOR = 1e3;
-      out.printf("%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+      out.printf("%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
                  i * windowSizeSeconds, (double) s.getCount() / windowSizeSeconds,
-                 s.getAverage() / MILLISECONDS_FACTOR, s.getMinimum() / MILLISECONDS_FACTOR,
-                 s.get25thPercentile() / MILLISECONDS_FACTOR, s.getMedian() / MILLISECONDS_FACTOR,
+                 s.getAverage() / MILLISECONDS_FACTOR,
+                 s.getStandardDeviation() / (MILLISECONDS_FACTOR * MILLISECONDS_FACTOR),
+                 s.getMinimum() / MILLISECONDS_FACTOR, s.get25thPercentile() / MILLISECONDS_FACTOR,
+                 s.getMedian() / MILLISECONDS_FACTOR,
                  s.get75thPercentile() / MILLISECONDS_FACTOR,
                  s.get90thPercentile() / MILLISECONDS_FACTOR,
                  s.get95thPercentile() / MILLISECONDS_FACTOR,
@@ -125,7 +110,7 @@ public final class Results {
   }
 
   public void writeCSV2(int windowSizeSeconds, PrintStream out, TransactionType txType) {
-    String header[] = {
+    String[] header = {
       "Time (seconds)",
       "Requests",
       "Throughput (requests/second)",
@@ -133,16 +118,17 @@ public final class Results {
       "25th Percentile Latency (microseconds)",
       "Median Latency (microseconds)",
       "Average Latency (microseconds)",
+      "Standard Deviation Latency (microseconds)",
       "75th Percentile Latency (microseconds)",
       "90th Percentile Latency (microseconds)",
       "95th Percentile Latency (microseconds)",
       "99th Percentile Latency (microseconds)",
       "Maximum Latency (microseconds)"
     };
-    out.println(StringUtil.join(",", header));
+    out.println(String.join(",", header));
     int i = 0;
     for (DistributionStatistics s : new TimeBucketIterable(latencySamples, windowSizeSeconds, txType)) {
-      out.printf("%d,%d,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+      out.printf("%d,%d,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
           i * windowSizeSeconds,
           s.getCount(),
           (double) s.getCount() / windowSizeSeconds,
@@ -150,6 +136,7 @@ public final class Results {
           (int) s.get25thPercentile(),
           (int) s.getMedian(),
           (int) s.getAverage(),
+          (int) s.getStandardDeviation(),
           (int) s.get75thPercentile(),
           (int) s.get90thPercentile(),
           (int) s.get95thPercentile(),
@@ -160,30 +147,23 @@ public final class Results {
   }
 
   public void writeAllCSVAbsoluteTiming(List<TransactionType> activeTXTypes, PrintStream out) {
-    // This is needed because nanTime does not guarantee offset... we
-    // ground it (and round it) to ms from 1970-01-01 like currentTime
-    double x = ((double) System.nanoTime() / (double) 1000000000);
-    double y = ((double) System.currentTimeMillis() / (double) 1000);
-
     out.println("Start," + startTime);
     out.println("End," + endTime);
-
-    // long startNs = latencySamples.get(0).startNs;
-    String header[] = {
+    String[] header = {
         "Transaction Name",
         "Start Time (nanoseconds)",
         "Latency (microseconds)",
         "OperationLatency (microseconds)"
     };
-    out.println(StringUtil.join(",", header));
+    out.println(String.join(",", header));
     for (Sample s : latencySamples) {
-      String row[] = {
+      String[] row = {
           activeTXTypes.get(s.tranType-1).getName(),
           Long.toString(s.startNs),
           Integer.toString(s.latencyUs),
           Integer.toString(s.operationLatencyUs),
       };
-      out.println(StringUtil.join(",", row));
+      out.println(String.join(",", row));
     }
   }
 }

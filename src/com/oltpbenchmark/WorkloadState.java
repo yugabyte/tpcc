@@ -16,14 +16,11 @@
 
 package com.oltpbenchmark;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.LinkedList;
 
 import com.oltpbenchmark.types.State;
-import com.oltpbenchmark.util.QueueLimitException;
-import org.apache.log4j.Logger;
 
 /**
  * This class is used to share a state among the workers of a single
@@ -34,27 +31,21 @@ import org.apache.log4j.Logger;
  */
 public class WorkloadState {
   private static final int RATE_QUEUE_LIMIT = 10000;
-  private static final Logger LOG = Logger.getLogger(ThreadBench.class);
 
-  private LinkedList<SubmittedProcedure> workQueue = new LinkedList<SubmittedProcedure>();
-  private BenchmarkState benchmarkState;
+  private final LinkedList<SubmittedProcedure> workQueue = new LinkedList<>();
+  private final BenchmarkState benchmarkState;
   private int workersWaiting = 0;
   private int workersWorking = 0;
-  private int num_terminals;
+  private final int num_terminals;
   private int workerNeedSleep;
 
-  private List<Phase> works = new ArrayList<Phase>();
-  private Iterator<Phase> phaseIterator;
+  private final Iterator<Phase> phaseIterator;
+  private final TraceReader traceReader;
   private Phase currentPhase = null;
-  private long phaseStartNs = 0;
-  private TraceReader traceReader = null;
-
-  private long phaseStartTime = 0;
 
   public WorkloadState(BenchmarkState benchmarkState, List<Phase> works, int num_terminals,
                        TraceReader traceReader) {
     this.benchmarkState = benchmarkState;
-    this.works = works;
     this.num_terminals = num_terminals;
     this.workerNeedSleep = num_terminals;
     this.traceReader = traceReader;
@@ -64,10 +55,8 @@ public class WorkloadState {
 
   /**
   * Add a request to do work.
-  *
-  * @throws QueueLimitException
   */
-  public void addToQueue(int amount, boolean resetQueues) throws QueueLimitException {
+  public void addToQueue(int amount, boolean resetQueues) {
     synchronized (this) {
       if (resetQueues)
         workQueue.clear();
@@ -93,7 +82,7 @@ public class WorkloadState {
         workQueue.remove();
 
       // Wake up sleeping workers to deal with the new work.
-      int numToWake = (amount <= workersWaiting? amount : workersWaiting);
+      int numToWake = (Math.min(amount, workersWaiting));
       for (int i = 0; i < numToWake; ++i)
         this.notify();
     }
@@ -236,9 +225,6 @@ public class WorkloadState {
       this.notifyAll();
     }
   }
-
-  public void setPhaseStartTime(long startTime) { this.phaseStartTime = startTime; }
-  public long getPhaseStartTime() { return this.phaseStartTime; }
 
   /**
    * Delegates pre-start blocking to the global state handler

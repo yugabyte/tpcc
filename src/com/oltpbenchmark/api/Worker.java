@@ -19,11 +19,9 @@ package com.oltpbenchmark.api;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.SQLException;
-import java.sql.Savepoint;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -37,7 +35,6 @@ import com.oltpbenchmark.SubmittedProcedure;
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.WorkloadState;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
-import com.oltpbenchmark.catalog.Catalog;
 import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.types.TransactionStatus;
@@ -49,17 +46,17 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     private LatencyRecord latencies;
     private LatencyRecord wholeOperationLatencies;
     private LatencyRecord acqConnectionLatencies;
-    private Statement currStatement;
+    private final Statement currStatement;
 
     // Interval requests used by the monitor
-    private AtomicInteger intervalRequests = new AtomicInteger(0);
+    private final AtomicInteger intervalRequests = new AtomicInteger(0);
 
     private final int id;
     private final T benchmarkModule;
     protected final HikariDataSource dataSource;
     protected static WorkloadConfiguration wrkld;
     protected TransactionTypes transactionTypes;
-    protected Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<Class<? extends Procedure>, Procedure>();
+    protected Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<>();
 
     private boolean seenDone = false;
 
@@ -70,8 +67,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     public Worker(T benchmarkModule, int id) {
         this.id = id;
         this.benchmarkModule = benchmarkModule;
-        this.wrkld = this.benchmarkModule.getWorkloadConfiguration();
-        this.wrkldState = this.wrkld.getWorkloadState();
+        // TODO -- can these be made non-static?
+        Worker.wrkld = this.benchmarkModule.getWorkloadConfiguration();
+        Worker.wrkldState = Worker.wrkld.getWorkloadState();
         this.currStatement = null;
         totalRetries = new int[wrkld.getNumTxnTypes()];
         totalFailures = new int[wrkld.getNumTxnTypes()];
@@ -88,7 +86,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     public final void InitializeProcedures() {
         // Generate all the Procedures that we're going to need
-        this.transactionTypes = this.wrkld.getTransTypes();
+        this.transactionTypes = Worker.wrkld.getTransTypes();
         for (Entry<TransactionType, Procedure> e : this.benchmarkModule.getProcedures().entrySet()) {
             Procedure proc = e.getValue();
             this.class_procedures.put(proc.getClass(), proc);
@@ -123,25 +121,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                              this.getClass().getSimpleName(), this.getId());
     }
 
-    /**
-     * Get the the total number of workers in this benchmark invocation
-     */
-    public final int getNumWorkers() {
-        return (this.benchmarkModule.getWorkloadConfiguration().getTerminals());
-    }
-
-    public final WorkloadConfiguration getWorkloadConfiguration() {
-        return (this.benchmarkModule.getWorkloadConfiguration());
-    }
-
-    public final Catalog getCatalog() {
-        return (this.benchmarkModule.getCatalog());
-    }
-
-    public final Random rng() {
-        return (this.benchmarkModule.rng());
-    }
-
     public final int getRequests() {
         return latencies.size();
     }
@@ -167,10 +146,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         return (P) (this.class_procedures.get(procClass));
     }
 
-    synchronized public void setCurrStatement(Statement s) {
-        this.currStatement = s;
-    }
-
     private long getKeyingTimeInMillis(TransactionType type) {
         // TPC-C 5.2.5.2: For keying times for each type of transaction.
         if (type.getName().equals("NewOrder")) {
@@ -194,20 +169,22 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     private long getThinkTimeInMillis(TransactionType type) {
         // TPC-C 5.2.5.4: For think times for each type of transaction.
-        long mean = -1;;
-        if (type.getName().equals("NewOrder")) {
-          mean = 12000;
-        } else if (type.getName().equals("Payment")) {
-          mean = 12000;
-        } else if (type.getName().equals("OrderStatus")) {
-          mean = 10000;
-        } else if (type.getName().equals("Delivery")) {
-          mean = 5000;
-        } else if (type.getName().equals("StockLevel")) {
-          mean = 5000;
-        } else {
-          LOG.error("returning -1 " + type.getName());
-          return -1;
+        long mean;
+        switch (type.getName()) {
+            case "NewOrder":
+            case "Payment":
+                mean = 12000;
+                break;
+            case "OrderStatus":
+                mean = 10000;
+                break;
+            case "Delivery":
+            case "StockLevel":
+                mean = 5000;
+                break;
+            default:
+                LOG.error("returning -1 " + type.getName());
+                return -1;
         }
 
         float c = this.benchmarkModule.rng().nextFloat();
@@ -230,12 +207,12 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         }
     }
 
-    class TransactionExecutionState {
-      private long startOperation = 0;
-      private long endOperation = 0;
-      private long startConnection = 0;
-      private long endConnection = 0;
-      private TransactionType type;
+    static class TransactionExecutionState {
+      private final long startOperation;
+      private long endOperation;
+      private final long startConnection;
+      private long endConnection;
+      private final TransactionType type;
 
       public TransactionExecutionState() {
         this.startOperation = 0;
@@ -307,38 +284,29 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         State preState, postState;
         Phase phase;
 
-        TransactionType invalidTT = TransactionType.INVALID;
-        assert (invalidTT != null);
-
         work: while (true) {
 
             // PART 1: Init and check if done
 
-            preState = wrkldState.getGlobalState();
-            phase = this.wrkldState.getCurrentPhase();
+            preState = Worker.wrkldState.getGlobalState();
 
-            switch (preState) {
-                case DONE:
-                    if (!seenDone) {
-                        // This is the first time we have observed that the
-                        // test is done notify the global test state, then
-                        // continue applying load
-                        seenDone = true;
-                        wrkldState.signalDone();
-                        break work;
-                    }
-                    break;
-                default:
-                    // Do nothing
+            // Do nothing
+            if (preState == State.DONE && !seenDone) {
+                // This is the first time we have observed that the
+                // test is done. Notify the global test state, then
+                // continue applying load
+                seenDone = true;
+                Worker.wrkldState.signalDone();
+                break;
             }
 
             // PART 2: Wait for work
 
             // Sleep if there's nothing to do.
-            wrkldState.stayAwake();
-            phase = this.wrkldState.getCurrentPhase();
+            Worker.wrkldState.stayAwake();
+            phase = Worker.wrkldState.getCurrentPhase();
             if (phase == null)
-                continue work;
+                continue;
 
 
             // Grab some work and update the state, in case it changed while we
@@ -351,17 +319,17 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
             long keying_time_msecs = 0;
             long think_time_msecs = 0;
-            if (this.wrkld.getUseKeyingTime()) {
+            if (Worker.wrkld.getUseKeyingTime()) {
                 // Wait for the keying time which is a fixed amount for each type of transaction.
                 keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
             }
-            if (this.wrkld.getUseThinkTime()) {
+            if (Worker.wrkld.getUseThinkTime()) {
                 think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
             }
 
-            phase = this.wrkldState.getCurrentPhase();
+            phase = Worker.wrkldState.getCurrentPhase();
             if (phase == null)
-                continue work;
+                continue;
 
             switch (preState) {
                 case DONE:
@@ -393,13 +361,13 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
             TransactionExecutionState executionState = new TransactionExecutionState();
             try {
-                executionState = doWork(preState == State.MEASURE, pieceOfWork);
+                executionState = doWork(pieceOfWork);
             } catch (IndexOutOfBoundsException e) {
                 if (phase.isThroughputRun()) {
                     LOG.error("Thread tried executing disabled phase!");
                     throw e;
                 }
-                if (phase.id == this.wrkldState.getCurrentPhase().id) {
+                if (phase.id == Worker.wrkldState.getCurrentPhase().id) {
                     switch (preState) {
                         case WARMUP:
                             // Don't quit yet: we haven't even begun!
@@ -446,16 +414,16 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // that either started during the warmup phase or ended
                     // after the timer went off.
                     if (preState == State.MEASURE && executionState.getTransactionType() != null &&
-                        this.wrkldState.getCurrentPhase().id == phase.id) {
+                        Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         latencies.addLatency(
                           executionState.getTransactionType().getId(),
                           start, end,
-                          executionState.getStartOperation(), executionState.getEndOperation(),
-                          this.id, phase.id);
+                          executionState.getStartOperation(), executionState.getEndOperation()
+                        );
                         acqConnectionLatencies.addLatency(
                           1, start, end,
-                          executionState.getStartConnection(),executionState.getEndOperation(),
-                          this.id, phase.id);
+                          executionState.getStartConnection(),executionState.getEndOperation()
+                        );
 
                         // The latency of the whole operation can be obtained by evaluating the
                         // time from the acquisition of the connection to the completion of the
@@ -463,19 +431,19 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                         wholeOperationLatencies.addLatency(
                           executionState.getTransactionType().getId(),
                           start, end,
-                          executionState.getStartConnection(), executionState.getEndOperation(),
-                          this.id, phase.id);
+                          executionState.getStartConnection(), executionState.getEndOperation()
+                        );
 
                         intervalRequests.incrementAndGet();
                     }
                     if (phase.isLatencyRun())
-                        this.wrkldState.startColdQuery();
+                        Worker.wrkldState.startColdQuery();
                     break;
                 case COLD_QUERY:
                     // No recording for cold runs, but next time we will since
                     // it'll be a hot run.
                     if (preState == State.COLD_QUERY)
-                        this.wrkldState.startHotQuery();
+                        Worker.wrkldState.startHotQuery();
                     break;
                 default:
                     // Do nothing
@@ -492,10 +460,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      * Called in a loop in the thread to exercise the system under test. Each
      * implementing worker should return the TransactionType handle that was
      * executed.
-     *
-     * @param llr
      */
-    protected final TransactionExecutionState doWork(boolean measure, SubmittedProcedure pieceOfWork) {
+    protected final TransactionExecutionState doWork(SubmittedProcedure pieceOfWork) {
         TransactionType next = null;
         long startOperation = 0;
         long endOperation = 0;
@@ -503,17 +469,15 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         long endConnection = 0;
 
         TransactionStatus status = TransactionStatus.RETRY;
-        Savepoint savepoint = null;
         final DatabaseType dbType = wrkld.getDBType();
-        final boolean recordAbortMessages = wrkld.getRecordAbortMessages();
 
-        Connection conn = null;
+        Connection conn;
         try {
             startConnection = System.nanoTime();
 
             conn = dataSource.getConnection();
             conn.setAutoCommit(false);
-            conn.setTransactionIsolation(this.wrkld.getIsolationMode());
+            conn.setTransactionIsolation(Worker.wrkld.getIsolationMode());
 
             endConnection = System.nanoTime();
             int attempt = 0;
@@ -530,14 +494,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 assert (next.isSupplemental() == false) : "Trying to select a supplemental transaction " + next;
 
                 try {
-                    // For Postgres, we have to create a savepoint in order
-                    // to rollback a user aborted transaction
-                    // if (dbType == DatabaseType.POSTGRES) {
-                    // savepoint = this.conn.setSavepoint();
-                    // // if (LOG.isDebugEnabled())
-                    // LOG.info("Created SavePoint: " + savepoint);
-                    // }
-
                     status = TransactionStatus.UNKNOWN;
 
                     startOperation = System.nanoTime();
@@ -549,12 +505,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 } catch (UserAbortException ex) {
                     if (LOG.isDebugEnabled())
                         LOG.trace(next + " Aborted", ex);
-                    if (savepoint != null) {
-                        conn.rollback(savepoint);
-                    } else {
-                        conn.rollback();
-                    }
-
+                    conn.rollback();
                     status = TransactionStatus.USER_ABORTED;
                     break;
 
@@ -567,12 +518,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                                                ex.getClass().getSimpleName(), next, this.toString(),
                                                ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
-		    if (this.wrkld.getDBType().shouldUseTransactions()) {
-			if (savepoint != null) {
-			    conn.rollback(savepoint);
-			} else {
-			    conn.rollback();
-			}
+		    if (Worker.wrkld.getDBType().shouldUseTransactions()) {
+                conn.rollback();
 		    }
 
                     if (ex.getSQLState() == null) {
@@ -641,8 +588,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         }
 
         return new TransactionExecutionState(startOperation, endOperation,
-                                             startConnection, endConnection,
-                                             next);
+                startConnection, endConnection,
+                next);
     }
 
     /**
@@ -655,26 +602,16 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     /**
      * Invoke a single transaction for the given TransactionType
-     *
-     * @param txnType
-     * @return TODO
-     * @throws UserAbortException
-     *             TODO
-     * @throws SQLException
-     *             TODO
      */
     protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType) throws UserAbortException, SQLException;
 
     /**
      * Called at the end of the test to do any clean up that may be required.
-     *
-     * @param error
-     *            TODO
      */
     public void tearDown(boolean error) { }
 
     public void initializeState() {
-        assert (this.wrkldState == null);
-        this.wrkldState = this.wrkld.getWorkloadState();
+        assert (Worker.wrkldState == null);
+        Worker.wrkldState = Worker.wrkld.getWorkloadState();
     }
 }

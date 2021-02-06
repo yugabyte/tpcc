@@ -52,7 +52,6 @@ A utility script (./tpccbenchmark) is provided for running the benchmark. The op
    --clear &lt;arg&gt;             Clear all records in the database for this
                              benchmark
    --create &lt;arg&gt;            Initialize the database for this benchmark
-   --dialects-export &lt;arg&gt;   Export benchmark SQL to a dialects file
    --execute &lt;arg&gt;           Execute the benchmark workload
 -h,--help                    Print this help
    --histograms              Print txn histograms

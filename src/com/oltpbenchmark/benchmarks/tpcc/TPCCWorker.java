@@ -27,36 +27,30 @@ package com.oltpbenchmark.benchmarks.tpcc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.api.TransactionType;
-import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.TPCCProcedure;
 import com.oltpbenchmark.types.TransactionStatus;
 
 public class TPCCWorker extends Worker<TPCCBenchmark> {
 
-    private static final Logger LOG = Logger.getLogger(TPCCWorker.class);
+  private static final Logger LOG = Logger.getLogger(TPCCWorker.class);
 
-    // This is the warehouse that is a constant for this terminal.
+  // This is the warehouse that is a constant for this terminal.
   private final int terminalWarehouseID;
   // This is the district ID used for StockLevel transactions.
   private final int terminalDistrictID;
   // private boolean debugMessages;
   private final Random gen = new Random();
 
-  private int numWarehouses;
-
   public TPCCWorker(TPCCBenchmark benchmarkModule, int id,
                     int terminalWarehouseID, int terminalDistrictLowerID,
-                    int terminalDistrictUpperID, int numWarehouses)
-                    throws SQLException {
+                    int terminalDistrictUpperID) {
     super(benchmarkModule, id);
 
     this.terminalWarehouseID = terminalWarehouseID;
@@ -65,7 +59,6 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
     assert terminalDistrictLowerID <= terminalDistrictUpperID;
     this.terminalDistrictID =
       TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
-    this.numWarehouses = numWarehouses;
   }
 
   /**

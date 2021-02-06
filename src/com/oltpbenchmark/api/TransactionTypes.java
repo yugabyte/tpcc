@@ -17,32 +17,23 @@
 package com.oltpbenchmark.api;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.collections15.map.ListOrderedMap;
 
+import static java.util.Comparator.*;
+
 public class TransactionTypes implements Collection<TransactionType> {
 	
-	private final ListOrderedMap<String, TransactionType> types = new ListOrderedMap<String, TransactionType>();
-	
-	protected TransactionTypes() {
-	    // Nothing to see... nothing to do...
-	}
+	private final ListOrderedMap<String, TransactionType> types = new ListOrderedMap<>();
 	
 	public TransactionTypes(List<TransactionType> transactiontypes) {
-		Collections.sort(transactiontypes, new Comparator<TransactionType>() {
-			@Override
-			public int compare(TransactionType o1, TransactionType o2) {
-				return o1.compareTo(o2);
-			}
-		});
+		transactiontypes.sort(naturalOrder());
 		for (TransactionType tt : transactiontypes) {
 		    // System.err.println("Adding " + tt + " - " + this.types + " / " + transactiontypes);
 		    String key = tt.getName().toUpperCase();
-		    assert(this.types.containsKey(key) == false) :
+		    assert(!this.types.containsKey(key)) :
 		        "Duplicate TransactionType '" + tt + "'\n" + this.types;
 			this.types.put(key, tt);
 		} // FOR
@@ -50,10 +41,6 @@ public class TransactionTypes implements Collection<TransactionType> {
 
 	public TransactionType getType(String procName) {
 	    return (this.types.get(procName.toUpperCase()));
-	}
-	
-	public TransactionType getType(Class<? extends Procedure> procClass) {
-		return (this.getType(procClass.getSimpleName()));
 	}
 
 	public TransactionType getType(int id) {

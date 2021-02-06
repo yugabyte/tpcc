@@ -17,15 +17,12 @@
 
 package com.oltpbenchmark;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -37,8 +34,6 @@ import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
-import com.oltpbenchmark.util.Histogram;
-import com.oltpbenchmark.util.QueueLimitException;
 import com.oltpbenchmark.util.StringUtil;
 
 public class ThreadBench implements Thread.UncaughtExceptionHandler {
@@ -49,19 +44,16 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   private final List<? extends Worker<? extends BenchmarkModule>> workers;
   private final ArrayList<Thread> workerThreads;
   // private File profileFile;
-  private List<WorkloadConfiguration> workConfs;
-  private List<WorkloadState> workStates;
-  ArrayList<LatencyRecord.Sample> samples = new ArrayList<LatencyRecord.Sample>();
+  private final List<WorkloadConfiguration> workConfs;
+  private final List<WorkloadState> workStates;
+  ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
-  private ThreadBench(List<? extends Worker<? extends BenchmarkModule>> workers, List<WorkloadConfiguration> workConfs) {
-      this(workers, null, workConfs);
-  }
-
-  public ThreadBench(List<? extends Worker<? extends BenchmarkModule>> workers, File profileFile, List<WorkloadConfiguration> workConfs) {
+  public ThreadBench(List<? extends Worker<? extends BenchmarkModule>> workers, List<WorkloadConfiguration> workConfs) {
       this.workers = workers;
       this.workConfs = workConfs;
-      this.workerThreads = new ArrayList<Thread>(workers.size());
+      this.workerThreads = new ArrayList<>(workers.size());
+      this.workStates = new ArrayList<>();
   }
 
   public static final class TimeBucketIterable implements Iterable<DistributionStatistics> {
@@ -70,10 +62,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       private final TransactionType txType;
 
       /**
-       * @param samples
-       * @param windowSizeSeconds
-       * @param txType
-       *            Allows to filter transactions by type
+       * Instantiate an Iterable of DistributionStatistics for the given samples for each windowSizeSeconds of samples,
+       * restricting to the specified txType.
        */
       public TimeBucketIterable(Iterable<Sample> samples, int windowSizeSeconds, TransactionType txType) {
           this.samples = samples;
@@ -98,10 +88,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       private DistributionStatistics next;
 
       /**
-       * @param samples
-       * @param windowSizeSeconds
-       * @param txType
-       *            Allows to filter transactions by type
+       * Constructs an iterator of DistributionStatistics for the given sample for each windowSizeSeconds of samples,
+       * restricting to the specified txType.
        */
       public TimeBucketIterator(Iterator<LatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
           this.samples = samples;
@@ -124,7 +112,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           assert sample.startNs >= nextStartNs;
 
           // Collect all samples in the time window
-          ArrayList<Integer> latencies = new ArrayList<Integer>();
+          ArrayList<Integer> latencies = new ArrayList<>();
           long endNs = nextStartNs + windowSizeSeconds * 1000000000L;
           while (sample != null && sample.startNs < endNs) {
 
@@ -142,7 +130,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           }
 
           // Set up the next time window
-          assert sample == null || endNs <= sample.startNs;
           nextStartNs = endNs;
 
           int[] l = new int[latencies.size()];
@@ -177,7 +164,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   private void createWorkerThreads() {
-
       for (Worker<?> worker : workers) {
           worker.initializeState();
           Thread thread = new Thread(worker);
@@ -185,7 +171,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           thread.start();
           this.workerThreads.add(thread);
       }
-      return;
   }
 
   private void interruptWorkers() {
@@ -195,10 +180,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   /**
-   * This method blocks until all of the worker threads finish execution
-   * @param workerThreads
-   * @return
-   * @throws InterruptedException
+   * This method blocks until all of the worker threads finish execution.
    */
   private int finalizeWorkers(ArrayList<Thread> workerThreads) throws InterruptedException {
       assert testState.getState() == State.DONE || testState.getState() == State.EXIT;
@@ -239,13 +221,11 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           this.setDaemon(true);
       }
 
-      private boolean stop = false;
-
       @Override
       public void run() {
-          Map<String, Object> m = new ListOrderedMap<String, Object>();
+          Map<String, Object> m = new ListOrderedMap<>();
           LOG.info("Starting WatchDogThread");
-          while (this.stop == false) {
+          while (true) {
               try {
                   Thread.sleep(20000);
               } catch (InterruptedException ex) {
@@ -299,23 +279,15 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       }
   } // CLASS
 
-  /*
-   * public static Results runRateLimitedBenchmark(List<Worker> workers, File
-   * profileFile) throws QueueLimitException, IOException { ThreadBench bench
-   * = new ThreadBench(workers, profileFile); return
-   * bench.runRateLimitedFromFile(); }
-   */
-
-  public static Results runRateLimitedBenchmark(List<Worker<? extends BenchmarkModule>> workers, List<WorkloadConfiguration> workConfs, int intervalMonitoring) throws QueueLimitException, IOException {
+  public static Results runRateLimitedBenchmark(List<Worker<? extends BenchmarkModule>> workers, List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
       ThreadBench bench = new ThreadBench(workers, workConfs);
       bench.intervalMonitor = intervalMonitoring;
       return bench.runRateLimitedMultiPhase();
   }
 
-  public Results runRateLimitedMultiPhase() throws QueueLimitException, IOException {
+  public Results runRateLimitedMultiPhase() {
     assert testState == null;
     testState = new BenchmarkState(workers.size() + 1);
-    workStates = new ArrayList<WorkloadState>();
 
     for (WorkloadConfiguration workState : this.workConfs) {
       workStates.add(workState.initializeState(testState));
@@ -337,7 +309,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
     for (WorkloadState workState : this.workStates) {
       workState.switchToNextPhase();
-      workState.setPhaseStartTime(start);
       phase = workState.getCurrentPhase();
       LOG.info(phase.currentPhaseString());
       if (phase.rate < lowestRate) {
@@ -345,6 +316,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       }
     }
 
+    assert phase != null;
     long intervalNs = getInterval(lowestRate, phase.arrival);
 
     long nextInterval = start + intervalNs;
@@ -394,7 +366,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         now = System.nanoTime();
         diff = nextInterval - now;
       }
-      assert diff <= 0;
 
       boolean phaseComplete = false;
       if (phase != null) {
@@ -404,7 +375,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           // trace reader has no more
           for (WorkloadConfiguration workConf : workConfs) {
             phaseComplete = false;
-            tr = workConf.getTraceReader();
             assert workConf.getTraceReader() != null;
             if (!workConf.getWorkloadState().getScriptPhaseComplete()) {
                 break;
@@ -436,7 +406,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           for (WorkloadState workState : workStates) {
             synchronized (workState) {
               workState.switchToNextPhase();
-              workState.setPhaseStartTime(now);
               lowestRate = Integer.MAX_VALUE;
               phase = workState.getCurrentPhase();
               interruptWorkers();
@@ -457,10 +426,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           }
           if (phase != null) {
             // update frequency in which we check according to
-            // wakeup
-            // speed
-            // intervalNs = (long) (1000000000. / (double)
-            // lowestRate + 0.5);
+            // wakeup speed
             delta += phase.time * 1000000000L;
           }
         }
@@ -498,6 +464,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         // began during the warmup phase.
         // If we're not doing serial executions, this function has no
         // effect and is thus safe to call regardless.
+        assert phase != null;
         phase.resetSerial();
       } else if (state == State.EXIT) {
         // All threads have noticed the done, meaning all measured
@@ -521,16 +488,10 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       Collections.sort(samples);
 
       // Compute stats on all the latencies
-      int[] latencies = new int[samples.size()];
-      for (int i = 0; i < samples.size(); ++i) {
-        latencies[i] = samples.get(i).latencyUs;
-      }
-      DistributionStatistics stats = DistributionStatistics.computeStatistics(latencies);
-
-      Results results = new Results(measureEnd - start, requests, stats, samples);
+      Results results = new Results(measureEnd - start, requests, samples);
 
       // Compute transaction histogram
-      Set<TransactionType> txnTypes = new HashSet<TransactionType>();
+      Set<TransactionType> txnTypes = new HashSet<>();
       for (WorkloadConfiguration workConf : workConfs) {
         txnTypes.addAll(workConf.getTransTypes());
       }

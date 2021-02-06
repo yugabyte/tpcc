@@ -29,7 +29,7 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
    * Contains (start time, latency, transactionType, workerid, phaseid) pentiplets
    * in microsecond form.
    */
-  private final ArrayList<Sample[]> values = new ArrayList<Sample[]>();
+  private final ArrayList<Sample[]> values = new ArrayList<>();
   private int nextIndex;
 
   public LatencyRecord(long startNs) {
@@ -37,9 +37,7 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
     allocateChunk();
   }
 
-    public void addLatency(int transType, long startNs, long endNs,
-                           long operationStartNs, long operationEndNs,
-                           int workerId, int phaseId) {
+  public void addLatency(int transType, long startNs, long endNs, long operationStartNs, long operationEndNs) {
     assert endNs >= startNs;
     if (nextIndex == ALLOC_SIZE) {
       allocateChunk();
@@ -51,7 +49,7 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
     int operationLatencyUs = (int)((operationEndNs - operationStartNs + 500) / 1000);
     assert operationLatencyUs >= 0;
 
-    chunk[nextIndex] = new Sample(transType, startNs, latencyUs, operationStartNs, operationLatencyUs, workerId, phaseId);
+    chunk[nextIndex] = new Sample(transType, startNs, latencyUs, operationLatencyUs);
     ++nextIndex;
   }
 
@@ -77,21 +75,14 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
     public final int tranType;
     public long startNs;
     public final int latencyUs;
-    public long operationStartNs;
     public final int operationLatencyUs;
-    public final int workerId;
-    public final int phaseId;
 
     public Sample(int tranType, long startNs, int latencyUs,
-                  long operationStartNs, int operationLatencyUs,
-                  int workerId, int phaseId) {
+                  int operationLatencyUs) {
       this.tranType = tranType;
       this.startNs = startNs;
       this.latencyUs = latencyUs;
-      this.operationStartNs = operationStartNs;
       this.operationLatencyUs = operationLatencyUs;
-      this.workerId = workerId;
-      this.phaseId = phaseId;
     }
 
     @Override
@@ -104,7 +95,6 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
       else if (diff < 0)
         return -1;
       else {
-        assert diff == 0;
         return 0;
       }
     }

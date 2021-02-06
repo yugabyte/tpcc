@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 
@@ -47,11 +48,11 @@ public class Phase {
   private final boolean timed;
   private final List<Double> weights;
   private final int num_weights;
-  private int activeTerminals;
+  private final int activeTerminals;
 
   Phase(String benchmarkName, int id, int t, int wt, int r, List<String> o, boolean rateLimited, boolean disabled,
         boolean serial, boolean timed, int activeTerminals, Arrival a) {
-    ArrayList<Double> w = new ArrayList<Double>();
+    ArrayList<Double> w = new ArrayList<>();
     for (String s : o)
         w.add(Double.parseDouble(s));
 
@@ -70,7 +71,7 @@ public class Phase {
     this.arrival=a;
 
     if (this.serial) {
-      List<Integer> starts = new ArrayList<Integer>(this.activeTerminals);
+      List<Integer> starts = new ArrayList<>(this.activeTerminals);
 
       if (this.activeTerminals > 1 && this.isThroughputRun()) {
         // If it's a throughput run, then workers will execute queries serially
@@ -78,7 +79,7 @@ public class Phase {
         // queries instead of starting them all on query 1.
 
         // Only consider queries with positive weights
-        List<Integer> valid = new ArrayList<Integer>();
+        List<Integer> valid = new ArrayList<>();
         for (int i = 0; i < this.num_weights; ++i) {
           if (this.weights.get(i) > 0)
               valid.add(i + 1);
@@ -91,9 +92,9 @@ public class Phase {
           starts.add(1);
       }
       this.startSerials = Collections.unmodifiableList(starts);
-      this.nextSerials = new ArrayList<Integer>(this.startSerials);
+      this.nextSerials = new ArrayList<>(this.startSerials);
       LOG.debug(String.format("Reset serial exec starting queries for %d terminals to: %s", this.activeTerminals,
-                StringUtil.join(", ", this.startSerials)));
+              this.startSerials.stream().map(Object::toString).collect(Collectors.joining(", "))));
     } else {
       this.startSerials = null;
       this.nextSerials = null;
@@ -157,8 +158,6 @@ public class Phase {
   /**
    * This simply computes the next transaction by randomly selecting one based
    * on the weights of this phase.
-   *
-   * @return
    */
   public int chooseTransaction() {
     return chooseTransaction(false, 0);
@@ -176,7 +175,7 @@ public class Phase {
 
         // Serial runs should not execute queries with non-positive
         // weights.
-        while (ret < this.num_weights && weights.get(ret - 1).doubleValue() <= 0.0)
+        while (ret < this.num_weights && weights.get(ret - 1) <= 0.0)
           ret = ++next;
 
         // If it's a cold execution, then we don't want to advance yet,
@@ -202,7 +201,7 @@ public class Phase {
       int randomPercentage = gen.nextInt((int)totalWeight()) + 1;
       double weight = 0.0;
       for (int i = 0; i < this.num_weights; i++) {
-        weight += weights.get(i).doubleValue();
+        weight += weights.get(i);
         if (randomPercentage <= weight) {
           return i + 1;
         }
@@ -215,7 +214,7 @@ public class Phase {
    * Returns a string for logging purposes when entering the phase
    */
   public String currentPhaseString() {
-    List<String> inner = new ArrayList<String>();
+    List<String> inner = new ArrayList<>();
     inner.add("[Workload=" + benchmarkName.toUpperCase() + "]");
     if (isDisabled()){
       inner.add("[Disabled=true]");
@@ -235,7 +234,7 @@ public class Phase {
       inner.add("[ActiveWorkers=" + getActiveTerminals() + "]");
     }
 
-    return StringUtil.bold("PHASE START") + " :: " + StringUtil.join(" ", inner);
+    return StringUtil.bold("PHASE START") + " :: " + String.join(" ", inner);
   }
 
 }

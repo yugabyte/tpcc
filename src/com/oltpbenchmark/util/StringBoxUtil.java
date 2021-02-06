@@ -1,5 +1,7 @@
 package com.oltpbenchmark.util;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.util.regex.Pattern;
 
 /**
@@ -10,27 +12,12 @@ public abstract class StringBoxUtil {
 
     private static final Pattern LINE_SPLIT = Pattern.compile("\n");
 
-    private static final String DEFAULT_MARKER = "*";
-    
-    public static final String UNICODE_BOX_CORNERS[] = {"\u250C", "\u2510", "\u2514", "\u2518"};
-    public static final String UNICODE_BOX_VERTICAL = "\u2502";
-    public static final String UNICODE_BOX_HORIZONTAL = "\u2500";
-    
-    public static final String UNICODE_HEAVYBOX_CORNERS[] = {"\u250F", "\u2513", "\u2517", "\u251B"};
+    public static final String[] UNICODE_HEAVYBOX_CORNERS = {"\u250F", "\u2513", "\u2517", "\u251B"};
     public static final String UNICODE_HEAVYBOX_VERTICAL = "\u2503";
     public static final String UNICODE_HEAVYBOX_HORIZONTAL = "\u2501";
-    
-    /**
-     * 
-     * @param str
-     * @param horzMark
-     * @param vertMark
-     * @param max_len
-     * @param corners
-     * @return
-     */
-    public static String box(String str, String horzMark, String vertMark, Integer max_len, String corners[]) {
-        String lines[] = LINE_SPLIT.split(str);
+
+    public static String box(String str, String horzMark, String vertMark, Integer max_len, String[] corners) {
+        String[] lines = LINE_SPLIT.split(str);
         if (lines.length == 0)
             return ("");
     
@@ -50,8 +37,8 @@ public abstract class StringBoxUtil {
             } // FOR
         }
     
-        final String top_line = corners[0] + StringUtil.repeat(horzMark, max_len + 2) + corners[1]; // padding - two corners
-        final String bot_line = corners[2] + StringUtil.repeat(horzMark, max_len + 2) + corners[3]; // padding - two corners
+        final String top_line = corners[0] + StringUtils.repeat(horzMark, max_len + 2) + corners[1]; // padding - two corners
+        final String bot_line = corners[2] + StringUtils.repeat(horzMark, max_len + 2) + corners[3]; // padding - two corners
         final String f = "%s %-" + max_len + "s %s\n";
     
         StringBuilder sb = new StringBuilder();
@@ -66,48 +53,12 @@ public abstract class StringBoxUtil {
     
     /**
      * Heavy unicode border box
-     * @param str
-     * @return
      */
     public static String heavyBox(String str) {
         return box(str, StringBoxUtil.UNICODE_HEAVYBOX_HORIZONTAL,
                         StringBoxUtil.UNICODE_HEAVYBOX_VERTICAL,
                         null,
                         StringBoxUtil.UNICODE_HEAVYBOX_CORNERS);
-    }
-
-    /**
-     * Create a box around some text
-     * 
-     * @param str
-     * @param mark
-     * @param max_len
-     * @return
-     */
-    public static String box(String str, String mark, Integer max_len) {
-        return box(str, mark, mark, max_len, null);
-    }
-
-    /**
-     * Make a box around some text using the given marker character.
-     * 
-     * @param str
-     * @param mark
-     * @return
-     */
-    public static String box(String str, String mark) {
-        return (box(str, mark, null));
-    }
-
-    /**
-     * Make a box around some text. If str has multiple lines, then the box will
-     * be the length of the longest string.
-     * 
-     * @param str
-     * @return
-     */
-    public static String box(String str) {
-        return (box(str, DEFAULT_MARKER, null));
     }
 
 

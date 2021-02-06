@@ -33,6 +33,8 @@
 
 package com.oltpbenchmark.util;
 
+import java.util.Objects;
+
 /**
  * Class representing a pair of generic-ized types. Supports equality, hashing
  * and all that other nice Java stuff. Based on STL's pair class in C++.
@@ -42,7 +44,7 @@ public class Pair<T, U> implements Comparable<Pair<T, U>> {
 
     public final T first;
     public final U second;
-    private transient Integer hash;
+    private final transient Integer hash;
 
     public Pair(T first, U second, boolean precomputeHash) {
         this.first = first;
@@ -60,7 +62,7 @@ public class Pair<T, U> implements Comparable<Pair<T, U>> {
     }
     
     public int hashCode() {
-        if (hash != null) return (hash.intValue());
+        if (hash != null) return hash;
         return (this.computeHashCode());
     }
 
@@ -72,38 +74,21 @@ public class Pair<T, U> implements Comparable<Pair<T, U>> {
     public int compareTo(Pair<T, U> other) {
         return (other.hash - this.hash);
     }
-    
-    public Object get(int idx) {
-        if (idx == 0) return first;
-        else if (idx == 1) return second;
-        return null;
-    }
-
-    /**
-     * @param o Object to compare to.
-     * @return Is the object equal to a value in the pair.
-     */
-    public boolean contains(Object o) {
-        if ((first != null) && (first.equals(o))) return true;
-        if ((second != null) && (second.equals(o))) return true;
-        if (o != null) return false;
-        return ((first == null) || (second == null));
-    }
 
     public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
         
-        if (o == null || !(o instanceof Pair)) {
+        if (!(o instanceof Pair)) {
             return false;
         }
 
         @SuppressWarnings("unchecked")
         Pair<T, U> other = (Pair<T, U>) o;
 
-        return (first == null ? other.first == null : first.equals(other.first))
-                && (second == null ? other.second == null : second.equals(other.second));
+        return (Objects.equals(first, other.first))
+                && (Objects.equals(second, other.second));
     }
 
     /**
@@ -111,6 +96,6 @@ public class Pair<T, U> implements Comparable<Pair<T, U>> {
      * inference.
      */
     public static <T, U> Pair<T, U> of(T x, U y) {
-        return new Pair<T, U>(x, y);
+        return new Pair<>(x, y);
     }
 }

@@ -120,12 +120,10 @@ public class Payment extends TPCCProcedure {
   private PreparedStatement payInsertHist = null;
   private PreparedStatement customerByName = null;
 
-  public ResultSet run(Connection conn, Random gen,
-                       int w_id, int numWarehouses,
-                       int terminalDistrictLowerID, int terminalDistrictUpperID,
-                       TPCCWorker w) throws SQLException {
-
-      // initializing all prepared statements
+  public void run(Connection conn, Random gen,
+                  int w_id, int numWarehouses,
+                  int terminalDistrictLowerID, int terminalDistrictUpperID,
+                  TPCCWorker w) throws SQLException {
     payUpdateWhse = this.getPreparedStatement(conn, payUpdateWhseSQL);
     payGetWhse = this.getPreparedStatement(conn, payGetWhseSQL);
     payUpdateDist = this.getPreparedStatement(conn, payUpdateDistSQL);
@@ -137,9 +135,7 @@ public class Payment extends TPCCProcedure {
     payInsertHist = this.getPreparedStatement(conn, payInsertHistSQL);
     customerByName = this.getPreparedStatement(conn, customerByNameSQL);
 
-    // payUpdateWhse =this.getPreparedStatement(conn, payUpdateWhseSQL);
     int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
-    int customerID = TPCCUtil.getCustomerID(gen);
 
     int x = TPCCUtil.randomNumber(1, 100, gen);
     int customerDistrictID;
@@ -155,17 +151,15 @@ public class Payment extends TPCCProcedure {
     }
 
     long y = TPCCUtil.randomNumber(1, 100, gen);
-    boolean customerByName;
-    String customerLastName = null;
-    customerID = -1;
+    Customer c;
     if (y <= 60) {
       // 60% lookups by last name
-      customerByName = true;
-      customerLastName = TPCCUtil.getNonUniformRandomLastNameForRun(gen);
+      String customerLastName = TPCCUtil.getNonUniformRandomLastNameForRun(gen);
+      c = getCustomerByName(customerWarehouseID, customerDistrictID, customerLastName);
     } else {
       // 40% lookups by customer ID
-      customerByName = false;
-      customerID = TPCCUtil.getCustomerID(gen);
+      int customerID = TPCCUtil.getCustomerID(gen);
+      c = getCustomerById(customerWarehouseID, customerDistrictID, customerID);
     }
 
     float paymentAmount = (float) (TPCCUtil.randomNumber(100, 500000, gen) / 100.0);
@@ -192,7 +186,6 @@ public class Payment extends TPCCProcedure {
     w_zip = rs.getString("W_ZIP");
     w_name = rs.getString("W_NAME");
     rs.close();
-    rs = null;
 
     payUpdateDist.setDouble(1, paymentAmount);
     payUpdateDist.setInt(2, w_id);
@@ -213,16 +206,6 @@ public class Payment extends TPCCProcedure {
     d_zip = rs.getString("D_ZIP");
     d_name = rs.getString("D_NAME");
     rs.close();
-    rs = null;
-
-    Customer c;
-    if (customerByName) {
-      assert customerID <= 0;
-      c = getCustomerByName(customerWarehouseID, customerDistrictID, customerLastName);
-    } else {
-      assert customerLastName == null;
-      c = getCustomerById(customerWarehouseID, customerDistrictID, customerID, conn);
-    }
 
     c.c_balance -= paymentAmount;
     c.c_ytd_payment += paymentAmount;
@@ -238,7 +221,6 @@ public class Payment extends TPCCProcedure {
                                    " C_D_ID=" + customerDistrictID + " not found!");
       c_data = rs.getString("C_DATA");
       rs.close();
-      rs = null;
 
       c_data = c.c_id + " " + customerDistrictID + " " + customerWarehouseID + " " + districtID +
                " " + w_id + " " + paymentAmount + " | " + c_data;
@@ -292,7 +274,7 @@ public class Payment extends TPCCProcedure {
     if (LOG.isTraceEnabled()) {
       StringBuilder terminalMessage = new StringBuilder();
       terminalMessage.append("\n+---------------------------- PAYMENT ----------------------------+");
-      terminalMessage.append("\n Date: " + TPCCUtil.getCurrentTime());
+      terminalMessage.append("\n Date: ").append(TPCCUtil.getCurrentTime());
       terminalMessage.append("\n\n Warehouse: ");
       terminalMessage.append(w_id);
       terminalMessage.append("\n   Street:  ");
@@ -338,8 +320,6 @@ public class Payment extends TPCCProcedure {
       terminalMessage.append("\n   Since:   ");
       if (c.c_since != null) {
         terminalMessage.append(c.c_since.toString());
-      } else {
-        terminalMessage.append("");
       }
       terminalMessage.append("\n   Credit:  ");
       terminalMessage.append(c.c_credit);
@@ -354,25 +334,24 @@ public class Payment extends TPCCProcedure {
       terminalMessage.append("\n New Cust-Balance: ");
       terminalMessage.append(c.c_balance);
       if (c.c_credit.equals("BC")) {
+        assert c_data != null;
         if (c_data.length() > 50) {
-          terminalMessage.append("\n\n Cust-Data: " + c_data.substring(0, 50));
+          terminalMessage.append("\n\n Cust-Data: ").append(c_data, 0, 50);
           int data_chunks = c_data.length() > 200 ? 4 : c_data.length() / 50;
           for (int n = 1; n < data_chunks; n++)
-            terminalMessage.append("\n            " + c_data.substring(n * 50, (n + 1) * 50));
+            terminalMessage.append("\n            ").append(c_data, n * 50, (n + 1) * 50);
         } else {
-          terminalMessage.append("\n\n Cust-Data: " + c_data);
+          terminalMessage.append("\n\n Cust-Data: ").append(c_data);
         }
       }
       terminalMessage.append("\n+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
-    return null;
   }
 
   // attention duplicated code across trans... ok for now to maintain separate
   // prepared statements
-  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id,
-                                  Connection conn) throws SQLException {
+  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id) throws SQLException {
     payGetCust.setInt(1, c_w_id);
     payGetCust.setInt(2, c_d_id);
     payGetCust.setInt(3, c_id);
@@ -393,7 +372,7 @@ public class Payment extends TPCCProcedure {
   // allow for separate statements.
   public Customer getCustomerByName(int c_w_id, int c_d_id,
                                     String customerLastName) throws SQLException {
-    ArrayList<Customer> customers = new ArrayList<Customer>();
+    ArrayList<Customer> customers = new ArrayList<>();
     customerByName.setInt(1, c_w_id);
     customerByName.setInt(2, c_d_id);
     customerByName.setString(3, customerLastName);

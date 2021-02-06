@@ -24,7 +24,6 @@ import java.net.URL;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.sql.*;
 
@@ -39,16 +38,13 @@ public class ScriptRunner {
 
 	private static final String DEFAULT_DELIMITER = ";";
 
-	private Connection connection;
+	private final Connection connection;
 
-	private boolean stopOnError;
-	private boolean autoCommit;
+	private final boolean stopOnError;
+	private final boolean autoCommit;
 
-	private PrintWriter logWriter = new PrintWriter(System.out);
-	private PrintWriter errorLogWriter = new PrintWriter(System.err);
-
-	private String delimiter = DEFAULT_DELIMITER;
-	private boolean fullLineDelimiter = false;
+	private final String delimiter = DEFAULT_DELIMITER;
+	private final boolean fullLineDelimiter = false;
 
 	/**
 	 * Default constructor
@@ -60,36 +56,8 @@ public class ScriptRunner {
 		this.stopOnError = stopOnError;
 	}
 
-	public void setDelimiter(String delimiter, boolean fullLineDelimiter) {
-		this.delimiter = delimiter;
-		this.fullLineDelimiter = fullLineDelimiter;
-	}
-
 	/**
-	 * Setter for logWriter property
-	 * 
-	 * @param logWriter
-	 *            - the new value of the logWriter property
-	 */
-	public void setLogWriter(PrintWriter logWriter) {
-		this.logWriter = logWriter;
-	}
-
-	/**
-	 * Setter for errorLogWriter property
-	 * 
-	 * @param errorLogWriter
-	 *            - the new value of the errorLogWriter property
-	 */
-	public void setErrorLogWriter(PrintWriter errorLogWriter) {
-		this.errorLogWriter = errorLogWriter;
-	}
-
-	/**
-	 * Runs an SQL script (read in using the Reader parameter)
-	 * 
-	 * @param reader
-	 *            - the source of the script
+	 * Runs an SQL script
 	 */
 	public void runScript(URL resource) throws IOException, SQLException {
 		Reader reader = new InputStreamReader(resource.openStream());
@@ -103,9 +71,7 @@ public class ScriptRunner {
 			} finally {
 				connection.setAutoCommit(originalAutoCommit);
 			}
-		} catch (IOException e) {
-			throw e;
-		} catch (SQLException e) {
+		} catch (IOException | SQLException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new RuntimeException("Error running script.  Cause: " + e, e);
@@ -125,12 +91,11 @@ public class ScriptRunner {
 	 * @throws IOException
 	 *             if there is an error reading from the Reader
 	 */
-	private void runScript(Connection conn, Reader reader) throws IOException,
-			SQLException {
+	private void runScript(Connection conn, Reader reader) throws IOException, SQLException {
 		StringBuffer command = null;
 		try {
 			LineNumberReader lineReader = new LineNumberReader(reader);
-			String line = null;
+			String line;
 			while ((line = lineReader.readLine()) != null) {
 			    if (LOG.isDebugEnabled()) LOG.debug(line);
 				if (command == null) {
@@ -142,46 +107,24 @@ public class ScriptRunner {
 				} else if (trimmedLine.length() < 1
 						|| trimmedLine.startsWith("//")) {
 					// Do nothing
-				} else if (trimmedLine.length() < 1
-						|| trimmedLine.startsWith("--")) {
-					// Do nothing
 				} else if (!fullLineDelimiter
 						&& trimmedLine.endsWith(getDelimiter())
 						|| fullLineDelimiter
 						&& trimmedLine.equals(getDelimiter())) {
-					command.append(line.substring(0, line
-							.lastIndexOf(getDelimiter())));
+					command.append(line, 0, line.lastIndexOf(getDelimiter()));
 					command.append(" ");
 					Statement statement = conn.createStatement();
-
-					// println(command);
 
 					boolean hasResults = false;
 					final String sql = command.toString().trim();
 					if (stopOnError) {
-                                try {
 						hasResults = statement.execute(sql);
-                                } catch (SQLException e) {
-                                    // Some errors aren't actually errors.
-                                    if (e.getErrorCode() == 0 && e.getSQLState() != null
-                                            && e.getSQLState().equals("42S02"))
-                                    {
-                                        // MonetDB has no "drop table if exists" statement,
-                                        // so we have to just try to drop a table whether
-                                        // it exists or not. This error means that the
-                                        // table didn't exist. But no matter: we can carry
-                                        // on.
-                                    }
-                                    else {
-                                        throw e;
-                                    }
-                                }
 					} else {
 						try {
 							statement.execute(sql);
 						} catch (SQLException e) {
-							printlnError("Error executing: " + sql);
-							printlnError(e);
+							System.err.println("Error executing: " + sql);
+							System.err.println(e.toString());
 						}
 					}
 
@@ -190,22 +133,22 @@ public class ScriptRunner {
 					}
 					
 					// HACK
-					if (hasResults && sql.toUpperCase().startsWith("CREATE") == false) {
+					if (hasResults && !sql.toUpperCase().startsWith("CREATE")) {
     					ResultSet rs = statement.getResultSet();
-    					if (hasResults && rs != null) {
+    					if (rs != null) {
     						ResultSetMetaData md = rs.getMetaData();
     						int cols = md.getColumnCount();
     						for (int i = 0; i < cols; i++) {
     							String name = md.getColumnLabel(i);
-    							print(name + "\t");
+								System.out.println(name + "\t");
     						}
-    						println("");
+							System.out.println();
     						while (rs.next()) {
     							for (int i = 0; i < cols; i++) {
     								String value = rs.getString(i);
-    								print(value + "\t");
+    								System.out.println(value + "\t");
     							}
-    							println("");
+								System.out.println();
     						}
     						rs.close();
     					}
@@ -226,13 +169,8 @@ public class ScriptRunner {
 			if (!autoCommit) {
 				conn.commit();
 			}
-		} catch (SQLException e) {
-//			e.fillInStackTrace();
-			printlnError("Error executing: " + command);
-			throw e;
-		} catch (IOException e) {
-//			e.fillInStackTrace();
-			printlnError("Error executing: " + command);
+		} catch (SQLException | IOException e) {
+			System.err.println("Error executing: " + command);
 			throw e;
 		} finally {
 			if (!autoCommit) conn.rollback();
@@ -244,30 +182,8 @@ public class ScriptRunner {
 		return delimiter;
 	}
 
-	private void print(Object o) {
-		if (logWriter != null) {
-			System.out.print(o);
-		}
-	}
-
-	private void println(Object o) {
-		if (logWriter != null) {
-			logWriter.println(o);
-		}
-	}
-
-	private void printlnError(Object o) {
-		if (errorLogWriter != null) {
-			errorLogWriter.println(o);
-		}
-	}
-
 	private void flush() {
-		if (logWriter != null) {
-			logWriter.flush();
-		}
-		if (errorLogWriter != null) {
-			errorLogWriter.flush();
-		}
+		System.out.flush();
+		System.err.flush();
 	}
 }

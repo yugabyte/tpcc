@@ -33,19 +33,8 @@ public abstract class AbstractCatalogObject implements Serializable {
 	
 	/**
 	 * Return the name of this catalog object in the database
-	 * @return
 	 */
 	public final String getName() {
 		return (this.name);
 	}
-	
-	/**
-     * Return the name of this catalog object escaped with the 
-     * by the CatalogUtil.separator
-     * @return
-     */
-    public final String getEscapedName() {
-    	String s = Catalog.getSeparator();
-    	return s + this.name + s;
-    }
 }

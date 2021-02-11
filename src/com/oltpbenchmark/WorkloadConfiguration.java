@@ -70,6 +70,7 @@ public class WorkloadConfiguration {
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
   private boolean useStoredProcedures = true;
+  private int maxRetriesPerTransaction = 0;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -418,6 +419,14 @@ public class WorkloadConfiguration {
     this.useStoredProcedures = useStoredProcedures;
   }
   public boolean getUseStoredProcedures() { return this.useStoredProcedures; }
+
+  public void setMaxRetriesPerTransaction(int maxRetriesPerTransaction) {
+    this.maxRetriesPerTransaction = maxRetriesPerTransaction;
+  }
+
+  public int getMaxRetriesPerTransaction() {
+    return maxRetriesPerTransaction;
+  }
 
   @Override
   public String toString() {

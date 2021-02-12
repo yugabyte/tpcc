@@ -49,5 +49,6 @@
           <weights>45,43,4,4,4</weights>
         </work>
 	</works>
-		
+    <maxRetriesPerTransaction>2</maxRetriesPerTransaction>
+
 </parameters>

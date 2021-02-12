@@ -323,6 +323,10 @@ public class DBWorkload {
         wrkld.setBatchSize(xmlConfig.getInt("batchSize"));
       }
 
+      if (xmlConfig.containsKey("maxRetriesPerTransaction")) {
+        wrkld.setMaxRetriesPerTransaction(xmlConfig.getInt("maxRetriesPerTransaction"));
+      }
+
       if (xmlConfig.containsKey("port")) {
         wrkld.setPort(xmlConfig.getInt("port"));
       }
@@ -1034,6 +1038,12 @@ public class DBWorkload {
       xmlConfig.containsKey("displayEnhancedLatencyMetrics") &&
       xmlConfig.getBoolean("displayEnhancedLatencyMetrics");
     PrintLatencies(workers, displayEnhancedLatencyMetrics);
+
+    int total_retries = 0;
+    for (Worker<?> w : workers) {
+      total_retries += w.getTotalRetries();
+    }
+    LOG.info("Total retries : " + total_retries);
 
     return r;
   }

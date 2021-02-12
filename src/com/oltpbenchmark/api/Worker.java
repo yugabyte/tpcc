@@ -63,6 +63,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     private boolean seenDone = false;
 
+    int totalRetries = 0;
+    int totalAttemptsPerTransaction = 1;
+
     public Worker(T benchmarkModule, int id) {
         this.id = id;
         this.benchmarkModule = benchmarkModule;
@@ -77,6 +80,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         } catch (Exception ex) {
             throw new RuntimeException("Failed to connect to database", ex);
         }
+        totalAttemptsPerTransaction = wrkld.getMaxRetriesPerTransaction() + 1;
     }
 
     public final void InitializeProcedures() {
@@ -100,6 +104,10 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      */
     public final int getId() {
         return this.id;
+    }
+
+    public final int getTotalRetries() {
+      return totalRetries;
     }
 
     @Override
@@ -402,11 +410,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 }
             }
             // In case of transaction failures, the end times will not be populated.
-            if (executionState.getEndOperation() == 0) {
-              executionState.setEndOperation(System.nanoTime());
-            }
-            if (executionState.getEndConnection() == 0) {
-              executionState.setEndConnection(System.nanoTime());
+            if (executionState.getEndOperation() == 0 || executionState.getEndConnection() == 0) {
+              continue work;
             }
 
             if (think_time_msecs > 0) {
@@ -492,7 +497,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         final DatabaseType dbType = wrkld.getDBType();
         final boolean recordAbortMessages = wrkld.getRecordAbortMessages();
 
-
         Connection conn = null;
         try {
             startConnection = System.nanoTime();
@@ -502,8 +506,11 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             conn.setTransactionIsolation(this.wrkld.getIsolationMode());
 
             endConnection = System.nanoTime();
+            int attempt = 0;
 
-            while (status == TransactionStatus.RETRY && this.wrkldState.getGlobalState() != State.DONE) {
+            while (status == TransactionStatus.RETRY &&
+                   this.wrkldState.getGlobalState() != State.DONE &&
+                   ++attempt <= totalAttemptsPerTransaction) {
                 if (next == null) {
                     next = transactionTypes.getType(pieceOfWork.getType());
                 }
@@ -562,6 +569,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // ------------------
                     } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
                         // Postgres serialization
+                        totalRetries++;
+                        status = TransactionStatus.RETRY;
                         continue;
                     } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("53200")) {
                         // Postgres OOM error

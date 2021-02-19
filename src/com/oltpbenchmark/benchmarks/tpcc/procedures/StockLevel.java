@@ -16,10 +16,7 @@
 
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
@@ -50,9 +47,26 @@ public class StockLevel extends TPCCProcedure {
       " AND S_I_ID = OL_I_ID" +
       " AND S_QUANTITY < ?");
 
+//  CREATE OR REPLACE FUNCTION get_counts_dynamic(warehouse INT, district INT, min_o_id INT, max_o_id INT, max_quantity INT)
+//  RETURNS integer AS $$
+//  DECLARE
+//  item_ids integer[];
+//  result integer;
+//  BEGIN
+//  SELECT ARRAY(SELECT DISTINCT(OL_I_ID)
+//  FROM ORDER_LINE
+//  WHERE OL_W_ID = $1 and OL_D_ID = $2 and OL_O_ID >= $3 and OL_O_ID < $4) INTO item_ids;
+//  SELECT COUNT(S_I_ID) INTO result
+//  FROM STOCK WHERE S_W_ID = $1
+//  AND S_I_ID = ANY(item_ids) AND S_QUANTITY < $5;
+//  RETURN result;
+//  END; $$ LANGUAGE plpgsql;
+
   // Stock Level Txn
   private PreparedStatement stockGetDistOrderId = null;
   private PreparedStatement stockGetCountStock = null;
+
+  private CallableStatement stockGetCountStockFunc = null;
 
   public ResultSet run(Connection conn, Random gen,
                         int w_id, int numWarehouses,
@@ -60,6 +74,9 @@ public class StockLevel extends TPCCProcedure {
                         TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
+    stockGetCountStockFunc = conn.prepareCall("{ ? = call getStockCounts( ?, ?, ?, ?, ? )");
+    stockGetCountStockFunc.registerOutParameter(1, Types.INTEGER);
+
     stockGetCountStock= this.getPreparedStatement(conn, stockGetCountStockSQL);
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
@@ -82,16 +99,22 @@ public class StockLevel extends TPCCProcedure {
     o_id = rs.getInt("D_NEXT_O_ID");
     rs.close();
 
-    stockGetCountStock.setInt(1, w_id);
-    stockGetCountStock.setInt(2, d_id);
-    stockGetCountStock.setInt(3, o_id);
-    stockGetCountStock.setInt(4, o_id - 20);
-    stockGetCountStock.setInt(5, w_id);
-    stockGetCountStock.setInt(6, threshold);
+//    stockGetCountStock.setInt(1, w_id);
+//    stockGetCountStock.setInt(2, d_id);
+//    stockGetCountStock.setInt(3, o_id);
+//    stockGetCountStock.setInt(4, o_id - 20);
+//    stockGetCountStock.setInt(5, w_id);
+//    stockGetCountStock.setInt(6, threshold);
+    stockGetCountStockFunc.setInt(2, w_id);
+    stockGetCountStockFunc.setInt(3, d_id);
+    stockGetCountStockFunc.setInt(4, o_id - 20);
+    stockGetCountStockFunc.setInt(5, o_id);
+    stockGetCountStockFunc.setInt(6, threshold);
     if (trace)
       LOG.trace(String.format("stockGetCountStock BEGIN [W_ID=%d, D_ID=%d, O_ID=%d]",
                 w_id, d_id, o_id));
-    rs = stockGetCountStock.executeQuery();
+    rs = stockGetCountStockFunc.executeQuery();
+//    rs = stockGetCountStock.executeQuery();
     if (trace) LOG.trace("stockGetCountStock END");
 
     if (!rs.next()) {

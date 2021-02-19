@@ -45,7 +45,7 @@ CREATE TABLE stock (
   s_dist_08 char(24) NOT NULL,
   s_dist_09 char(24) NOT NULL,
   s_dist_10 char(24) NOT NULL,
-  PRIMARY KEY ((s_w_id,s_i_id)HASH)
+  PRIMARY KEY (s_w_id HASH, s_i_id ASC)
 );
 
 -- TODO: o_entry_d  ON UPDATE CURRENT_TIMESTAMP

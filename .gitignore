@@ -5,3 +5,5 @@ results/
 venv/
 __pycache__/
 .idea/
+target/
+*iml

@@ -79,7 +79,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         if (!workConf.getEnableForeignKeysAfterLoad() && workConf.getShouldEnableForeignKeys()) {
           EnableForeignKeyConstraints(conn);
         }
-        CreateStockLevelStoredProcedure(conn);
+//        CreateStockLevelStoredProcedure(conn);
         if (workConf.getStartWarehouseIdForShard() == 1) {
           loadItems(conn, TPCCConfig.configItemCount);
         }

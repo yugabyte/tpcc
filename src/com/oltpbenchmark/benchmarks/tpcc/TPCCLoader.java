@@ -79,6 +79,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         if (!workConf.getEnableForeignKeysAfterLoad() && workConf.getShouldEnableForeignKeys()) {
           EnableForeignKeyConstraints(conn);
         }
+        CreateStockLevelStoredProcedure(conn);
         if (workConf.getStartWarehouseIdForShard() == 1) {
           loadItems(conn, TPCCConfig.configItemCount);
         }
@@ -164,21 +165,30 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
   }
 
   protected void CreateStockLevelStoredProcedure(Connection conn) {
-//    CREATE OR REPLACE
-//    FUNCTION get_counts_dynamic(warehouse INT, district INT, min_o_id INT, max_o_id INT, max_quantity INT)
-//    RETURNS integer AS $$
-//    DECLARE
-//    item_ids integer[];
-//    result integer;
-//    BEGIN
-//    SELECT ARRAY(SELECT DISTINCT(OL_I_ID)
-//    FROM ORDER_LINE
-//    WHERE OL_W_ID = $1 and OL_D_ID = $2 and OL_O_ID >= $3 and OL_O_ID < $4) INTO item_ids;
-//    SELECT COUNT(S_I_ID) INTO result
-//    FROM STOCK WHERE S_W_ID = $1
-//    AND S_I_ID = ANY(item_ids) AND S_QUANTITY < $5;
-//    RETURN result;
-//    END; $$ LANGUAGE plpgsql;
+    try {
+      Statement st = conn.createStatement();
+      st.execute(
+" CREATE OR REPLACE"
++ " FUNCTION get_counts_dynamic(warehouse INT, district INT, min_o_id INT, max_o_id INT, max_quantity INT)"
++ " RETURNS integer AS $$"
++ " DECLARE"
++ " item_ids integer[];"
++ " result integer;"
++ " BEGIN"
++ " SELECT ARRAY(SELECT DISTINCT(OL_I_ID)"
++ " FROM ORDER_LINE"
++ " WHERE OL_W_ID = $1 and OL_D_ID = $2 and OL_O_ID >= $3 and OL_O_ID < $4) INTO item_ids;"
++ " SELECT COUNT(S_I_ID) INTO result"
++ " FROM STOCK WHERE S_W_ID = $1"
++ " AND S_I_ID = ANY(item_ids) AND S_QUANTITY < $5;"
++ " RETURN result;"
++ " END; $$ LANGUAGE plpgsql;");
+    } catch (SQLException se) {
+      LOG.debug(se.getMessage());
+      transRollback(conn);
+    }
+
+
   }
 
   protected void EnableForeignKeyConstraints(Connection conn) {

@@ -74,8 +74,8 @@ public class StockLevel extends TPCCProcedure {
                         TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
-    stockGetCountStockFunc = conn.prepareCall("{ ? = call getStockCounts( ?, ?, ?, ?, ? ) }");
-    stockGetCountStockFunc.registerOutParameter(1, Types.INTEGER);
+    stockGetCountStockFunc = conn.prepareCall("{ ? = call getStockCounts( ?, ?, ?, ? ) }");
+//    stockGetCountStockFunc.registerOutParameter(1, Types.INTEGER);
 
     stockGetCountStock= this.getPreparedStatement(conn, stockGetCountStockSQL);
 
@@ -105,11 +105,11 @@ public class StockLevel extends TPCCProcedure {
 //    stockGetCountStock.setInt(4, o_id - 20);
 //    stockGetCountStock.setInt(5, w_id);
 //    stockGetCountStock.setInt(6, threshold);
-    stockGetCountStockFunc.setInt(2, w_id);
-    stockGetCountStockFunc.setInt(3, d_id);
-    stockGetCountStockFunc.setInt(4, o_id - 20);
-    stockGetCountStockFunc.setInt(5, o_id);
-    stockGetCountStockFunc.setInt(6, threshold);
+    stockGetCountStockFunc.setInt(1, w_id);
+    stockGetCountStockFunc.setInt(2, d_id);
+    stockGetCountStockFunc.setInt(3, o_id - 20);
+    stockGetCountStockFunc.setInt(4, o_id);
+    stockGetCountStockFunc.setInt(5, threshold);
     if (trace)
       LOG.trace(String.format("stockGetCountStock BEGIN [W_ID=%d, D_ID=%d, O_ID=%d]",
                 w_id, d_id, o_id));
@@ -123,7 +123,7 @@ public class StockLevel extends TPCCProcedure {
       if (trace) LOG.warn(msg);
       throw new RuntimeException(msg);
     }
-    stock_count = rs.getInt("STOCK_COUNT");
+    stock_count = rs.getInt("result");
     if (trace) LOG.trace("stockGetCountStock RESULT=" + stock_count);
 
     conn.commit();

@@ -74,7 +74,7 @@ public class StockLevel extends TPCCProcedure {
                         TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
-    stockGetCountStockFunc = conn.prepareCall("{ ? = call getStockCounts( ?, ?, ?, ?, ? )");
+    stockGetCountStockFunc = conn.prepareCall("{ ? = call getStockCounts( ?, ?, ?, ?, ? ) }");
     stockGetCountStockFunc.registerOutParameter(1, Types.INTEGER);
 
     stockGetCountStock= this.getPreparedStatement(conn, stockGetCountStockSQL);

@@ -63,7 +63,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
     private boolean seenDone = false;
 
-    int totalRetries = 0;
+    int[] totalRetries;
+    int[] totalFailures;
     int totalAttemptsPerTransaction = 1;
 
     public Worker(T benchmarkModule, int id) {
@@ -72,6 +73,8 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         this.wrkld = this.benchmarkModule.getWorkloadConfiguration();
         this.wrkldState = this.wrkld.getWorkloadState();
         this.currStatement = null;
+        totalRetries = new int[wrkld.getNumTxnTypes()];
+        totalFailures = new int[wrkld.getNumTxnTypes()];
         InitializeProcedures();
 
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
@@ -106,8 +109,12 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         return this.id;
     }
 
-    public final int getTotalRetries() {
+    public final int[] getTotalRetries() {
       return totalRetries;
+    }
+
+    public final int[] getTotalFailures() {
+      return totalFailures;
     }
 
     @Override
@@ -409,18 +416,21 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     }
                 }
             }
-            // In case of transaction failures, the end times will not be populated.
-            if (executionState.getEndOperation() == 0 || executionState.getEndConnection() == 0) {
-              continue work;
-            }
-
-            if (think_time_msecs > 0) {
+           if (think_time_msecs > 0) {
                 // Sleep for the think time duration.
                 try {
                     Thread.sleep(think_time_msecs);
                 } catch (InterruptedException e) {
                     LOG.error("Thread sleep interrupted");
                 }
+            }
+
+            // In case of transaction failures, the end times will not be populated.
+            if (executionState.getEndOperation() == 0 || executionState.getEndConnection() == 0) {
+              if (this.wrkldState.getGlobalState() != State.DONE) {
+                ++totalFailures[pieceOfWork.getType() - 1];
+              }
+              continue work;
             }
 
             // PART 4: Record results
@@ -514,6 +524,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 if (next == null) {
                     next = transactionTypes.getType(pieceOfWork.getType());
                 }
+                if (attempt > 1) {
+                    ++totalRetries[pieceOfWork.getType() - 1];
+                }
                 assert (next.isSupplemental() == false) : "Trying to select a supplemental transaction " + next;
 
                 try {
@@ -569,7 +582,6 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // ------------------
                     } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
                         // Postgres serialization
-                        totalRetries++;
                         status = TransactionStatus.RETRY;
                         continue;
                     } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("53200")) {

@@ -1039,12 +1039,17 @@ public class DBWorkload {
       xmlConfig.getBoolean("displayEnhancedLatencyMetrics");
     PrintLatencies(workers, displayEnhancedLatencyMetrics);
 
-    int total_retries = 0;
+    int numTxnTypes = workConfs.get(0).getNumTxnTypes();
+    int[] totalRetries = new int[numTxnTypes];
+    int[] totalFailures = new int[numTxnTypes];
     for (Worker<?> w : workers) {
-      total_retries += w.getTotalRetries();
+      for (int i = 0; i < numTxnTypes; ++i) {
+        totalRetries[i] += w.getTotalRetries()[i];
+        totalFailures[i] += w.getTotalFailures()[i];
+      }
     }
-    LOG.info("Total retries : " + total_retries);
-
+    LOG.info(String.format("Total retries: %s Total failures: %s",
+                           Arrays.toString(totalRetries), Arrays.toString(totalFailures)));
     return r;
   }
 

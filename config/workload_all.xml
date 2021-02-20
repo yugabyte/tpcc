@@ -49,6 +49,10 @@
           <weights>45,43,4,4,4</weights>
         </work>
 	</works>
-    <maxRetriesPerTransaction>2</maxRetriesPerTransaction>
+    <!--
+      Set the number of retries to 0 as retrying when the number of warehouses is
+      high is pointless as it just leads to more failures.
+    -->
+    <maxRetriesPerTransaction>0</maxRetriesPerTransaction>
 
 </parameters>

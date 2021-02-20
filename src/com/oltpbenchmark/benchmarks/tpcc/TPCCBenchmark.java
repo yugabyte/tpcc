@@ -26,6 +26,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.WorkloadConfiguration;
@@ -164,8 +165,8 @@ public class TPCCBenchmark extends BenchmarkModule {
       loader.EnableForeignKeyConstraints(makeConnection());
     }
 
-    // This function creates SQL procedures that the execution would need. Currently we have
-    // procedures only to update the Stock table.
+    // This function creates SQL procedures that the execution would need. Currently we have procedures to update the
+    // Stock table, and a procedure to get stock levels of items recently ordered.
     public void createSqlProcedures() throws Exception {
       try {
         Connection conn = makeConnection();
@@ -188,6 +189,8 @@ public class TPCCBenchmark extends BenchmarkModule {
           st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d", i));
           st.execute(updateStmt);
         }
+
+        StockLevel.InitializeGetStockCountProc(conn);
       } catch (SQLException se) {
         LOG.error(se.getMessage());
         throw se;

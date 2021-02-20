@@ -16,10 +16,7 @@
 
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
@@ -39,20 +36,35 @@ public class StockLevel extends TPCCProcedure {
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
+  private static final String GET_STOCK_COUNTS_PROC_NAME = "getstockcounts";
+
   public SQLStmt stockGetCountStockSQL = new SQLStmt(
-      "SELECT COUNT(DISTINCT (S_I_ID)) AS STOCK_COUNT " +
-      " FROM " + TPCCConstants.TABLENAME_ORDERLINE + ", " + TPCCConstants.TABLENAME_STOCK +
-      " WHERE OL_W_ID = ?" +
-      " AND OL_D_ID = ?" +
-      " AND OL_O_ID < ?" +
-      " AND OL_O_ID >= ?" +
-      " AND S_W_ID = ?" +
-      " AND S_I_ID = OL_I_ID" +
-      " AND S_QUANTITY < ?");
+      String.format("{ ? = call %s( ?, ?, ?, ? ) }", GET_STOCK_COUNTS_PROC_NAME));
+
+  public static void InitializeGetStockCountProc(Connection conn) throws SQLException {
+    Statement stmt = conn.createStatement();
+    stmt.execute(String.format(
+        "CREATE OR REPLACE" +
+        " FUNCTION %s(warehouse INT, district INT, min_o_id INT, max_o_id INT, max_quantity INT)" +
+        " RETURNS integer AS $$" +
+        " DECLARE" +
+        " item_ids integer[];" +
+        " result integer;" +
+        " BEGIN" +
+        " SELECT ARRAY(SELECT DISTINCT(OL_I_ID)" +
+        " FROM ORDER_LINE" +
+        " WHERE OL_W_ID = $1 and OL_D_ID = $2 and OL_O_ID >= $3 and OL_O_ID < $4) INTO item_ids;" +
+        " SELECT COUNT(S_I_ID) INTO result" +
+        " FROM STOCK WHERE S_W_ID = $1" +
+        " AND S_I_ID = ANY(item_ids) AND S_QUANTITY < $5;" +
+        " RETURN result;" +
+        " END; $$ LANGUAGE plpgsql", GET_STOCK_COUNTS_PROC_NAME));
+  }
 
   // Stock Level Txn
   private PreparedStatement stockGetDistOrderId = null;
-  private PreparedStatement stockGetCountStock = null;
+
+  private CallableStatement stockGetCountStockFunc = null;
 
   public ResultSet run(Connection conn, Random gen,
                         int w_id, int numWarehouses,
@@ -60,13 +72,13 @@ public class StockLevel extends TPCCProcedure {
                         TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
-    stockGetCountStock= this.getPreparedStatement(conn, stockGetCountStockSQL);
+    stockGetCountStockFunc = conn.prepareCall(stockGetCountStockSQL.getSQL());
+
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
 
     int o_id = 0;
-    // XXX int i_id = 0;
     int stock_count = 0;
 
     stockGetDistOrderId.setInt(1, w_id);
@@ -82,16 +94,15 @@ public class StockLevel extends TPCCProcedure {
     o_id = rs.getInt("D_NEXT_O_ID");
     rs.close();
 
-    stockGetCountStock.setInt(1, w_id);
-    stockGetCountStock.setInt(2, d_id);
-    stockGetCountStock.setInt(3, o_id);
-    stockGetCountStock.setInt(4, o_id - 20);
-    stockGetCountStock.setInt(5, w_id);
-    stockGetCountStock.setInt(6, threshold);
+    stockGetCountStockFunc.setInt(1, w_id);
+    stockGetCountStockFunc.setInt(2, d_id);
+    stockGetCountStockFunc.setInt(3, o_id - 20);
+    stockGetCountStockFunc.setInt(4, o_id);
+    stockGetCountStockFunc.setInt(5, threshold);
     if (trace)
       LOG.trace(String.format("stockGetCountStock BEGIN [W_ID=%d, D_ID=%d, O_ID=%d]",
                 w_id, d_id, o_id));
-    rs = stockGetCountStock.executeQuery();
+    rs = stockGetCountStockFunc.executeQuery();
     if (trace) LOG.trace("stockGetCountStock END");
 
     if (!rs.next()) {
@@ -100,7 +111,7 @@ public class StockLevel extends TPCCProcedure {
       if (trace) LOG.warn(msg);
       throw new RuntimeException(msg);
     }
-    stock_count = rs.getInt("STOCK_COUNT");
+    stock_count = rs.getInt("result");
     if (trace) LOG.trace("stockGetCountStock RESULT=" + stock_count);
 
     conn.commit();

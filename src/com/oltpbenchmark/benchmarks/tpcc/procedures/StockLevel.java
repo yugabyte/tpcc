@@ -66,7 +66,7 @@ public class StockLevel extends TPCCProcedure {
 
   private CallableStatement stockGetCountStockFunc = null;
 
-  public void run(Connection conn, Random gen,
+  public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   TPCCWorker w) throws SQLException {
@@ -128,5 +128,6 @@ public class StockLevel extends TPCCProcedure {
               "\n+-----------------------------------------------------------------+\n\n";
       LOG.trace(terminalMessage);
     }
+    return null;
   }
 }

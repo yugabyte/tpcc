@@ -93,7 +93,7 @@ public class Delivery extends TPCCProcedure {
   private PreparedStatement delivUpdateCustBalDelivCnt = null;
 
 
-  public void run(Connection conn, Random gen,
+  public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   TPCCWorker w) throws SQLException {
@@ -252,5 +252,6 @@ public class Delivery extends TPCCProcedure {
       terminalMessage.append("+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
+    return null;
   }
 }

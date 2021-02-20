@@ -120,7 +120,7 @@ public class Payment extends TPCCProcedure {
   private PreparedStatement payInsertHist = null;
   private PreparedStatement customerByName = null;
 
-  public void run(Connection conn, Random gen,
+  public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   TPCCWorker w) throws SQLException {
@@ -347,6 +347,7 @@ public class Payment extends TPCCProcedure {
       terminalMessage.append("\n+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
+    return null;
   }
 
   // attention duplicated code across trans... ok for now to maintain separate

@@ -56,7 +56,7 @@ public class WorkloadConfiguration {
   private int numTxnTypes;
   private TraceReader traceReader = null;
   private boolean useKeyingTime = true;
-  private final boolean useThinkTime = true;
+  private boolean useThinkTime = true;
   private boolean enableForeignKeysAfterLoad = true;
   private boolean shouldEnableForeignKeys = true;
   private int batchSize = 128;
@@ -316,6 +316,10 @@ public class WorkloadConfiguration {
 
   public boolean getUseThinkTime() {
     return useThinkTime;
+  }
+
+  public void setUseThinkTime(boolean useThinkTime) {
+    this.useThinkTime = useThinkTime;
   }
 
   public boolean getEnableForeignKeysAfterLoad() {

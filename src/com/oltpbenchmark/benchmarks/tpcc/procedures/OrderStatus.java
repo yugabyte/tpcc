@@ -75,7 +75,7 @@ public class OrderStatus extends TPCCProcedure {
   private PreparedStatement payGetCust = null;
   private PreparedStatement customerByName = null;
 
-  public void run(Connection conn, Random gen, int w_id, int numWarehouses,
+  public ResultSet run(Connection conn, Random gen, int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
@@ -87,6 +87,7 @@ public class OrderStatus extends TPCCProcedure {
     ordStatGetOrderLines = this.getPreparedStatement(conn, ordStatGetOrderLinesSQL);
 
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
+    boolean c_by_name = false;
     int y = TPCCUtil.randomNumber(1, 100, gen);
     Customer c;
     if (y <= 60) {
@@ -205,6 +206,7 @@ public class OrderStatus extends TPCCProcedure {
       LOG.trace(sb.toString());
     }
 
+    return null;
   }
 
   // attention duplicated code across trans... ok for now to maintain separate

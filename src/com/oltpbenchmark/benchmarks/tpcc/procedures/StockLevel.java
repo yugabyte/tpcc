@@ -70,6 +70,7 @@ public class StockLevel extends TPCCProcedure {
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   TPCCWorker w) throws SQLException {
+    conn.setAutoCommit(true);
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
     stockGetCountStockFunc = conn.prepareCall(stockGetCountStockSQL.getSQL());
@@ -112,7 +113,6 @@ public class StockLevel extends TPCCProcedure {
     stock_count = rs.getInt("result");
     if (trace) LOG.trace("stockGetCountStock RESULT=" + stock_count);
 
-    conn.commit();
     rs.close();
 
     if (trace) {

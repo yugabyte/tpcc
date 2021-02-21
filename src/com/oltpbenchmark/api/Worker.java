@@ -505,7 +505,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 } catch (UserAbortException ex) {
                     if (LOG.isDebugEnabled())
                         LOG.trace(next + " Aborted", ex);
-                    conn.rollback();
+                    if (!conn.getAutoCommit()) {
+                        conn.rollback();
+                    }
                     status = TransactionStatus.USER_ABORTED;
                     break;
 
@@ -518,7 +520,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                                                ex.getClass().getSimpleName(), next, this.toString(),
                                                ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
-		    if (Worker.wrkld.getDBType().shouldUseTransactions()) {
+		    if (Worker.wrkld.getDBType().shouldUseTransactions() & !conn.getAutoCommit()) {
                 conn.rollback();
 		    }
 

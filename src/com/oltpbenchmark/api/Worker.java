@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
+import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.zaxxer.hikari.HikariDataSource;
 
 import org.apache.log4j.Logger;
@@ -495,7 +496,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
      *
      * @param llr
      */
-    protected final TransactionExecutionState doWork(boolean measure, SubmittedProcedure pieceOfWork) {
+    protected final TransactionExecutionState doWork(boolean measure, final SubmittedProcedure pieceOfWork) {
         TransactionType next = null;
         long startOperation = 0;
         long endOperation = 0;
@@ -509,10 +510,17 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
 
         Connection conn = null;
         try {
+            if (next == null) {
+                next = transactionTypes.getType(pieceOfWork.getType());
+            }
             startConnection = System.nanoTime();
 
             conn = dataSource.getConnection();
-            conn.setAutoCommit(false);
+            if (next.getProcedureClass() != StockLevel.class) {
+                // In accordance with 2.8.2.3 of the TPCC spec, StockLevel may execute each query in its own Snapshot
+                // Isolation.
+                conn.setAutoCommit(false);
+            }
             conn.setTransactionIsolation(this.wrkld.getIsolationMode());
 
             endConnection = System.nanoTime();
@@ -521,9 +529,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             while (status == TransactionStatus.RETRY &&
                    this.wrkldState.getGlobalState() != State.DONE &&
                    ++attempt <= totalAttemptsPerTransaction) {
-                if (next == null) {
-                    next = transactionTypes.getType(pieceOfWork.getType());
-                }
+
                 if (attempt > 1) {
                     ++totalRetries[pieceOfWork.getType() - 1];
                 }
@@ -549,10 +555,12 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                 } catch (UserAbortException ex) {
                     if (LOG.isDebugEnabled())
                         LOG.trace(next + " Aborted", ex);
-                    if (savepoint != null) {
-                        conn.rollback(savepoint);
-                    } else {
-                        conn.rollback();
+                    if (!conn.getAutoCommit()) {
+                        if (savepoint != null) {
+                            conn.rollback(savepoint);
+                        } else {
+                            conn.rollback();
+                        }
                     }
 
                     status = TransactionStatus.USER_ABORTED;
@@ -567,7 +575,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                                                ex.getClass().getSimpleName(), next, this.toString(),
                                                ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
-		    if (this.wrkld.getDBType().shouldUseTransactions()) {
+		    if (this.wrkld.getDBType().shouldUseTransactions() && !conn.getAutoCommit()) {
 			if (savepoint != null) {
 			    conn.rollback(savepoint);
 			} else {

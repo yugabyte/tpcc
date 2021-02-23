@@ -23,15 +23,16 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Random;
 
+import com.oltpbenchmark.api.Procedure;
+import com.oltpbenchmark.api.Worker;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
-import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 
-public class Delivery extends TPCCProcedure {
+public class Delivery extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(Delivery.class);
 
@@ -96,7 +97,7 @@ public class Delivery extends TPCCProcedure {
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
-                  TPCCWorker w) throws SQLException {
+                  Worker w) throws SQLException {
 
     boolean trace = LOG.isDebugEnabled();
     int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);

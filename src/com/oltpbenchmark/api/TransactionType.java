@@ -18,7 +18,7 @@ package com.oltpbenchmark.api;
 
 public class TransactionType implements Comparable<TransactionType> {
 
-    public static class Invalid extends Procedure { }
+    public abstract static class Invalid extends Procedure { }
     public static final int INVALID_ID = 0;
     public static final TransactionType INVALID = new TransactionType(Invalid.class, INVALID_ID);
     

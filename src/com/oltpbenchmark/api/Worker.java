@@ -526,7 +526,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                                                ex.getClass().getSimpleName(), next, this.toString(),
                                                ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
-		    if (Worker.wrkld.getDBType().shouldUseTransactions() && !conn.getAutoCommit()) {
+		    if (!conn.getAutoCommit()) {
                 conn.rollback();
 		    }
 

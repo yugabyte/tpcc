@@ -24,7 +24,6 @@ import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,13 +50,7 @@ import com.oltpbenchmark.util.StringUtil;
 public final class Catalog {
     private static final Logger LOG = Logger.getLogger(Catalog.class);
     
-    /**
-     * TODO
-     */
-    private static String separator;
-    
     private static final Random rand = new Random();
-
 
     /**
      * Create an in-memory instance of HSQLDB so that we can 
@@ -67,12 +60,8 @@ public final class Catalog {
     private static final String DB_JDBC = "org.hsqldb.jdbcDriver";
     private static final DatabaseType DB_TYPE = DatabaseType.HSQLDB;
     
-//    private static final String DB_CONNECTION = "jdbc:h2:mem:";
-//    private static final String DB_JDBC = "org.h2.Driver";
-//    private static final DatabaseType DB_TYPE = DatabaseType.H2;
-    
     private final BenchmarkModule benchmark;
-    private final Map<String, Table> tables = new HashMap<String, Table>();
+    private final Map<String, Table> tables = new HashMap<>();
     private final Map<String, String> origTableNames;
     private final Connection conn;
     
@@ -107,16 +96,7 @@ public final class Catalog {
     // --------------------------------------------------------------------------
     // ACCESS METHODS
     // --------------------------------------------------------------------------
-    
-    public int getTableCount() {
-        return (this.tables.size());
-    }
-    public Collection<String> getTableNames() {
-        return (this.tables.keySet());
-    }
-    public Collection<Table> getTables() {
-        return (this.tables.values());
-    }
+
     /**
      * Get the table by the given name. This is case insensitive
      */
@@ -131,17 +111,14 @@ public final class Catalog {
     
     /**
      * Construct the set of Table objects from a given Connection handle
-     * @param conn
-     * @return
-     * @throws SQLException
-     * @see http://docs.oracle.com/javase/6/docs/api/java/sql/DatabaseMetaData.html
+     * see http://docs.oracle.com/javase/6/docs/api/java/sql/DatabaseMetaData.html
      */
     protected void init() throws SQLException {
         // Load the database's DDL
         this.benchmark.createDatabase(DB_TYPE, this.conn);
         
         // TableName -> ColumnName -> <FkeyTable, FKeyColumn>
-        Map<String, Map<String, Pair<String, String>>> foreignKeys = new HashMap<String, Map<String,Pair<String,String>>>();
+        Map<String, Map<String, Pair<String, String>>> foreignKeys = new HashMap<>();
         
         DatabaseMetaData md = conn.getMetaData();
         ResultSet table_rs = md.getTables(null, null, null, new String[]{"TABLE"});
@@ -153,7 +130,7 @@ public final class Catalog {
             LOG.debug(String.format("ORIG:%s -> CATALOG:%s", internal_table_name, table_name));
             
             String table_type = table_rs.getString(4);
-            if (table_type.equalsIgnoreCase("TABLE") == false) continue;
+            if (!table_type.equalsIgnoreCase("TABLE")) continue;
             Table catalog_tbl = new Table(table_name);
             
             // COLUMNS
@@ -165,15 +142,8 @@ public final class Catalog {
                 String col_name = col_rs.getString(4);
                 int col_type = col_rs.getInt(5);
                 String col_typename = col_rs.getString(6);
-                Integer col_size = col_rs.getInt(7);
-                String col_defaultValue = col_rs.getString(13);
-                boolean col_nullable = col_rs.getString(18).equalsIgnoreCase("YES");
-                boolean col_autoinc = false; // FIXME col_rs.getString(22).toUpperCase().equals("YES");
 
-                Column catalog_col = new Column(catalog_tbl, col_name, col_type, col_typename, col_size);
-                catalog_col.setDefaultValue(col_defaultValue);
-                catalog_col.setAutoincrement(col_autoinc);
-                catalog_col.setNullable(col_nullable);
+                Column catalog_col = new Column(catalog_tbl, col_name);
                 // FIXME col_catalog.setSigned();
                 
                 if (LOG.isDebugEnabled())
@@ -187,7 +157,7 @@ public final class Catalog {
             if (LOG.isDebugEnabled())
                 LOG.debug("Retrieving PRIMARY KEY information for " + table_name);
             ResultSet pkey_rs = md.getPrimaryKeys(null, null, internal_table_name);
-            SortedMap<Integer, String> pkey_cols = new TreeMap<Integer, String>();
+            SortedMap<Integer, String> pkey_cols = new TreeMap<>();
             while (pkey_rs.next()) {
                 String col_name = pkey_rs.getString(4);
                 assert(catalog_tbl.getColumnByName(col_name) != null) :
@@ -197,12 +167,11 @@ public final class Catalog {
                 //       a zero for this value, then we'll just length of the pkey_cols map
                 if (col_idx == 0) col_idx = pkey_cols.size();
                 LOG.debug(String.format("PKEY[%02d]: %s.%s", col_idx, table_name, col_name));
-                assert(pkey_cols.containsKey(col_idx) == false);
+                assert(!pkey_cols.containsKey(col_idx));
                 pkey_cols.put(col_idx, col_name);
             } // WHILE
             pkey_rs.close();
-            catalog_tbl.setPrimaryKeyColumns(pkey_cols.values());
-            
+
             // INDEXES
             if (LOG.isDebugEnabled())
                 LOG.debug("Retrieving INDEX information for " + table_name);
@@ -210,9 +179,7 @@ public final class Catalog {
             while (idx_rs.next()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug(SQLUtil.debug(idx_rs));
-                boolean idx_unique = (idx_rs.getBoolean(4) == false);
                 String idx_name = idx_rs.getString(6);
-                int idx_type = idx_rs.getShort(7);
                 int idx_col_pos = idx_rs.getInt(8) - 1;
                 String idx_col_name = idx_rs.getString(9);
                 String sort = idx_rs.getString(10);
@@ -224,10 +191,9 @@ public final class Catalog {
 
                 Index catalog_idx = catalog_tbl.getIndex(idx_name);
                 if (catalog_idx == null) {
-                    catalog_idx = new Index(catalog_tbl, idx_name, idx_type, idx_unique);
+                    catalog_idx = new Index(idx_name);
                     catalog_tbl.addIndex(catalog_idx);
                 }
-                assert (catalog_idx != null);
                 catalog_idx.addColumn(idx_col_name, idx_direction, idx_col_pos);
             } // WHILE
             idx_rs.close();
@@ -236,7 +202,7 @@ public final class Catalog {
             if (LOG.isDebugEnabled())
                 LOG.debug("Retrieving FOREIGN KEY information for " + table_name);
             ResultSet fk_rs = md.getImportedKeys(null, null, internal_table_name);
-            foreignKeys.put(table_name, new HashMap<String, Pair<String,String>>());
+            foreignKeys.put(table_name, new HashMap<>());
             while (fk_rs.next()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug(table_name + " => " + SQLUtil.debug(fk_rs));
@@ -278,15 +244,12 @@ public final class Catalog {
                 
                 if (LOG.isDebugEnabled())
                     LOG.debug(catalog_col.fullName() + " -> " + fkey_col.fullName());
-                catalog_col.setForeignKey(fkey_col);
-            } // FOR
-        } // FOR
-        
-        return;
+            }
+        }
     }
     
     protected Map<String, String> getOriginalTableNames() {
-        Map<String, String> origTableNames = new HashMap<String, String>();
+        Map<String, String> origTableNames = new HashMap<>();
         Pattern p = Pattern.compile("CREATE[\\s]+TABLE[\\s]+(.*?)[\\s]+", Pattern.CASE_INSENSITIVE);
         URL ddl = this.benchmark.getDatabaseDDL(DatabaseType.HSQLDB);
         String ddlContents;
@@ -295,14 +258,13 @@ public final class Catalog {
         } catch(IOException ioe) {
             throw new RuntimeException(ioe);
         }
-        assert(ddlContents.isEmpty() == false);
+        assert(!ddlContents.isEmpty());
         Matcher m = p.matcher(ddlContents);
         while (m.find()) {
             String tableName = m.group(1).trim();
             origTableNames.put(tableName.toUpperCase(), tableName);
-//            origTableNames.put(tableName, tableName);
         } // WHILE
-        assert(origTableNames.isEmpty() == false) :
+        assert(!origTableNames.isEmpty()) :
             "Failed to extract original table names for " + this.benchmark.getBenchmarkName();
         
         if (LOG.isDebugEnabled())
@@ -310,22 +272,9 @@ public final class Catalog {
         
         return (origTableNames);
     }
-    
-	public static void setSeparator(Connection c) throws SQLException {
-		Catalog.separator = c.getMetaData().getIdentifierQuoteString();
-	}
-	
-	public static void setSeparator(String separator) throws SQLException {
-        Catalog.separator = separator;
-    }
-
-	public static String getSeparator() {
-		return separator;
-	}
 	
 	@Override
 	public String toString() {
 	    return StringUtil.formatMaps(this.tables);
 	}
-     
 }

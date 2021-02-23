@@ -50,12 +50,8 @@ public enum SortDirectionType {
             " instead of position " + val;
     }
 
-    public int getValue() {
-        return this.ordinal();
-    }
-
-    protected static final Map<Integer, SortDirectionType> idx_lookup = new HashMap<Integer, SortDirectionType>();
-    protected static final Map<String, SortDirectionType> name_lookup = new HashMap<String, SortDirectionType>();
+    protected static final Map<Integer, SortDirectionType> idx_lookup = new HashMap<>();
+    protected static final Map<String, SortDirectionType> name_lookup = new HashMap<>();
     static {
         for (SortDirectionType vt : EnumSet.allOf(SortDirectionType.class)) {
             SortDirectionType.idx_lookup.put(vt.ordinal(), vt);
@@ -63,22 +59,4 @@ public enum SortDirectionType {
         }
     }
 
-    public static Map<Integer, SortDirectionType> getIndexMap() {
-        return idx_lookup;
-    }
-
-    public static Map<String, SortDirectionType> getNameMap() {
-        return name_lookup;
-    }
-
-    public static SortDirectionType get(Integer idx) {
-        assert(idx >= 0);
-        SortDirectionType ret = SortDirectionType.idx_lookup.get(idx);
-        return (ret == null ? SortDirectionType.INVALID : ret);
-    }
-
-    public static SortDirectionType get(String name) {
-        SortDirectionType ret = SortDirectionType.name_lookup.get(name.toLowerCase().intern());
-        return (ret == null ? SortDirectionType.INVALID : ret);
-    }
 }

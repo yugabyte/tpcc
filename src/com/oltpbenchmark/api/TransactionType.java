@@ -16,7 +16,6 @@
 
 package com.oltpbenchmark.api;
 
-
 public class TransactionType implements Comparable<TransactionType> {
 
     public static class Invalid extends Procedure { }
@@ -40,6 +39,16 @@ public class TransactionType implements Comparable<TransactionType> {
 	public Class<? extends Procedure> getProcedureClass() {
 	    return (this.procClass);
 	}
+
+	public Procedure getInstance() {
+		try {
+			return this.procClass.getConstructor().newInstance();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
 	public String getName() {
 		return this.procClass.getSimpleName();
 	}
@@ -52,13 +61,9 @@ public class TransactionType implements Comparable<TransactionType> {
 
 	@Override
 	public boolean equals(Object obj) {
-	    if (this == obj)
-	        return true;
-	    
-	    if (!(obj instanceof TransactionType) || obj == null)
-	        return false;
-	    
-		TransactionType other = (TransactionType)obj;
+		if (!(obj instanceof TransactionType)) return false;
+	    if (this == obj) return true;
+		TransactionType other = (TransactionType) obj;
 		return (this.id == other.id && this.procClass.equals(other.procClass));
 	}
 	

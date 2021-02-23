@@ -18,9 +18,7 @@ package com.oltpbenchmark;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.Iterator;
 import java.util.ListIterator;
-import java.util.List;
 import java.util.LinkedList;
 
 import org.apache.log4j.Logger;
@@ -36,7 +34,7 @@ public class TraceReader {
   private static final Logger LOG = Logger.getLogger(TraceReader.class);
 
   // POD for tracking submitted/read procedures.
-  private class TraceElement {
+  private static class TraceElement {
     int txnId;
     int phaseId;
     long startTimeNs;
@@ -48,8 +46,7 @@ public class TraceReader {
     }
   }
 
-  private LinkedList<TraceElement> tracedProcedures = new LinkedList<TraceElement>();
-  private String tracefileName;
+  private final LinkedList<TraceElement> tracedProcedures = new LinkedList<>();
   private int currentPhaseId;
   private long phaseStartTime;
   private boolean phaseComplete;
@@ -119,8 +116,8 @@ public class TraceReader {
           // trace file.
           assert phaseBaseTime <= startTimeNs;
           tracedProcedures.add(new TraceElement(Integer.parseInt(splitLine[txnIdCol]),
-                                                phaseId,
-                                               startTimeNs - phaseBaseTime));
+                  phaseId,
+                  startTimeNs - phaseBaseTime));
         }
       } catch (Exception e) {
         LOG.error("Encountered a bad line in the trace file: " + line);
@@ -135,13 +132,11 @@ public class TraceReader {
 
   /**
    * Returns a list of procedures that should be submitted to the work queue.
-   *
-   * @throws IncompletePhaseException
    */
   public LinkedList<SubmittedProcedure> getProcedures(long nowNs) {
     long timeSincePhaseStart = nowNs - phaseStartTime;
     // Nothing to do if the list is empty.
-    LinkedList<SubmittedProcedure> readyProcedures = new LinkedList<SubmittedProcedure>();
+    LinkedList<SubmittedProcedure> readyProcedures = new LinkedList<>();
     if (tracedProcedures.isEmpty()) {
       phaseComplete = true;
       return readyProcedures;
@@ -149,6 +144,7 @@ public class TraceReader {
 
     ListIterator<TraceElement> iter = tracedProcedures.listIterator();
     TraceElement curr = tracedProcedures.peek();
+    assert curr != null;
 
     // Shouldn't have a procedure from a previous phase, or else we
     // wouldn't have switched phases successfully.
@@ -162,7 +158,7 @@ public class TraceReader {
           || curr.startTimeNs > timeSincePhaseStart) {
         break;
       }
-      readyProcedures.add(new SubmittedProcedure(curr.txnId, nowNs));
+      readyProcedures.add(new SubmittedProcedure(curr.txnId));
       iter.remove();
     }
 
@@ -183,6 +179,7 @@ public class TraceReader {
     // Should only change the phase if our list indicates that there are no
     // remaining procedures from earlier phases.
     TraceElement head = tracedProcedures.peek();
+    assert head != null;
     if (head.phaseId < newPhaseId) {
       LOG.error("Changing to phase " + newPhaseId
                 + " but head procedure is from"

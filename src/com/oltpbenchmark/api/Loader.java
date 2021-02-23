@@ -19,20 +19,13 @@ package com.oltpbenchmark.api;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.WorkloadConfiguration;
-import com.oltpbenchmark.catalog.Catalog;
-import com.oltpbenchmark.catalog.Column;
 import com.oltpbenchmark.catalog.Table;
-import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.Histogram;
-import com.oltpbenchmark.util.SQLUtil;
-import org.hibernate.hql.ast.SqlASTFactory;
 
 /**
  * @author pavlo
@@ -43,7 +36,7 @@ public abstract class Loader<T extends BenchmarkModule> {
     protected final T benchmark;
     protected final WorkloadConfiguration workConf;
     protected final int numWarehouses;
-    private final Histogram<String> tableSizes = new Histogram<String>(true);
+    private final Histogram<String> tableSizes = new Histogram<>();
 
     /**
      * A LoaderThread is responsible for loading some portion of a
@@ -51,9 +44,7 @@ public abstract class Loader<T extends BenchmarkModule> {
      * Note that each LoaderThread has its own databsae Connection handle.
      */
     public abstract class LoaderThread implements Runnable {
-
-        public LoaderThread() throws SQLException {
-        }
+        public LoaderThread() {}
 
         @Override
         public final void run() {
@@ -75,11 +66,8 @@ public abstract class Loader<T extends BenchmarkModule> {
 
         /**
          * This is the method that each LoaderThread has to implement
-         * @param conn
-         * @throws SQLException
          */
-        public abstract void load(Connection conn) throws SQLException;
-
+        public abstract void load(Connection conn);
     }
 
     public Loader(T benchmark) {
@@ -105,36 +93,14 @@ public abstract class Loader<T extends BenchmarkModule> {
      *
      * @return The list of LoaderThreads the framework will launch.
      */
-    public abstract List<LoaderThread> createLoaderThreads() throws SQLException;
-
-    public void setTableCount(String tableName, int size) {
-        this.tableSizes.set(tableName, size);
-    }
-
-    public void addToTableCount(String tableName, int delta) {
-        this.tableSizes.put(tableName, delta);
-    }
+    public abstract List<LoaderThread> createLoaderThreads();
 
     public Histogram<String> getTableCounts() {
         return (this.tableSizes);
     }
 
-    public DatabaseType getDatabaseType() {
-        return (this.workConf.getDBType());
-    }
-
-    /**
-     * Return the database's catalog
-     */
-    public Catalog getCatalog() {
-        return (this.benchmark.getCatalog());
-    }
-
     /**
      * Get the catalog object for the given table name
-     *
-     * @param tableName
-     * @return
      */
     @Deprecated
     public Table getTableCatalog(String tableName) {
@@ -144,62 +110,8 @@ public abstract class Loader<T extends BenchmarkModule> {
     }
 
     /**
-     * Get the pre-seeded Random generator for this Loader invocation
-     *
-     * @return
-     */
-    public Random rng() {
-        return (this.benchmark.rng());
-    }
-
-
-
-    /**
      * Method that can be overriden to specifically unload the tables of the
-     * database. In the default implementation it checks for tables from the
-     * catalog to delete them using SQL. Any subclass can inject custom behavior
-     * here.
-     *
-     * @param catalog The catalog containing all loaded tables
-     * @throws SQLException
+     * database.
      */
-    public void unload(Connection conn, Catalog catalog) throws SQLException {
-        conn.setAutoCommit(false);
-        conn.setTransactionIsolation(workConf.getIsolationMode());
-        Statement st = conn.createStatement();
-        for (Table catalog_tbl : catalog.getTables()) {
-            LOG.debug(String.format("Deleting data from %s.%s", workConf.getDBName(), catalog_tbl.getName()));
-            String sql = "DELETE FROM " + catalog_tbl.getEscapedName();
-            st.execute(sql);
-        } // FOR
-        conn.commit();
-    }
-
-    /**
-     *
-     * @param conn
-     * @param catalog_col
-     * @param value
-     * @throws SQLException
-     */
-    protected void updateAutoIncrement(Connection conn, Column catalog_col, int value) throws SQLException {
-        String sql = null;
-        switch (getDatabaseType()) {
-            case POSTGRES:
-                String seqName = SQLUtil.getSequenceName(getDatabaseType(), catalog_col);
-                assert (seqName != null);
-                sql = String.format("SELECT setval(%s, %d)", seqName.toLowerCase(), value);
-                break;
-            default:
-                // Nothing!
-        }
-        if (sql != null) {
-            if (LOG.isDebugEnabled())
-                LOG.debug(String.format("Updating %s auto-increment counter with value '%d'", catalog_col.fullName(), value));
-            Statement stmt = conn.createStatement();
-            boolean result = stmt.execute(sql);
-            if (LOG.isDebugEnabled())
-                LOG.debug(String.format("%s => [%s]", sql, result));
-        }
-    }
+    public abstract void unload(Connection conn) throws SQLException;
 }

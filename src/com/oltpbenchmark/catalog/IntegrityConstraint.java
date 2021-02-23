@@ -26,14 +26,8 @@ import org.apache.commons.lang.NotImplementedException;
  */
 public abstract class IntegrityConstraint implements Serializable{
     private static final long serialVersionUID = 1L;
-	
-	private String id;
 
-	public IntegrityConstraint(){
-	    // ????
-	}
-	
-	@Override
+    @Override
 	public IntegrityConstraint clone(){
 		
 		try {
@@ -44,18 +38,5 @@ public abstract class IntegrityConstraint implements Serializable{
 		return null;	
 	}
 
-	public String getId() {
-		return id;
-	}
-
-	/**
-	 * @param id the id to set
-	 */
-	public void setId(String id) {
-		this.id = id;
-	}
-	
-	public abstract boolean equals(IntegrityConstraint ic);
-	
 
 }

@@ -64,6 +64,7 @@ public class WorkloadConfiguration {
   private boolean needsExecution = false;
   private boolean useStoredProcedures = true;
   private int maxRetriesPerTransaction = 0;
+  private int maxLoaderRetries = 0;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -359,6 +360,14 @@ public class WorkloadConfiguration {
 
   public int getMaxRetriesPerTransaction() {
     return maxRetriesPerTransaction;
+  }
+
+  public void setMaxLoaderRetries(int maxLoaderRetries) {
+    this.maxLoaderRetries = maxLoaderRetries;
+  }
+
+  public int getMaxLoaderRetries() {
+    return maxLoaderRetries;
   }
 
   @Override

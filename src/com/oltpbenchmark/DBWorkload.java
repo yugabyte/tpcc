@@ -315,6 +315,10 @@ public class DBWorkload {
         wrkld.setMaxRetriesPerTransaction(xmlConfig.getInt("maxRetriesPerTransaction"));
       }
 
+      if (xmlConfig.containsKey("maxLoaderRetries")) {
+        wrkld.setMaxLoaderRetries(xmlConfig.getInt("maxLoaderRetries"));
+      }
+
       if (xmlConfig.containsKey("port")) {
         wrkld.setPort(xmlConfig.getInt("port"));
       }

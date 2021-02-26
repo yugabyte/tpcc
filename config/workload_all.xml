@@ -54,5 +54,6 @@
       high is pointless as it just leads to more failures.
     -->
     <maxRetriesPerTransaction>0</maxRetriesPerTransaction>
+    <maxLoaderRetries>2</maxLoaderRetries>
 
 </parameters>

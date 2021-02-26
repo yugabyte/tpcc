@@ -40,6 +40,7 @@ import java.sql.Statement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -148,15 +149,28 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
     }
   }
 
-  protected void transCommit(Connection conn) {
-    try {
-      conn.commit();
-    } catch (SQLException se) {
-      LOG.debug(se.getMessage());
-      transRollback(conn);
+  private void performInsertsWithRetries(Connection conn, PreparedStatement... stmts) throws Exception {
+    int attempts = workConf.getMaxLoaderRetries() + 1;
+    SQLException failure = null;
+    for (int i = 0; i < attempts; ++i) {
+      try {
+         for (PreparedStatement stmt: stmts) {
+            stmt.executeBatch();
+            stmt.clearBatch();
+         }
+          conn.commit();
+          return;
+      } catch (SQLException ex) {
+        LOG.warn("Fail to load batch with error: " + ex.getMessage());
+        failure = ex;
+        transRollback(conn);
+      }
+    }
+    if (failure != null) {
+      LOG.error("Failed to load data for TPCC", failure);
+      throw failure;
     }
   }
-
   protected void EnableForeignKeyConstraints(Connection conn) {
     try {
       Statement st = conn.createStatement();
@@ -200,7 +214,7 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 
       conn.commit();
     } catch (SQLException se) {
-      LOG.debug(se.getMessage());
+      LOG.error("Could not create foreign keys" + se.getMessage());
       transRollback(conn);
     }
   }
@@ -242,29 +256,16 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         batchSize++;
 
         if (batchSize == workConf.getBatchSize()) {
-          itemPrepStmt.executeBatch();
-          itemPrepStmt.clearBatch();
-          transCommit(conn);
+          performInsertsWithRetries(conn, itemPrepStmt);
           batchSize = 0;
         }
       }
+      if (batchSize > 0)
+          performInsertsWithRetries(conn, itemPrepStmt);
 
-      if (batchSize > 0) itemPrepStmt.executeBatch();
-      transCommit(conn);
-
-    } catch (SQLException ex) {
-      SQLException next = ex.getNextException();
-      LOG.error("Failed to load data for TPC-C", ex);
-      if (next != null) LOG.error(ex.getClass().getSimpleName() + " Cause => " + next.getMessage());
-      fail = true;
     } catch (Exception ex) {
       LOG.error("Failed to load data for TPC-C", ex);
-      fail = true;
-    } finally {
-      if (fail) {
-        LOG.debug("Rolling back changes from last batch");
-        transRollback(conn);
-      }
+      transRollback(conn);
     }
 
   } // end loadItem()
@@ -298,12 +299,9 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
       whsePrepStmt.setString(++idx, warehouse.w_zip);
       whsePrepStmt.execute();
 
-      transCommit(conn);
-    } catch (SQLException se) {
-      LOG.debug(se.getMessage());
-      transRollback(conn);
-    } catch (Exception e) {
-      e.printStackTrace();
+      performInsertsWithRetries(conn, whsePrepStmt);
+    } catch (Exception ex) {
+      LOG.error("Failed to load data for TPC-C", ex);
       transRollback(conn);
     }
   } // end loadWhse()
@@ -359,19 +357,12 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
         stckPrepStmt.addBatch();
         if ((k % workConf.getBatchSize()) == 0) {
-          stckPrepStmt.executeBatch();
-          stckPrepStmt.clearBatch();
-          transCommit(conn);
+          performInsertsWithRetries(conn, stckPrepStmt);
         }
       } // end for [i]
-
-      stckPrepStmt.executeBatch();
-      transCommit(conn);
-    } catch (SQLException se) {
-      LOG.debug(se.getMessage());
-      transRollback(conn);
-    } catch (Exception e) {
-      e.printStackTrace();
+      performInsertsWithRetries(conn, stckPrepStmt);
+    } catch (Exception ex) {
+      LOG.error("Failed to load data for TPC-C", ex);
       transRollback(conn);
     }
   } // end loadStock()
@@ -409,14 +400,11 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
         distPrepStmt.setString(++idx, district.d_city);
         distPrepStmt.setString(++idx, district.d_state);
         distPrepStmt.setString(++idx, district.d_zip);
-        distPrepStmt.executeUpdate();
+        distPrepStmt.addBatch();
       } // end for [d]
-      transCommit(conn);
-    } catch (SQLException se) {
-      LOG.debug(se.getMessage());
-      transRollback(conn);
+      performInsertsWithRetries(conn, distPrepStmt);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Failed to load data for TPC-C", e);
       transRollback(conn);
     }
   } // end loadDist()
@@ -517,26 +505,14 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
           histPrepStmt.addBatch();
 
           if ((k % workConf.getBatchSize()) == 0) {
-            custPrepStmt.executeBatch();
-            histPrepStmt.executeBatch();
-            custPrepStmt.clearBatch();
-            custPrepStmt.clearBatch();
-            transCommit(conn);
+            performInsertsWithRetries(conn, custPrepStmt, histPrepStmt);
           }
         } // end for [c]
       } // end for [d]
+      performInsertsWithRetries(conn, custPrepStmt, histPrepStmt);
 
-      custPrepStmt.executeBatch();
-      histPrepStmt.executeBatch();
-      custPrepStmt.clearBatch();
-      histPrepStmt.clearBatch();
-      transCommit(conn);
-
-    } catch (SQLException se) {
-      LOG.debug(se.getMessage());
-      transRollback(conn);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Failed to load data for TPC-C", e);
       transRollback(conn);
     }
   } // end loadCust()
@@ -659,17 +635,12 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
             orlnPrepStmt.addBatch();
 
             if ((k % workConf.getBatchSize()) == 0) {
-              ordrPrepStmt.executeBatch();
               if (newOrderBatch > 0) {
-                  nworPrepStmt.executeBatch();
-                  newOrderBatch = 0;
+                performInsertsWithRetries(conn, ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
+                newOrderBatch = 0;
+              } else {
+                performInsertsWithRetries(conn, ordrPrepStmt, orlnPrepStmt);
               }
-              orlnPrepStmt.executeBatch();
-
-              ordrPrepStmt.clearBatch();
-              nworPrepStmt.clearBatch();
-              orlnPrepStmt.clearBatch();
-              transCommit(conn);
             }
           } // end for [l]
         } // end for [c]
@@ -677,16 +648,9 @@ public class TPCCLoader extends Loader<TPCCBenchmark> {
 
       if (LOG.isDebugEnabled())
         LOG.debug("  Writing final records " + k + " of " + t);
-      ordrPrepStmt.executeBatch();
-      nworPrepStmt.executeBatch();
-      orlnPrepStmt.executeBatch();
-      transCommit(conn);
-    } catch (SQLException se) {
-      LOG.debug(se.getMessage());
-      se.printStackTrace();
-      transRollback(conn);
+      performInsertsWithRetries(conn, ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Failed to load data for TPC-C", e);
       transRollback(conn);
     }
   } // end loadOrder()

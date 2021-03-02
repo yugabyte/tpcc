@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Random;
 
+import com.oltpbenchmark.api.Procedure;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
@@ -32,7 +33,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
 
-public class Payment extends TPCCProcedure {
+public class Payment extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(Payment.class);
 

@@ -20,11 +20,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 
+import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import org.apache.log4j.Logger;
 
 public abstract class Procedure {
@@ -110,7 +113,14 @@ public abstract class Procedure {
     public String toString() {
         return (this.procName);
     }
-    
+
+    public abstract ResultSet run(Connection conn, Random gen,
+                                  int terminalWarehouseID, int numWarehouses,
+                                  int terminalDistrictLowerID, int terminalDistrictUpperID,
+                                  TPCCWorker w) throws SQLException;
+
+    public void test(Connection conn, TPCCWorker w) throws Exception {}
+
     /**
      * Thrown from a Procedure to indicate to the Worker
      * that the procedure should be aborted and rolled back.

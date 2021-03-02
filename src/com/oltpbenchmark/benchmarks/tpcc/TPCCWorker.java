@@ -29,12 +29,12 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Random;
 
+import com.oltpbenchmark.api.Procedure;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.benchmarks.tpcc.procedures.TPCCProcedure;
 import com.oltpbenchmark.types.TransactionStatus;
 
 public class TPCCWorker extends Worker<TPCCBenchmark> {
@@ -68,7 +68,7 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
   protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction)
                                           throws UserAbortException, SQLException {
     try {
-      TPCCProcedure proc = (TPCCProcedure) this.getProcedure(nextTransaction.getProcedureClass());
+      Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());
 
       // The districts should be chosen randomly from [1,10] for the following transactions:
       // 1. NewOrder    TPC-C 2.4.1.2
@@ -97,7 +97,7 @@ public class TPCCWorker extends Worker<TPCCBenchmark> {
   }
 
   public void test(Connection conn) throws Exception {
-    TPCCProcedure proc = (TPCCProcedure) this.getProcedure(
+    Procedure proc = this.getProcedure(
         this.transactionTypes.getType("NewOrder").getProcedureClass());
     proc.test(conn, this);
   }

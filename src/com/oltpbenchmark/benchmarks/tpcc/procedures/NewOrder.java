@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.oltpbenchmark.api.Procedure;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
@@ -36,7 +37,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 
-public class NewOrder extends TPCCProcedure {
+public class NewOrder extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(NewOrder.class);
 

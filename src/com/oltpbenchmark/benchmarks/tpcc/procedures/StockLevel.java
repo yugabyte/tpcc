@@ -19,6 +19,7 @@ package com.oltpbenchmark.benchmarks.tpcc.procedures;
 import java.sql.*;
 import java.util.Random;
 
+import com.oltpbenchmark.api.Procedure;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
@@ -26,7 +27,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 
-public class StockLevel extends TPCCProcedure {
+public class StockLevel extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(StockLevel.class);
 

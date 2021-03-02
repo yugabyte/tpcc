@@ -39,6 +39,7 @@ import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.TransactionTypes;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.FileUtil;
 import com.oltpbenchmark.util.StringBoxUtil;
@@ -981,6 +982,12 @@ public class DBWorkload {
         }
       }
     }
+
+    NewOrder.printLatencyStats();
+    Payment.printLatencyStats();
+    OrderStatus.printLatencyStats();
+    Delivery.printLatencyStats();
+    StockLevel.printLatencyStats();
 
     if (!displayEnhancedLatencyMetrics) {
       for (int i = 0; i < list_latencies.size(); ++i) {

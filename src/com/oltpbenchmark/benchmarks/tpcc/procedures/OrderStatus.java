@@ -24,6 +24,8 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Random;
 
+import org.HdrHistogram.ConcurrentHistogram;
+import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
@@ -75,6 +77,19 @@ public class OrderStatus extends TPCCProcedure {
   private PreparedStatement payGetCust = null;
   private PreparedStatement customerByName = null;
 
+  private static Histogram latencyOrdStatGetNewestOrd = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private static Histogram latencyOrdStatGetOrderLines = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private static Histogram latencyPayGetCust = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private static Histogram latencyCustomerByName = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+
+  public static void printLatencyStats() {
+    LOG.info("OrderStatus : ");
+    LOG.info("latencyOrdStatGetNewestOrd " + TPCCProcedure.getStats(latencyOrdStatGetNewestOrd));
+    LOG.info("latencyOrdStatGetOrderLines " + TPCCProcedure.getStats(latencyOrdStatGetOrderLines));
+    LOG.info("latencyPayGetCust " + TPCCProcedure.getStats(latencyPayGetCust));
+    LOG.info("latencyCustomerByName " + TPCCProcedure.getStats(latencyCustomerByName));
+  }
+
   public ResultSet run(Connection conn, Random gen, int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   TPCCWorker w) throws SQLException {
@@ -108,7 +123,10 @@ public class OrderStatus extends TPCCProcedure {
     ordStatGetNewestOrd.setInt(2, d_id);
     ordStatGetNewestOrd.setInt(3, c.c_id);
     if (trace) LOG.trace("ordStatGetNewestOrd START");
+    long start = System.nanoTime();
     ResultSet rs = ordStatGetNewestOrd.executeQuery();
+    long end = System.nanoTime();
+    latencyOrdStatGetNewestOrd.recordValue((end - start) / 1000);
     if (trace) LOG.trace("ordStatGetNewestOrd END");
 
     if (!rs.next()) {
@@ -129,6 +147,9 @@ public class OrderStatus extends TPCCProcedure {
     ordStatGetOrderLines.setInt(3, w_id);
     if (trace) LOG.trace("ordStatGetOrderLines START");
     rs = ordStatGetOrderLines.executeQuery();
+    start = System.nanoTime();
+    end = System.nanoTime();
+    latencyOrdStatGetOrderLines.recordValue((end - start) / 1000);
     if (trace) LOG.trace("ordStatGetOrderLines END");
 
     while (rs.next()) {
@@ -218,7 +239,10 @@ public class OrderStatus extends TPCCProcedure {
     payGetCust.setInt(2, c_d_id);
     payGetCust.setInt(3, c_id);
     if (trace) LOG.trace("payGetCust START");
+    long start = System.nanoTime();
     ResultSet rs = payGetCust.executeQuery();
+    long end = System.nanoTime();
+    latencyPayGetCust.recordValue((end - start) / 1000);
     if (trace) LOG.trace("payGetCust END");
     if (!rs.next()) {
       String msg = String.format("Failed to get CUSTOMER [C_W_ID=%d, C_D_ID=%d, C_ID=%d]",
@@ -244,7 +268,10 @@ public class OrderStatus extends TPCCProcedure {
     customerByName.setInt(2, c_d_id);
     customerByName.setString(3, c_last);
     if (trace) LOG.trace("customerByName START");
+    long start = System.nanoTime();
     ResultSet rs = customerByName.executeQuery();
+    long end = System.nanoTime();
+    latencyCustomerByName.recordValue((end - start) / 1000);
     if (trace) LOG.trace("customerByName END");
 
     while (rs.next()) {

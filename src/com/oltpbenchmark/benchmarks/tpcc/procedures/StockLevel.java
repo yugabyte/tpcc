@@ -19,6 +19,8 @@ package com.oltpbenchmark.benchmarks.tpcc.procedures;
 import java.sql.*;
 import java.util.Random;
 
+import org.HdrHistogram.ConcurrentHistogram;
+import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
@@ -66,6 +68,15 @@ public class StockLevel extends TPCCProcedure {
 
   private CallableStatement stockGetCountStockFunc = null;
 
+  private static Histogram latencyGetDistOrderId = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private static Histogram latencyGetCountStock = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+
+  public static void printLatencyStats() {
+    LOG.info("StockLevel : ");
+    LOG.info("latencyGetDistOrderId " + TPCCProcedure.getStats(latencyGetDistOrderId));
+    LOG.info("latencyGetCountStock " + TPCCProcedure.getStats(latencyGetCountStock));
+  }
+
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
@@ -83,7 +94,10 @@ public class StockLevel extends TPCCProcedure {
     stockGetDistOrderId.setInt(2, d_id);
     if (trace)
       LOG.trace(String.format("stockGetDistOrderId BEGIN [W_ID=%d, D_ID=%d]", w_id, d_id));
+    long start = System.nanoTime();
     ResultSet rs = stockGetDistOrderId.executeQuery();
+    long end = System.nanoTime();
+    latencyGetDistOrderId.recordValue((end - start) / 1000);
     if (trace) LOG.trace("stockGetDistOrderId END");
 
     if (!rs.next()) {
@@ -100,7 +114,10 @@ public class StockLevel extends TPCCProcedure {
     if (trace)
       LOG.trace(String.format("stockGetCountStock BEGIN [W_ID=%d, D_ID=%d, O_ID=%d]",
                 w_id, d_id, o_id));
+    start = System.nanoTime();
     rs = stockGetCountStockFunc.executeQuery();
+    end = System.nanoTime();
+    latencyGetCountStock.recordValue((end - start) / 1000);
     if (trace) LOG.trace("stockGetCountStock END");
 
     if (!rs.next()) {

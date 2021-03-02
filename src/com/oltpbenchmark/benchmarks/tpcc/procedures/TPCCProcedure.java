@@ -21,15 +21,30 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Random;
 
+import org.HdrHistogram.ConcurrentHistogram;
+import org.HdrHistogram.Histogram;
+
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 
 public abstract class TPCCProcedure extends Procedure {
-
+  static final int numSigDigits = 4;
   public abstract ResultSet run(Connection conn, Random gen,
                                 int terminalWarehouseID, int numWarehouses,
                                 int terminalDistrictLowerID, int terminalDistrictUpperID,
                                 TPCCWorker w) throws SQLException;
 
   public void test(Connection conn, TPCCWorker w) throws Exception {}
+
+  static String getStats(Histogram latencyRecords) {
+      return getOperationLatencyString(latencyRecords);
+  }
+
+  private static String getOperationLatencyString(Histogram latencies) {
+      double avgLatency = latencies.getMean() / 1000;
+      double p99Latency = latencies.getValueAtPercentile(99.0) / 1000;
+
+      return "Count : " + latencies.getTotalCount() + " Avg Latency: " + avgLatency +
+              " msecs, p99 Latency: " + p99Latency + " msecs";
+  }
 }

@@ -38,7 +38,7 @@ public class Loader {
     private static final Logger LOG = Logger.getLogger(Loader.class);
     private static final int FIRST_UNPROCESSED_O_ID = 2101;
 
-    protected final TPCCBenchmark benchmark;
+    protected final BenchmarkModule benchmark;
     protected final WorkloadConfiguration workConf;
     protected final int numWarehouses;
     private final Histogram<String> tableSizes = new Histogram<>();
@@ -75,7 +75,7 @@ public class Loader {
         public abstract void load(Connection conn);
     }
 
-    public Loader(TPCCBenchmark benchmark) {
+    public Loader(BenchmarkModule benchmark) {
         this.benchmark = benchmark;
         this.workConf = benchmark.getWorkloadConfiguration();
         this.numWarehouses = workConf.getNumWarehouses();

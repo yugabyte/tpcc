@@ -81,6 +81,12 @@ public class Loader {
         this.numWarehouses = workConf.getNumWarehouses();
     }
 
+    /**
+     * Create a list of loader threads to load TPCC data. One thread will load items, and then every other thread will
+     * load all the data for a given warehouse.
+     *
+     * @return The list of LoaderThreads to run in order to load all TPCC data.
+     */
     public List<LoaderThread> createLoaderThreads() {
       List<LoaderThread> threads = new ArrayList<>();
       final CountDownLatch warehouseLatch =  new CountDownLatch(numWarehouses);

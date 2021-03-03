@@ -26,7 +26,6 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-import com.oltpbenchmark.benchmarks.tpcc.TPCCBenchmark;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
@@ -63,7 +62,7 @@ public class Worker implements Runnable {
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
 
     private final int id;
-    private final TPCCBenchmark benchmarkModule;
+    private final BenchmarkModule benchmarkModule;
     protected final HikariDataSource dataSource;
     protected static WorkloadConfiguration wrkld;
     protected TransactionTypes transactionTypes;
@@ -76,7 +75,7 @@ public class Worker implements Runnable {
     int totalAttemptsPerTransaction = 1;
 
     public Worker(
-            TPCCBenchmark benchmarkModule, int id, int terminalWarehouseID, int terminalDistrictLowerID,
+            BenchmarkModule benchmarkModule, int id, int terminalWarehouseID, int terminalDistrictLowerID,
             int terminalDistrictUpperID) {
         this.id = id;
         this.benchmarkModule = benchmarkModule;
@@ -116,7 +115,7 @@ public class Worker implements Runnable {
     /**
      * Get the BenchmarkModule managing this Worker
      */
-    public final TPCCBenchmark getBenchmarkModule() {
+    public final BenchmarkModule getBenchmarkModule() {
         return (this.benchmarkModule);
     }
 

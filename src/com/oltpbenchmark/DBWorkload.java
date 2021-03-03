@@ -22,7 +22,6 @@ import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import com.oltpbenchmark.benchmarks.tpcc.TPCCBenchmark;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -365,9 +364,9 @@ public class DBWorkload {
       // ----------------------------------------------------------------
       // CREATE BENCHMARK MODULE
       // ----------------------------------------------------------------
-      BenchmarkModule bench = new TPCCBenchmark(wrkld);
+      BenchmarkModule bench = new BenchmarkModule(wrkld);
       Map<String, Object> initDebug = new ListOrderedMap<>();
-      initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "TPCCBenchmark"));
+      initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "BenchmarkModule"));
       initDebug.put("Configuration", configFile);
       initDebug.put("Type", wrkld.getDBType());
       initDebug.put("Driver", wrkld.getDBDriver());

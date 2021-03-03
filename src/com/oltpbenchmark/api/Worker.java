@@ -22,9 +22,13 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
+import com.oltpbenchmark.benchmarks.tpcc.TPCCBenchmark;
+import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
+import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -40,10 +44,16 @@ import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.types.TransactionStatus;
 
-public abstract class Worker<T extends BenchmarkModule> implements Runnable {
+public class Worker implements Runnable {
     private static final Logger LOG = Logger.getLogger(Worker.class);
 
     private static WorkloadState wrkldState;
+    // This is the warehouse that is a constant for this terminal.
+    private int terminalWarehouseID;
+    // This is the district ID used for StockLevel transactions.
+    private final int terminalDistrictID;
+    // private boolean debugMessages;
+    protected final Random gen = new Random();
     private LatencyRecord latencies;
     private LatencyRecord wholeOperationLatencies;
     private LatencyRecord acqConnectionLatencies;
@@ -53,7 +63,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
 
     private final int id;
-    private final T benchmarkModule;
+    private final TPCCBenchmark benchmarkModule;
     protected final HikariDataSource dataSource;
     protected static WorkloadConfiguration wrkld;
     protected TransactionTypes transactionTypes;
@@ -65,7 +75,9 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     int[] totalFailures;
     int totalAttemptsPerTransaction = 1;
 
-    public Worker(T benchmarkModule, int id) {
+    public Worker(TPCCBenchmark benchmarkModule, int id,
+                      int terminalWarehouseID, int terminalDistrictLowerID,
+                      int terminalDistrictUpperID) {
         this.id = id;
         this.benchmarkModule = benchmarkModule;
         // TODO -- can these be made non-static?
@@ -83,6 +95,13 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             throw new RuntimeException("Failed to connect to database", ex);
         }
         totalAttemptsPerTransaction = wrkld.getMaxRetriesPerTransaction() + 1;
+        this.terminalWarehouseID = terminalWarehouseID;
+
+        assert terminalDistrictLowerID >= 1;
+        assert terminalDistrictUpperID <= TPCCConfig.configDistPerWhse;
+        assert terminalDistrictLowerID <= terminalDistrictUpperID;
+        this.terminalDistrictID =
+                TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
     }
 
     public final void InitializeProcedures() {
@@ -97,7 +116,7 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     /**
      * Get the BenchmarkModule managing this Worker
      */
-    public final T getBenchmarkModule() {
+    public final TPCCBenchmark getBenchmarkModule() {
         return (this.benchmarkModule);
     }
 
@@ -206,6 +225,12 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         } catch (SQLException e) {
             LOG.error("Failed to cancel statement: " + e.getMessage());
         }
+    }
+
+    public void test(Connection conn) throws Exception {
+      Procedure proc = this.getProcedure(
+          this.transactionTypes.getType("NewOrder").getProcedureClass());
+      proc.test(conn, this);
     }
 
     static class TransactionExecutionState {
@@ -609,9 +634,38 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
     }
 
     /**
-     * Invoke a single transaction for the given TransactionType
+     * Executes a single TPCC transaction of type transactionType.
      */
-    protected abstract TransactionStatus executeWork(Connection conn, TransactionType txnType) throws UserAbortException, SQLException;
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction)
+                                            throws UserAbortException, SQLException {
+      try {
+        Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());
+
+        // The districts should be chosen randomly from [1,10] for the following transactions:
+        // 1. NewOrder    TPC-C 2.4.1.2
+        // 2. Payment     TPC-C 2.5.1.2
+        // 3. OrderStatus TPC-C 2.6.1.2
+        // The 'StockLevel' transaction has a fixed districtId for the whole terminal.
+        int lowDistrictId = terminalDistrictID;
+        int highDistrictId = terminalDistrictID;
+        if (nextTransaction.getName().equals("NewOrder") ||
+            nextTransaction.getName().equals("Payment") ||
+            nextTransaction.getName().equals("OrderStatus")) {
+          lowDistrictId = 1;
+          highDistrictId = TPCCConfig.configDistPerWhse;
+        }
+        proc.run(conn, gen, terminalWarehouseID, wrkld.getTotalWarehousesAcrossShards(),
+                lowDistrictId, highDistrictId, this);
+      } catch (ClassCastException ex){
+        //fail gracefully
+        LOG.error("We have been invoked with an INVALID transactionType?!");
+        throw new RuntimeException("Bad transaction type = "+ nextTransaction);
+      }
+      if (!conn.getAutoCommit()) {
+        conn.commit();
+      }
+      return (TransactionStatus.SUCCESS);
+    }
 
     /**
      * Called at the end of the test to do any clean up that may be required.

@@ -24,12 +24,12 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import com.oltpbenchmark.api.Procedure;
+import com.oltpbenchmark.api.Worker;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
-import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
 
@@ -124,7 +124,7 @@ public class Payment extends Procedure {
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
-                  TPCCWorker w) throws SQLException {
+                  Worker w) throws SQLException {
     payUpdateWhse = this.getPreparedStatement(conn, payUpdateWhseSQL);
     payGetWhse = this.getPreparedStatement(conn, payGetWhseSQL);
     payUpdateDist = this.getPreparedStatement(conn, payUpdateDistSQL);

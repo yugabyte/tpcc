@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import org.apache.log4j.Logger;
 
 public abstract class Procedure {
@@ -117,9 +116,9 @@ public abstract class Procedure {
     public abstract ResultSet run(Connection conn, Random gen,
                                   int terminalWarehouseID, int numWarehouses,
                                   int terminalDistrictLowerID, int terminalDistrictUpperID,
-                                  TPCCWorker w) throws SQLException;
+                                  Worker w) throws SQLException;
 
-    public void test(Connection conn, TPCCWorker w) throws Exception {}
+    public void test(Connection conn, Worker w) throws Exception {}
 
     /**
      * Thrown from a Procedure to indicate to the Worker

@@ -169,7 +169,7 @@ public abstract class BenchmarkModule {
      *
      * @return TODO
      */
-    protected abstract Loader<? extends BenchmarkModule> makeLoaderImpl();
+    protected abstract Loader makeLoaderImpl();
 
     protected abstract Package getProcedurePackageImpl();
 
@@ -267,8 +267,7 @@ public abstract class BenchmarkModule {
      * test cases that use it. That's why it's here.
      */
     public final void loadDatabase() {
-        Loader<? extends BenchmarkModule> loader;
-        loader = this.makeLoaderImpl();
+        Loader loader = this.makeLoaderImpl();
         if (loader != null) {
             List<? extends LoaderThread> loaderThreads = loader.createLoaderThreads();
             if (loaderThreads != null) {
@@ -293,7 +292,7 @@ public abstract class BenchmarkModule {
 
     public final void clearDatabase() {
         try {
-            Loader<? extends BenchmarkModule> loader = this.makeLoaderImpl();
+            Loader loader = this.makeLoaderImpl();
             if (loader != null) {
                 Connection conn = listDataSource.get(0).getConnection();
                 conn.setAutoCommit(false);

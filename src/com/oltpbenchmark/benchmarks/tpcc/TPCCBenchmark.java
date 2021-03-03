@@ -62,8 +62,8 @@ public class TPCCBenchmark extends BenchmarkModule {
   }
 
   @Override
-  protected Loader<TPCCBenchmark> makeLoaderImpl() {
-    return new TPCCLoader(this);
+  protected Loader makeLoaderImpl() {
+    return new Loader(this);
   }
 
   protected ArrayList<TPCCWorker> createTerminals() {
@@ -153,7 +153,7 @@ public class TPCCBenchmark extends BenchmarkModule {
     }
 
     public void enableForeignKeys() throws Exception {
-      TPCCLoader loader = new TPCCLoader(this);
+      Loader loader = new Loader(this);
       loader.EnableForeignKeyConstraints(makeConnection());
     }
 

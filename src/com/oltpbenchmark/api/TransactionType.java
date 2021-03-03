@@ -16,9 +16,21 @@
 
 package com.oltpbenchmark.api;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Random;
+
 public class TransactionType implements Comparable<TransactionType> {
 
-    public abstract static class Invalid extends Procedure { }
+    public static class Invalid extends Procedure {
+		@Override
+		public ResultSet run(
+				Connection conn, Random gen, int terminalWarehouseID, int numWarehouses, int terminalDistrictLowerID,
+				int terminalDistrictUpperID, Worker w) throws SQLException {
+			return null;
+		}
+	}
     public static final int INVALID_ID = 0;
     public static final TransactionType INVALID = new TransactionType(Invalid.class, INVALID_ID);
     

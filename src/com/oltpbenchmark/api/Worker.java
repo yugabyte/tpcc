@@ -75,9 +75,9 @@ public class Worker implements Runnable {
     int[] totalFailures;
     int totalAttemptsPerTransaction = 1;
 
-    public Worker(TPCCBenchmark benchmarkModule, int id,
-                      int terminalWarehouseID, int terminalDistrictLowerID,
-                      int terminalDistrictUpperID) {
+    public Worker(
+            TPCCBenchmark benchmarkModule, int id, int terminalWarehouseID, int terminalDistrictLowerID,
+            int terminalDistrictUpperID) {
         this.id = id;
         this.benchmarkModule = benchmarkModule;
         // TODO -- can these be made non-static?

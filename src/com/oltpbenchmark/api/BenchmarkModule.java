@@ -159,7 +159,7 @@ public abstract class BenchmarkModule {
     // IMPLEMENTING CLASS INTERFACE
     // --------------------------------------------------------------------------
 
-    protected abstract List<Worker<? extends BenchmarkModule>> makeWorkersImpl();
+    protected abstract List<Worker> makeWorkersImpl();
 
     /**
      * Each BenchmarkModule needs to implement this method to load a sample
@@ -207,7 +207,7 @@ public abstract class BenchmarkModule {
         return null;
     }
 
-    public final List<Worker<? extends BenchmarkModule>> makeWorkers() {
+    public final List<Worker> makeWorkers() {
         return (this.makeWorkersImpl());
     }
 

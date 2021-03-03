@@ -48,11 +48,10 @@ public class TPCCBenchmark extends BenchmarkModule {
   }
 
   @Override
-  protected List<Worker<? extends BenchmarkModule>> makeWorkersImpl() {
-
-    ArrayList<Worker<? extends BenchmarkModule>> workers = new ArrayList<>();
+  protected List<Worker> makeWorkersImpl() {
+    ArrayList<Worker> workers = new ArrayList<>();
     try {
-      List<TPCCWorker> terminals = createTerminals();
+      List<Worker> terminals = createTerminals();
       workers.addAll(terminals);
     } catch (Exception e) {
       e.printStackTrace();
@@ -66,10 +65,10 @@ public class TPCCBenchmark extends BenchmarkModule {
     return new Loader(this);
   }
 
-  protected ArrayList<TPCCWorker> createTerminals() {
+  protected ArrayList<Worker> createTerminals() {
 
     // The array 'terminals' contains a terminal associated to a {warehouse, district}.
-    TPCCWorker[] terminals = new TPCCWorker[workConf.getTerminals()];
+    Worker[] terminals = new Worker[workConf.getTerminals()];
 
     int numWarehouses = workConf.getNumWarehouses();
     if (numWarehouses <= 0) {
@@ -122,14 +121,14 @@ public class TPCCBenchmark extends BenchmarkModule {
         }
         lowerDistrictId += 1;
 
-        TPCCWorker terminal = new TPCCWorker(this, workerId++,
+        Worker terminal = new Worker(this, workerId++,
                                              w_id, lowerDistrictId, upperDistrictId);
         terminals[k++] = terminal;
       }
     }
     assert terminals[terminals.length - 1] != null;
 
-    ArrayList<TPCCWorker> ret = new ArrayList<>();
+    ArrayList<Worker> ret = new ArrayList<>();
     Collections.addAll(ret, terminals);
     return ret;
   }
@@ -190,7 +189,7 @@ public class TPCCBenchmark extends BenchmarkModule {
     }
 
     public void test() throws Exception {
-      TPCCWorker worker = new TPCCWorker(this, 1 /* worker_id */, 1, 1, 1);
+      Worker worker = new Worker(this, 1 /* worker_id */, 1, 1, 1);
       worker.test(makeConnection());
     }
 }

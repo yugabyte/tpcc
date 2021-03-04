@@ -47,7 +47,7 @@ The workload descriptor works the same way as it does in the upstream branch and
 ## Running the Benchmark
 A utility script (./tpccbenchmark) is provided for running the benchmark. The options are
 
-```
+<pre>
 -c,--config &lt;arg&gt;            [required] Workload configuration file
    --clear &lt;arg&gt;             Clear all records in the database for this
                              benchmark
@@ -60,7 +60,7 @@ A utility script (./tpccbenchmark) is provided for running the benchmark. The op
    --runscript &lt;arg&gt;         Run an SQL script
 -s,--sample &lt;arg&gt;            Sampling window
 -v,--verbose                 Display Messages
-```
+</pre>
 
 ## Example
 The following command for example initiates a tpcc database (--create=true --load=true) and a then run a workload as described in config/workload_all.xml file. The results (latency, throughput) are summarized and written into two files: outputfile.res (aggregated) and outputfile.raw (detailed):
@@ -69,7 +69,7 @@ The following command for example initiates a tpcc database (--create=true --loa
 ./tpccbenchmark -c config/workload_all.xml --create=true --load=true --execute=true -s 300 -o outputfile
 ```
 
-Since data loading can be a lengthy process, one could first create a and populate a database which can be reused for multiple experiments:
+Since data loading can be a lengthy process, one could first create and populate a database which can be reused for multiple experiments:
 
 ```
 ./tpccbenchmark -c config/workload_all.xml --create=true --load=true

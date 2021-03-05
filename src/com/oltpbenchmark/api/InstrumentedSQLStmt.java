@@ -23,12 +23,10 @@ public class InstrumentedSQLStmt {
         this.sqlStmt = sqlStmt;
     }
     public InstrumentedSQLStmt(Histogram histogram, String sql, int...substitutions) {
-        this.histogram = histogram;
-        this.sqlStmt = new SQLStmt(sql, substitutions);
+        this(histogram, new SQLStmt(sql, substitutions));
     }
     public InstrumentedSQLStmt(String sql, int...substitutions) {
-        this.sqlStmt = new SQLStmt(sql, substitutions);
-        this.histogram = new ConcurrentHistogram(numSigDigits);
+        this(new ConcurrentHistogram(numSigDigits), sql, substitutions);
     }
 
     public SQLStmt getSqlStmt() {

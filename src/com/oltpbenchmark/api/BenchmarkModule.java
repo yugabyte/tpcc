@@ -20,14 +20,13 @@ package com.oltpbenchmark.api;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -45,7 +44,7 @@ import com.oltpbenchmark.util.ThreadUtil;
 /**
  * Base class for all benchmark implementations
  */
-public abstract class BenchmarkModule {
+public class BenchmarkModule {
     private static final Logger LOG = Logger.getLogger(BenchmarkModule.class);
 
     /**
@@ -74,10 +73,10 @@ public abstract class BenchmarkModule {
      */
     private final Random rng = new Random();
 
-    public BenchmarkModule(String benchmarkName, WorkloadConfiguration workConf) {
+    public BenchmarkModule(WorkloadConfiguration workConf) {
         assert (workConf != null) : "The WorkloadConfiguration instance is null.";
 
-        this.benchmarkName = benchmarkName;
+        this.benchmarkName = "tpcc";
         this.workConf = workConf;
         this.catalog = new Catalog(this);
         if (workConf.getNeedsExecution()) {
@@ -159,19 +158,25 @@ public abstract class BenchmarkModule {
     // IMPLEMENTING CLASS INTERFACE
     // --------------------------------------------------------------------------
 
-    protected abstract List<Worker<? extends BenchmarkModule>> makeWorkersImpl();
+    protected List<Worker> makeWorkersImpl() {
+      ArrayList<Worker> workers = new ArrayList<>();
+      try {
+        List<Worker> terminals = createTerminals();
+        workers.addAll(terminals);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
 
-    /**
-     * Each BenchmarkModule needs to implement this method to load a sample
-     * dataset into the database. The Connection handle will already be
-     * configured for you, and the base class will commit+close it once this
-     * method returns
-     *
-     * @return TODO
-     */
-    protected abstract Loader<? extends BenchmarkModule> makeLoaderImpl();
+      return workers;
+    }
 
-    protected abstract Package getProcedurePackageImpl();
+    protected Loader makeLoaderImpl() {
+      return new Loader(this);
+    }
+
+    protected Package getProcedurePackageImpl() {
+      return (NewOrder.class.getPackage());
+    }
 
     // --------------------------------------------------------------------------
     // PUBLIC INTERFACE
@@ -207,7 +212,7 @@ public abstract class BenchmarkModule {
         return null;
     }
 
-    public final List<Worker<? extends BenchmarkModule>> makeWorkers() {
+    public final List<Worker> makeWorkers() {
         return (this.makeWorkersImpl());
     }
 
@@ -267,8 +272,7 @@ public abstract class BenchmarkModule {
      * test cases that use it. That's why it's here.
      */
     public final void loadDatabase() {
-        Loader<? extends BenchmarkModule> loader;
-        loader = this.makeLoaderImpl();
+        Loader loader = this.makeLoaderImpl();
         if (loader != null) {
             List<? extends LoaderThread> loaderThreads = loader.createLoaderThreads();
             if (loaderThreads != null) {
@@ -293,7 +297,7 @@ public abstract class BenchmarkModule {
 
     public final void clearDatabase() {
         try {
-            Loader<? extends BenchmarkModule> loader = this.makeLoaderImpl();
+            Loader loader = this.makeLoaderImpl();
             if (loader != null) {
                 Connection conn = listDataSource.get(0).getConnection();
                 conn.setAutoCommit(false);
@@ -386,9 +390,131 @@ public abstract class BenchmarkModule {
         return (proc_xref);
     }
 
-    public abstract void enableForeignKeys() throws Exception;
+    protected ArrayList<Worker> createTerminals() {
 
-    public abstract void createSqlProcedures() throws Exception;
+      // The array 'terminals' contains a terminal associated to a {warehouse, district}.
+      Worker[] terminals = new Worker[workConf.getTerminals()];
 
-    public void test() throws Exception {}
+      int numWarehouses = workConf.getNumWarehouses();
+      if (numWarehouses <= 0) {
+        numWarehouses = 1;
+      }
+      int numTerminals = workConf.getTerminals();
+      assert (numTerminals >= numWarehouses) :
+        String.format("Insufficient number of terminals '%d' [numWarehouses=%d]",
+                      numTerminals, numWarehouses);
+
+      // TODO: This is currently broken: fix it!
+      int warehouseOffset = Integer.getInteger("warehouseOffset", 1);
+      assert warehouseOffset == 1;
+
+      // We distribute terminals evenly across the warehouses
+      // Eg. if there are 10 terminals across 7 warehouses, they
+      // are distributed as
+      // 1, 1, 2, 1, 2, 1, 2
+      final double terminalsPerWarehouse = (double) numTerminals
+          / numWarehouses;
+      int workerId = 0;
+      assert terminalsPerWarehouse >= 1;
+      int k = 0;
+      for (int w = workConf.getStartWarehouseIdForShard() - 1;
+           w < numWarehouses + workConf.getStartWarehouseIdForShard() - 1;
+           w++) {
+        // Compute the number of terminals in *this* warehouse
+        int lowerTerminalId = (int) (w * terminalsPerWarehouse);
+        int upperTerminalId = (int) ((w + 1) * terminalsPerWarehouse);
+        // protect against double rounding errors
+        int w_id = w + 1;
+        if (w_id == numWarehouses)
+          upperTerminalId = numTerminals;
+        int numWarehouseTerminals = upperTerminalId - lowerTerminalId;
+
+        if (BenchmarkModule.LOG.isDebugEnabled())
+          BenchmarkModule.LOG.debug(String.format("w_id %d = %d terminals [lower=%d / upper%d]",
+                                  w_id, numWarehouseTerminals, lowerTerminalId, upperTerminalId));
+
+        final double districtsPerTerminal =
+          TPCCConfig.configDistPerWhse / (double) numWarehouseTerminals;
+        assert districtsPerTerminal >= 1 :
+          String.format("Too many terminals [districtsPerTerminal=%.2f, numWarehouseTerminals=%d]",
+                        districtsPerTerminal, numWarehouseTerminals);
+        for (int terminalId = 0; terminalId < numWarehouseTerminals; terminalId++) {
+          int lowerDistrictId = (int) (terminalId * districtsPerTerminal);
+          int upperDistrictId = (int) ((terminalId + 1) * districtsPerTerminal);
+          if (terminalId + 1 == numWarehouseTerminals) {
+            upperDistrictId = TPCCConfig.configDistPerWhse;
+          }
+          lowerDistrictId += 1;
+
+          Worker terminal = new Worker(this, workerId++,
+                                               w_id, lowerDistrictId, upperDistrictId);
+          terminals[k++] = terminal;
+        }
+      }
+      assert terminals[terminals.length - 1] != null;
+
+      ArrayList<Worker> ret = new ArrayList<>();
+      Collections.addAll(ret, terminals);
+      return ret;
+    }
+
+    /**
+       * Hack to support postgres-specific timestamps
+       * @param time - millis since epoch
+       * @return Timestamp
+       */
+      public Timestamp getTimestamp(long time) {
+        Timestamp timestamp;
+
+        // HACK: NoisePage doesn't support JDBC timestamps.
+        // We have to use the postgres-specific type
+        if (this.workConf.getDBType() == DatabaseType.NOISEPAGE) {
+          timestamp = new org.postgresql.util.PGTimestamp(time);
+        } else {
+          timestamp = new Timestamp(time);
+        }
+        return (timestamp);
+      }
+
+    public void enableForeignKeys() throws Exception {
+        Loader loader = new Loader(this);
+        loader.EnableForeignKeyConstraints(makeConnection());
+      }
+
+    // This function creates SQL procedures that the execution would need. Currently we have procedures to update the
+      // Stock table, and a procedure to get stock levels of items recently ordered.
+      public void createSqlProcedures() throws Exception {
+        try {
+          Connection conn = makeConnection();
+          Statement st = conn.createStatement();
+
+          StringBuilder argsSb = new StringBuilder();
+          StringBuilder updateStatements = new StringBuilder();
+
+          argsSb.append("wid int");
+          for (int i = 1; i <= 15; ++i) {
+            argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));
+            updateStatements.append(String.format(
+              "UPDATE STOCK SET S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
+              "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d;",
+              i, i, i, i));
+            String updateStmt =
+              String.format("CREATE PROCEDURE updatestock%d (%s) AS '%s' LANGUAGE SQL;",
+                            i, argsSb.toString(), updateStatements.toString());
+
+            st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d", i));
+            st.execute(updateStmt);
+          }
+
+          StockLevel.InitializeGetStockCountProc(conn);
+        } catch (SQLException se) {
+          BenchmarkModule.LOG.error(se.getMessage());
+          throw se;
+        }
+      }
+
+    public void test() throws Exception {
+        Worker worker = new Worker(this, 1 /* worker_id */, 1, 1, 1);
+        worker.test(makeConnection());
+      }
 }

@@ -22,7 +22,6 @@ import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import com.oltpbenchmark.benchmarks.tpcc.TPCCBenchmark;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -366,9 +365,9 @@ public class DBWorkload {
       // ----------------------------------------------------------------
       // CREATE BENCHMARK MODULE
       // ----------------------------------------------------------------
-      BenchmarkModule bench = new TPCCBenchmark(wrkld);
+      BenchmarkModule bench = new BenchmarkModule(wrkld);
       Map<String, Object> initDebug = new ListOrderedMap<>();
-      initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "TPCCBenchmark"));
+      initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "BenchmarkModule"));
       initDebug.put("Configuration", configFile);
       initDebug.put("Type", wrkld.getDBType());
       initDebug.put("Driver", wrkld.getDBDriver());
@@ -903,7 +902,7 @@ public class DBWorkload {
   private static Results runWorkload(List<BenchmarkModule> benchList,
                                      int intervalMonitor,
                                      XMLConfiguration xmlConfig) {
-    List<Worker<?>> workers = new ArrayList<>();
+    List<Worker> workers = new ArrayList<>();
     List<WorkloadConfiguration> workConfs = new ArrayList<>();
 
     long start = System.nanoTime();
@@ -924,7 +923,7 @@ public class DBWorkload {
     r.endTime = end;
 
     long numNewOrderTransactions = 0;
-    for (Worker<?> w : workers) {
+    for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         if (sample.tranType == newOrderTxnId && sample.startNs + 1000L * sample.latencyUs <= end) {
           ++numNewOrderTransactions;
@@ -951,7 +950,7 @@ public class DBWorkload {
     int numTxnTypes = workConfs.get(0).getNumTxnTypes();
     int[] totalRetries = new int[numTxnTypes];
     int[] totalFailures = new int[numTxnTypes];
-    for (Worker<?> w : workers) {
+    for (Worker w : workers) {
       for (int i = 0; i < numTxnTypes; ++i) {
         totalRetries[i] += w.getTotalRetries()[i];
         totalFailures[i] += w.getTotalFailures()[i];
@@ -962,7 +961,7 @@ public class DBWorkload {
     return r;
   }
 
-  private static void PrintLatencies(List<Worker<?>> workers,
+  private static void PrintLatencies(List<Worker> workers,
                                      boolean displayEnhancedLatencyMetrics) {
     List<List<Integer>> list_latencies = new ArrayList<>();
     List<List<Integer>> list_enhanced_latencies = new ArrayList<>();
@@ -971,7 +970,7 @@ public class DBWorkload {
       list_enhanced_latencies.add(new ArrayList<>());
     }
 
-    for (Worker<?> w : workers) {
+    for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
       }
@@ -1005,7 +1004,7 @@ public class DBWorkload {
     }
 
     List<Integer> acqConnectionLatency = new ArrayList<>();
-    for (Worker<?> w : workers) {
+    for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getAcqConnectionLatencyRecords()) {
         acqConnectionLatency.add(sample.operationLatencyUs);
       }

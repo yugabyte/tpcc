@@ -41,7 +41,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
 
   private static BenchmarkState testState;
-  private final List<? extends Worker<? extends BenchmarkModule>> workers;
+  private final List<? extends Worker> workers;
   private final ArrayList<Thread> workerThreads;
   // private File profileFile;
   private final List<WorkloadConfiguration> workConfs;
@@ -49,7 +49,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
-  public ThreadBench(List<? extends Worker<? extends BenchmarkModule>> workers, List<WorkloadConfiguration> workConfs) {
+  public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
       this.workers = workers;
       this.workConfs = workConfs;
       this.workerThreads = new ArrayList<>(workers.size());
@@ -164,7 +164,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   private void createWorkerThreads() {
-      for (Worker<?> worker : workers) {
+      for (Worker worker : workers) {
           worker.initializeState();
           Thread thread = new Thread(worker);
           thread.setUncaughtExceptionHandler(this);
@@ -174,7 +174,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   private void interruptWorkers() {
-      for (Worker<?> worker : workers) {
+      for (Worker worker : workers) {
           worker.cancelStatement();
       }
   }
@@ -192,7 +192,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       for (int i = 0, cnt = workerThreads.size(); i < cnt; i++) {
           Thread t = workerThreads.get(i);
           assert(t != null);
-          Worker<? extends BenchmarkModule> w = this.workers.get(i);
+          Worker w = this.workers.get(i);
           assert(w != null);
 
 
@@ -268,7 +268,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
               // Compute the last throughput
               long measuredRequests = 0;
               synchronized (testState) {
-                  for (Worker<?> w : workers) {
+                  for (Worker w : workers) {
                       measuredRequests += w.getAndResetIntervalRequests();
                   }
               }
@@ -279,7 +279,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       }
   } // CLASS
 
-  public static Results runRateLimitedBenchmark(List<Worker<? extends BenchmarkModule>> workers, List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
+  public static Results runRateLimitedBenchmark(List<Worker> workers, List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
       ThreadBench bench = new ThreadBench(workers, workConfs);
       bench.intervalMonitor = intervalMonitoring;
       return bench.runRateLimitedMultiPhase();
@@ -480,7 +480,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
       // Combine all the latencies together in the most disgusting way
       // possible: sorting!
-      for (Worker<?> w : workers) {
+      for (Worker w : workers) {
         for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
           samples.add(sample);
         }

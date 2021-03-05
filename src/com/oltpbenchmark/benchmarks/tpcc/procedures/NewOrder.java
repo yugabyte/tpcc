@@ -29,18 +29,19 @@ import java.util.List;
 import java.util.Random;
 
 import com.oltpbenchmark.api.InstrumentedSQLStmt;
+import com.oltpbenchmark.api.Procedure;
+import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
-
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
-import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 
-public class NewOrder extends TPCCProcedure {
+public class NewOrder extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(NewOrder.class);
 
@@ -218,7 +219,7 @@ public class NewOrder extends TPCCProcedure {
   public ResultSet run(Connection conn, Random gen,
                   int terminalWarehouseID, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
-                  TPCCWorker w) throws SQLException {
+                  Worker w) throws SQLException {
     int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
     int customerID = TPCCUtil.getCustomerID(gen);
     int numItems = TPCCUtil.randomNumber(5, 15, gen);
@@ -263,7 +264,7 @@ public class NewOrder extends TPCCProcedure {
   private void newOrderTransaction(int w_id, int d_id, int c_id,
                                    int o_ol_cnt, int o_all_local, int[] itemIDs,
                                    int[] supplierWarehouseIDs, int[] orderQuantities,
-                                   Connection conn, TPCCWorker w) throws SQLException {
+                                   Connection conn, Worker w) throws SQLException {
     float c_discount, w_tax, d_tax, i_price;
     int d_next_o_id, o_id = -1, s_quantity;
     String c_last, c_credit, i_name, i_data, s_data, ol_dist_info;
@@ -668,7 +669,7 @@ public class NewOrder extends TPCCProcedure {
     return total_amount;
   }
 
-  public void test(Connection conn, TPCCWorker w) throws Exception {
+  public void test(Connection conn, Worker w) throws Exception {
     //initializing all prepared statements
     stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
     stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
@@ -741,7 +742,7 @@ public class NewOrder extends TPCCProcedure {
 
   }
 
-  void AssertNewOrderTransaction(Connection conn, TPCCWorker w,
+  void AssertNewOrderTransaction(Connection conn, Worker w,
                                  int count, int wId, int dId, int cId, int nextOid,
                                  int[] itemIDs, int[] supplierWhIds, int[] orderQts,
                                  int[] qtyArr, int[] ytdArr,

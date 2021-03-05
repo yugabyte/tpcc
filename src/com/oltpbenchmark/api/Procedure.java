@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
 public abstract class Procedure {
@@ -68,7 +70,23 @@ public abstract class Procedure {
         } // FOR
         return (pStmt);
     }
-    
+
+    public final InstrumentedPreparedStatement getPreparedStatement(Connection conn,
+                                                                    SQLStmt sql,
+                                                                    Histogram histogram,
+                                                                    Object...params) throws SQLException {
+        InstrumentedSQLStmt stmt = new InstrumentedSQLStmt(histogram, sql);
+        return getPreparedStatement(conn, stmt, params);
+    }
+
+    public final InstrumentedPreparedStatement getPreparedStatement(Connection conn,
+                                                                    InstrumentedSQLStmt stmt,
+                                                                    Object...params) throws SQLException {
+        PreparedStatement pStmt = this.getPreparedStatement(conn, stmt.getSqlStmt(), params);
+        return new InstrumentedPreparedStatement(pStmt, stmt);
+    }
+
+
     /**
      * Return a PreparedStatement for the given SQLStmt handle
      * The underlying Procedure API will make sure that the proper SQL

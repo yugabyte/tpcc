@@ -17,18 +17,16 @@
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.HdrHistogram.ConcurrentHistogram;
-import org.HdrHistogram.Histogram;
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
@@ -38,7 +36,7 @@ public class OrderStatus extends TPCCProcedure {
 
   private static final Logger LOG = Logger.getLogger(OrderStatus.class);
 
-  public SQLStmt ordStatGetNewestOrdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt ordStatGetNewestOrdSQL = new InstrumentedSQLStmt(
       "SELECT O_ID, O_CARRIER_ID, O_ENTRY_D " +
       "  FROM " + TPCCConstants.TABLENAME_OPENORDER +
       " WHERE O_W_ID = ? " +
@@ -46,14 +44,14 @@ public class OrderStatus extends TPCCProcedure {
       "   AND O_C_ID = ? " +
       " ORDER BY O_ID DESC LIMIT 1");
 
-  public SQLStmt ordStatGetOrderLinesSQL = new SQLStmt(
+  public static InstrumentedSQLStmt ordStatGetOrderLinesSQL = new InstrumentedSQLStmt(
       "SELECT OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT, OL_DELIVERY_D " +
       "  FROM " + TPCCConstants.TABLENAME_ORDERLINE +
       " WHERE OL_O_ID = ?" +
       "   AND OL_D_ID = ?" +
       "   AND OL_W_ID = ?");
 
-  public SQLStmt payGetCustSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, " +
       "       C_CITY, C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, " +
       "       C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -62,7 +60,7 @@ public class OrderStatus extends TPCCProcedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt customerByNameSQL = new SQLStmt(
+  public static InstrumentedSQLStmt customerByNameSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_ID, C_STREET_1, C_STREET_2, C_CITY, " +
       "       C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, " +
       "       C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -72,22 +70,17 @@ public class OrderStatus extends TPCCProcedure {
       "   AND C_LAST = ? " +
       " ORDER BY C_FIRST");
 
-  private PreparedStatement ordStatGetNewestOrd = null;
-  private PreparedStatement ordStatGetOrderLines = null;
-  private PreparedStatement payGetCust = null;
-  private PreparedStatement customerByName = null;
-
-  private static Histogram latencyOrdStatGetNewestOrd = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyOrdStatGetOrderLines = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyPayGetCust = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyCustomerByName = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private InstrumentedPreparedStatement ordStatGetNewestOrd = null;
+  private InstrumentedPreparedStatement ordStatGetOrderLines = null;
+  private InstrumentedPreparedStatement payGetCust = null;
+  private InstrumentedPreparedStatement customerByName = null;
 
   public static void printLatencyStats() {
     LOG.info("OrderStatus : ");
-    LOG.info("latencyOrdStatGetNewestOrd " + TPCCProcedure.getStats(latencyOrdStatGetNewestOrd));
-    LOG.info("latencyOrdStatGetOrderLines " + TPCCProcedure.getStats(latencyOrdStatGetOrderLines));
-    LOG.info("latencyPayGetCust " + TPCCProcedure.getStats(latencyPayGetCust));
-    LOG.info("latencyCustomerByName " + TPCCProcedure.getStats(latencyCustomerByName));
+    LOG.info("latency OrdStatGetNewestOrd " + ordStatGetNewestOrdSQL.getStats());
+    LOG.info("latency OrdStatGetOrderLines " + ordStatGetOrderLinesSQL.getStats());
+    LOG.info("latency PayGetCust " + payGetCustSQL.getStats());
+    LOG.info("latency CustomerByName " + customerByNameSQL.getStats());
   }
 
   public ResultSet run(Connection conn, Random gen, int w_id, int numWarehouses,
@@ -123,10 +116,7 @@ public class OrderStatus extends TPCCProcedure {
     ordStatGetNewestOrd.setInt(2, d_id);
     ordStatGetNewestOrd.setInt(3, c.c_id);
     if (trace) LOG.trace("ordStatGetNewestOrd START");
-    long start = System.nanoTime();
     ResultSet rs = ordStatGetNewestOrd.executeQuery();
-    long end = System.nanoTime();
-    latencyOrdStatGetNewestOrd.recordValue((end - start) / 1000);
     if (trace) LOG.trace("ordStatGetNewestOrd END");
 
     if (!rs.next()) {
@@ -147,9 +137,6 @@ public class OrderStatus extends TPCCProcedure {
     ordStatGetOrderLines.setInt(3, w_id);
     if (trace) LOG.trace("ordStatGetOrderLines START");
     rs = ordStatGetOrderLines.executeQuery();
-    start = System.nanoTime();
-    end = System.nanoTime();
-    latencyOrdStatGetOrderLines.recordValue((end - start) / 1000);
     if (trace) LOG.trace("ordStatGetOrderLines END");
 
     while (rs.next()) {
@@ -239,10 +226,7 @@ public class OrderStatus extends TPCCProcedure {
     payGetCust.setInt(2, c_d_id);
     payGetCust.setInt(3, c_id);
     if (trace) LOG.trace("payGetCust START");
-    long start = System.nanoTime();
     ResultSet rs = payGetCust.executeQuery();
-    long end = System.nanoTime();
-    latencyPayGetCust.recordValue((end - start) / 1000);
     if (trace) LOG.trace("payGetCust END");
     if (!rs.next()) {
       String msg = String.format("Failed to get CUSTOMER [C_W_ID=%d, C_D_ID=%d, C_ID=%d]",
@@ -268,10 +252,7 @@ public class OrderStatus extends TPCCProcedure {
     customerByName.setInt(2, c_d_id);
     customerByName.setString(3, c_last);
     if (trace) LOG.trace("customerByName START");
-    long start = System.nanoTime();
     ResultSet rs = customerByName.executeQuery();
-    long end = System.nanoTime();
-    latencyCustomerByName.recordValue((end - start) / 1000);
     if (trace) LOG.trace("customerByName END");
 
     while (rs.next()) {

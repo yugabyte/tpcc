@@ -28,12 +28,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
 
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
@@ -43,52 +44,52 @@ public class NewOrder extends TPCCProcedure {
 
   private static final Logger LOG = Logger.getLogger(NewOrder.class);
 
-  public final SQLStmt stmtGetCustSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt stmtGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_DISCOUNT, C_LAST, C_CREDIT" +
       "  FROM " + TPCCConstants.TABLENAME_CUSTOMER +
       " WHERE C_W_ID = ? " +
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public final SQLStmt stmtGetWhseSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt stmtGetWhseSQL = new InstrumentedSQLStmt(
       "SELECT W_TAX " +
       "  FROM " + TPCCConstants.TABLENAME_WAREHOUSE +
       " WHERE W_ID = ?");
 
-  public final SQLStmt stmtGetDistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt stmtGetDistSQL = new InstrumentedSQLStmt(
       "SELECT D_NEXT_O_ID, D_TAX " +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? AND D_ID = ?");
 
-  public final SQLStmt  stmtInsertNewOrderSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtInsertNewOrderSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_NEWORDER +
       " (NO_O_ID, NO_D_ID, NO_W_ID) " +
       " VALUES ( ?, ?, ?)");
 
-  public final SQLStmt  stmtUpdateDistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtUpdateDistSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_DISTRICT +
       " SET D_NEXT_O_ID = D_NEXT_O_ID + 1 " +
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public final SQLStmt  stmtGetItemSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtGetItemSQL = new InstrumentedSQLStmt(
       "SELECT I_PRICE, I_NAME , I_DATA " +
       "  FROM " + TPCCConstants.TABLENAME_ITEM +
       " WHERE I_ID = ?");
 
-  public final SQLStmt  stmtGetStockSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtGetStockSQL = new InstrumentedSQLStmt(
       "SELECT S_QUANTITY, S_DATA, S_DIST_01, S_DIST_02, S_DIST_03, S_DIST_04, S_DIST_05, " +
       "       S_DIST_06, S_DIST_07, S_DIST_08, S_DIST_09, S_DIST_10" +
       "  FROM " + TPCCConstants.TABLENAME_STOCK +
       " WHERE S_I_ID = ? " +
       "   AND S_W_ID = ?");
 
-  public final SQLStmt  stmtInsertOOrderSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtInsertOOrderSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_OPENORDER +
       " (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_OL_CNT, O_ALL_LOCAL)" +
       " VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-  public final SQLStmt  stmtUpdateStockSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtUpdateStockSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_STOCK +
       "   SET S_QUANTITY = ? , " +
       "       S_YTD = S_YTD + ?, " +
@@ -97,7 +98,7 @@ public class NewOrder extends TPCCProcedure {
       " WHERE S_I_ID = ? " +
       "   AND S_W_ID = ?");
 
-  public final SQLStmt  stmtInsertOrderLineSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtInsertOrderLineSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_ORDERLINE +
       " (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, " +
       "OL_AMOUNT, OL_DIST_INFO)  VALUES (?,?,?,?,?,?,?,?,?)");
@@ -105,56 +106,47 @@ public class NewOrder extends TPCCProcedure {
   // We will have multiple statements for selecting from the ITEM table or STOCK table as also for
   // inserting into the ORDER_LINE tables based on the O_OL_CNT that is part of the NewOrder
   // transaction. These statements are created dynamically.
-  public SQLStmt[] stmtGetItemSQLArr;
-  public SQLStmt[] stmtGetStockSQLArr;
-  public SQLStmt[] stmtUpdateStockProcedureSQL;
-  public SQLStmt[] stmtInsertOrderLineSQLArr;
+  public InstrumentedSQLStmt[] stmtGetItemSQLArr;
+  public InstrumentedSQLStmt[] stmtGetStockSQLArr;
+  public InstrumentedSQLStmt[] stmtUpdateStockProcedureSQL;
+  public InstrumentedSQLStmt[] stmtInsertOrderLineSQLArr;
 
-  public static Histogram latencyGetCust = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyGetWhse = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyGetDist = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyInsertNewOrder = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyUpdateDist = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyInsertOOrder = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyGetItem = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyGetStock = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyUpdateStock = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyUpdateStockProcedure = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  public static Histogram latencyInsertOrderLine = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  public static Histogram latencyUpdateStockProcedure = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
+
 
   // NewOrder Txn
-  private PreparedStatement stmtGetCust = null;
-  private PreparedStatement stmtGetWhse = null;
-  private PreparedStatement stmtGetDist = null;
-  private PreparedStatement stmtInsertNewOrder = null;
-  private PreparedStatement stmtUpdateDist = null;
-  private PreparedStatement stmtInsertOOrder = null;
-  private PreparedStatement stmtGetItem = null;
-  private PreparedStatement stmtGetStock = null;
-  private PreparedStatement stmtUpdateStock = null;
-  private PreparedStatement stmtUpdateStockProcedure = null;
-  private PreparedStatement stmtInsertOrderLine = null;
+  private InstrumentedPreparedStatement stmtGetCust = null;
+  private InstrumentedPreparedStatement stmtGetWhse = null;
+  private InstrumentedPreparedStatement stmtGetDist = null;
+  private InstrumentedPreparedStatement stmtInsertNewOrder = null;
+  private InstrumentedPreparedStatement stmtUpdateDist = null;
+  private InstrumentedPreparedStatement stmtInsertOOrder = null;
+  private InstrumentedPreparedStatement stmtGetItem = null;
+  private InstrumentedPreparedStatement stmtGetStock = null;
+  private InstrumentedPreparedStatement stmtUpdateStock = null;
+  private InstrumentedPreparedStatement stmtUpdateStockProcedure = null;
+  private InstrumentedPreparedStatement stmtInsertOrderLine = null;
 
   public static void printLatencyStats() {
     LOG.info("NewOrder : ");
-    LOG.info("latencyGetCust " + TPCCProcedure.getStats(latencyGetCust));
-    LOG.info("latencyGetWhse " + TPCCProcedure.getStats(latencyGetWhse));
-    LOG.info("latencyGetDist " + TPCCProcedure.getStats(latencyGetDist));
-    LOG.info("latencyInsertNewOrder " + TPCCProcedure.getStats(latencyInsertNewOrder));
-    LOG.info("latencyUpdateDist " + TPCCProcedure.getStats(latencyUpdateDist));
-    LOG.info("latencyInsertOOrder " + TPCCProcedure.getStats(latencyInsertOOrder));
-    LOG.info("latencyGetItem " + TPCCProcedure.getStats(latencyGetItem));
-    LOG.info("latencyGetStock " + TPCCProcedure.getStats(latencyGetStock));
-    LOG.info("latencyUpdateStock " + TPCCProcedure.getStats(latencyUpdateStock));
-    LOG.info("latencyUpdateStockProcedure " + TPCCProcedure.getStats(latencyUpdateStockProcedure));
-    LOG.info("latencyInsertOrderLine " + TPCCProcedure.getStats(latencyInsertOrderLine));
+    LOG.info("latency GetCust " + stmtGetCustSQL.getStats());
+    LOG.info("latency GetWhse " + stmtGetWhseSQL.getStats());
+    LOG.info("latency GetDist " + stmtGetDistSQL.getStats());
+    LOG.info("latency InsertNewOrder " + stmtInsertNewOrderSQL.getStats());
+    LOG.info("latency UpdateDist " + stmtUpdateDistSQL.getStats());
+    LOG.info("latency InsertOOrder " + stmtInsertOOrderSQL.getStats());
+    LOG.info("latency GetItem " + stmtGetItemSQL.getStats());
+    LOG.info("latency GetStock " + stmtGetStockSQL.getStats());
+    LOG.info("latency UpdateStock " + stmtUpdateStockSQL.getStats());
+    LOG.info("latency UpdateStockProcedure " + InstrumentedSQLStmt.getOperationLatencyString(latencyUpdateStockProcedure));
+    LOG.info("latency InsertOrderLine " + stmtInsertOrderLineSQL.getStats());
   }
 
   public NewOrder() {
-    stmtGetItemSQLArr = new SQLStmt[15];
-    stmtGetStockSQLArr = new SQLStmt[15];
-    stmtUpdateStockProcedureSQL = new SQLStmt[15];
-    stmtInsertOrderLineSQLArr = new SQLStmt[11];
+    stmtGetItemSQLArr = new InstrumentedSQLStmt[15];
+    stmtGetStockSQLArr = new InstrumentedSQLStmt[15];
+    stmtUpdateStockProcedureSQL = new InstrumentedSQLStmt[15];
+    stmtInsertOrderLineSQLArr = new InstrumentedSQLStmt[11];
 
     // We create 15 statements for selecting rows from the `ITEM` table with varying number of ITEM
     // ids.  Each string looks like:
@@ -170,7 +162,7 @@ public class NewOrder extends TPCCProcedure {
       } else {
         sb.append(",?");
       }
-      stmtGetItemSQLArr[i - 1] = new SQLStmt(sb.toString() + ")");
+      stmtGetItemSQLArr[i - 1] = new InstrumentedSQLStmt(stmtGetItemSQL.getHistogram(), sb.toString() + ")");
     }
 
     // We create 15 statements for selecting rows from the `STOCK` table with varying number of
@@ -190,7 +182,7 @@ public class NewOrder extends TPCCProcedure {
       } else {
         sb.append(",?");
       }
-      stmtGetStockSQLArr[i - 1] = new SQLStmt(sb.toString() + ") FOR UPDATE");
+      stmtGetStockSQLArr[i - 1] = new InstrumentedSQLStmt(stmtGetStockSQL.getHistogram(), sb.toString() + ") FOR UPDATE");
     }
 
     // We create 15 statements to update the rows in `STOCK` table. Each string looks like:
@@ -199,7 +191,7 @@ public class NewOrder extends TPCCProcedure {
     sb.append("?");
     for (int i = 1; i <= 15; ++i) {
       sb.append(", ?, ?, ?, ?");
-      stmtUpdateStockProcedureSQL[i - 1] = new SQLStmt(String.format("CALL updatestock%d(%s)",
+      stmtUpdateStockProcedureSQL[i - 1] = new InstrumentedSQLStmt(latencyUpdateStockProcedure, String.format("CALL updatestock%d(%s)",
                                                                       i, sb.toString()));
     }
     // We create 11 statements that insert into `ORDERLINE`. Each string looks like:
@@ -218,7 +210,7 @@ public class NewOrder extends TPCCProcedure {
         sb.append(", (?,?,?,?,?,?,?,?,?)");
       }
       if (i >= 5) {
-        stmtInsertOrderLineSQLArr[i - 5] = new SQLStmt(sb.toString());
+        stmtInsertOrderLineSQLArr[i - 5] = new InstrumentedSQLStmt(stmtInsertOrderLineSQL.getHistogram(), sb.toString());
       }
     }
   }
@@ -283,16 +275,12 @@ public class NewOrder extends TPCCProcedure {
     int ol_supply_w_id, ol_i_id, ol_quantity;
     int s_remote_cnt_increment;
     float ol_amount, total_amount;
-    long start, end;
 
     try {
       stmtGetCust.setInt(1, w_id);
       stmtGetCust.setInt(2, d_id);
       stmtGetCust.setInt(3, c_id);
-      start = System.nanoTime();
       ResultSet rs = stmtGetCust.executeQuery();
-      end = System.nanoTime();
-      latencyGetCust.recordValue((end - start) / 1000);
       if (!rs.next())
         throw new RuntimeException("C_D_ID=" + d_id
             + " C_ID=" + c_id + " not found!");
@@ -302,10 +290,7 @@ public class NewOrder extends TPCCProcedure {
       rs.close();
 
       stmtGetWhse.setInt(1, w_id);
-      start = System.nanoTime();
       rs = stmtGetWhse.executeQuery();
-      end = System.nanoTime();
-      latencyGetWhse.recordValue((end - start) / 1000);
       if (!rs.next())
         throw new RuntimeException("W_ID=" + w_id + " not found!");
       w_tax = rs.getFloat("W_TAX");
@@ -313,10 +298,7 @@ public class NewOrder extends TPCCProcedure {
 
       stmtGetDist.setInt(1, w_id);
       stmtGetDist.setInt(2, d_id);
-      start = System.nanoTime();
       rs = stmtGetDist.executeQuery();
-      end = System.nanoTime();
-      latencyGetDist.recordValue((end - start) / 1000);
       if (!rs.next()) {
         throw new RuntimeException("D_ID=" + d_id + " D_W_ID=" + w_id
             + " not found!");
@@ -329,10 +311,7 @@ public class NewOrder extends TPCCProcedure {
       //update next_order_id first, but it might doesn't matter
       stmtUpdateDist.setInt(1, w_id);
       stmtUpdateDist.setInt(2, d_id);
-      start = System.nanoTime();
       int result = stmtUpdateDist.executeUpdate();
-      end = System.nanoTime();
-      latencyUpdateDist.recordValue((end - start) / 1000);
       if (result == 0)
         throw new RuntimeException(
             "Error!! Cannot update next_order_id on district for D_ID="
@@ -350,20 +329,14 @@ public class NewOrder extends TPCCProcedure {
           System.currentTimeMillis()));
       stmtInsertOOrder.setInt(6, o_ol_cnt);
       stmtInsertOOrder.setInt(7, o_all_local);
-      start = System.nanoTime();
       stmtInsertOOrder.executeUpdate();
-      end = System.nanoTime();
-      latencyInsertOOrder.recordValue((end - start) / 1000);
       //insert ooder first]]
       //TODO: add error checking
 
       stmtInsertNewOrder.setInt(1, o_id);
       stmtInsertNewOrder.setInt(2, d_id);
       stmtInsertNewOrder.setInt(3, w_id);
-      start = System.nanoTime();
       stmtInsertNewOrder.executeUpdate();
-      end = System.nanoTime();
-      latencyInsertNewOrder.recordValue((end - start) / 1000);
       //TODO: add error checking
 
       float[] i_price_arr = new float[o_ol_cnt];
@@ -397,7 +370,7 @@ public class NewOrder extends TPCCProcedure {
                        brandGeneric, conn);
       total_amount *= (1 + w_tax + d_tax) * (1 - c_discount);
     } catch(UserAbortException userEx) {
-        LOG.debug("Caught an expected error in New Order", userEx);
+        LOG.debug("Caught an expected error in New Order");
         throw userEx;
     } finally {
         if (stmtInsertOrderLine != null)
@@ -426,27 +399,21 @@ public class NewOrder extends TPCCProcedure {
     }
 
     for (Map.Entry<Integer, HashSet<Integer>> entry : input.entrySet()) {
-      stmtGetItem = this.getPreparedStatement(conn, stmtGetItemSQLArr[entry.getValue().size() - 1]);
+      stmtGetItem = this.getPreparedStatement(conn, stmtGetItemSQLArr[entry.getValue().size() - 1], stmtGetItemSQL.getHistogram());
       int k = 1;
       for (int itemId : entry.getValue()) {
         stmtGetItem.setInt(k++,  itemId);
       }
-      long start = System.nanoTime();
       ResultSet rs1 = stmtGetItem.executeQuery();
-      long end = System.nanoTime();
-      latencyGetItem.recordValue((end - start) / 1000);
 
       stmtGetStock =
-        this.getPreparedStatement(conn, stmtGetStockSQLArr[entry.getValue().size() - 1]);
+        this.getPreparedStatement(conn, stmtGetStockSQLArr[entry.getValue().size() - 1], stmtGetStockSQL.getHistogram());
       k = 1;
       stmtGetStock.setInt(k++, entry.getKey() /* supplier WH */);
       for (int itemId: entry.getValue()) {
         stmtGetStock.setInt(k++, itemId);
       }
-      start = System.nanoTime();
       ResultSet rs2 = stmtGetStock.executeQuery();
-      end = System.nanoTime();
-      latencyGetStock.recordValue((end - start) / 1000);
 
       for (int expected: entry.getValue()) {
         if (!rs1.next()) {
@@ -574,7 +541,7 @@ public class NewOrder extends TPCCProcedure {
     for (Map.Entry<Integer, List<Integer>> entry : input.entrySet()) {
       int whId = entry.getKey();
       int numEntries = entry.getValue().size();
-      stmtUpdateStockProcedure = this.getPreparedStatement(conn, stmtUpdateStockProcedureSQL[numEntries - 1]);
+      stmtUpdateStockProcedure = this.getPreparedStatement(conn, stmtUpdateStockProcedureSQL[numEntries - 1], latencyUpdateStockProcedure);
 
       int i = 1;
       stmtUpdateStockProcedure.setInt(i++, whId);
@@ -601,10 +568,7 @@ public class NewOrder extends TPCCProcedure {
         stmtUpdateStockProcedure.setInt(i++, ytd_arr[index] + ol_quantity);
         stmtUpdateStockProcedure.setInt(i++, remote_cnt_arr[index] + s_remote_cnt_increment);
       }
-      long start = System.nanoTime();
       stmtUpdateStockProcedure.execute();
-      long end = System.nanoTime();
-      latencyUpdateStockProcedure.recordValue((end - start) / 1000);
     }
   }
 
@@ -668,7 +632,7 @@ public class NewOrder extends TPCCProcedure {
                        Connection conn) throws SQLException {
     int total_amount = 0;
     int k = 1;
-    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5]);
+    stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5], stmtInsertOrderLineSQL.getHistogram());
     for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
       int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
       int ol_i_id = itemIDs[ol_number - 1];
@@ -700,12 +664,7 @@ public class NewOrder extends TPCCProcedure {
       stmtInsertOrderLine.setDouble(k++, ol_amount);
       stmtInsertOrderLine.setString(k++, ol_dist_info);
     }
-    {
-    long start = System.nanoTime();
     stmtInsertOrderLine.execute();
-    long end = System.nanoTime();
-    latencyInsertOrderLine.recordValue((end - start) / 1000);
-    }
     return total_amount;
   }
 

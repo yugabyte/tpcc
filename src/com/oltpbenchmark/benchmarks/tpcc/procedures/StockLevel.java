@@ -19,11 +19,12 @@ package com.oltpbenchmark.benchmarks.tpcc.procedures;
 import java.sql.*;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
@@ -32,7 +33,7 @@ public class StockLevel extends TPCCProcedure {
 
   private static final Logger LOG = Logger.getLogger(StockLevel.class);
 
-  public SQLStmt stockGetDistOrderIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt stockGetDistOrderIdSQL = new InstrumentedSQLStmt(
       "SELECT D_NEXT_O_ID " +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? " +
@@ -40,7 +41,7 @@ public class StockLevel extends TPCCProcedure {
 
   private static final String GET_STOCK_COUNTS_PROC_NAME = "getstockcounts";
 
-  public SQLStmt stockGetCountStockSQL = new SQLStmt(
+  public static InstrumentedSQLStmt stockGetCountStockSQL = new InstrumentedSQLStmt(
       String.format("{ ? = call %s( ?, ?, ?, ? ) }", GET_STOCK_COUNTS_PROC_NAME));
 
   public static void InitializeGetStockCountProc(Connection conn) throws SQLException {
@@ -64,17 +65,15 @@ public class StockLevel extends TPCCProcedure {
   }
 
   // Stock Level Txn
-  private PreparedStatement stockGetDistOrderId = null;
+  private InstrumentedPreparedStatement stockGetDistOrderId = null;
 
-  private CallableStatement stockGetCountStockFunc = null;
-
-  private static Histogram latencyGetDistOrderId = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyGetCountStock = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private static Histogram stockGetCountStockFuncLatency = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
+  private InstrumentedPreparedStatement stockGetCountStockFunc = null;
 
   public static void printLatencyStats() {
     LOG.info("StockLevel : ");
-    LOG.info("latencyGetDistOrderId " + TPCCProcedure.getStats(latencyGetDistOrderId));
-    LOG.info("latencyGetCountStock " + TPCCProcedure.getStats(latencyGetCountStock));
+    LOG.info("latency GetDistOrderId " + stockGetDistOrderIdSQL.getStats());
+    LOG.info("latency GetCountStock " + stockGetCountStockSQL.getStats());
   }
 
   public ResultSet run(Connection conn, Random gen,
@@ -83,7 +82,8 @@ public class StockLevel extends TPCCProcedure {
                   TPCCWorker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
-    stockGetCountStockFunc = conn.prepareCall(stockGetCountStockSQL.getSQL());
+    stockGetCountStockFunc = new InstrumentedPreparedStatement(conn.prepareCall(stockGetCountStockSQL.getSqlStmt().getSQL()),
+                                                               stockGetCountStockFuncLatency);
 
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
@@ -94,10 +94,7 @@ public class StockLevel extends TPCCProcedure {
     stockGetDistOrderId.setInt(2, d_id);
     if (trace)
       LOG.trace(String.format("stockGetDistOrderId BEGIN [W_ID=%d, D_ID=%d]", w_id, d_id));
-    long start = System.nanoTime();
     ResultSet rs = stockGetDistOrderId.executeQuery();
-    long end = System.nanoTime();
-    latencyGetDistOrderId.recordValue((end - start) / 1000);
     if (trace) LOG.trace("stockGetDistOrderId END");
 
     if (!rs.next()) {
@@ -114,10 +111,7 @@ public class StockLevel extends TPCCProcedure {
     if (trace)
       LOG.trace(String.format("stockGetCountStock BEGIN [W_ID=%d, D_ID=%d, O_ID=%d]",
                 w_id, d_id, o_id));
-    start = System.nanoTime();
     rs = stockGetCountStockFunc.executeQuery();
-    end = System.nanoTime();
-    latencyGetCountStock.recordValue((end - start) / 1000);
     if (trace) LOG.trace("stockGetCountStock END");
 
     if (!rs.next()) {

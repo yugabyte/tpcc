@@ -23,11 +23,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
@@ -38,29 +39,29 @@ public class Payment extends TPCCProcedure {
 
   private static final Logger LOG = Logger.getLogger(Payment.class);
 
-  public SQLStmt payUpdateWhseSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payUpdateWhseSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_WAREHOUSE +
       "   SET W_YTD = W_YTD + ? " +
       " WHERE W_ID = ? ");
 
-  public SQLStmt payGetWhseSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payGetWhseSQL = new InstrumentedSQLStmt(
       "SELECT W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_NAME" +
       "  FROM " + TPCCConstants.TABLENAME_WAREHOUSE +
       " WHERE W_ID = ?");
 
-  public SQLStmt payUpdateDistSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payUpdateDistSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_DISTRICT +
       "   SET D_YTD = D_YTD + ? " +
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public SQLStmt payGetDistSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payGetDistSQL = new InstrumentedSQLStmt(
       "SELECT D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_NAME" +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public SQLStmt payGetCustSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, " +
       "       C_CITY, C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, " +
       "       C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -69,14 +70,14 @@ public class Payment extends TPCCProcedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payGetCustCdataSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payGetCustCdataSQL = new InstrumentedSQLStmt(
       "SELECT C_DATA " +
       "  FROM " + TPCCConstants.TABLENAME_CUSTOMER +
       " WHERE C_W_ID = ? " +
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payUpdateCustBalCdataSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payUpdateCustBalCdataSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = ?, " +
       "       C_YTD_PAYMENT = ?, " +
@@ -86,7 +87,7 @@ public class Payment extends TPCCProcedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payUpdateCustBalSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payUpdateCustBalSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = ?, " +
       "       C_YTD_PAYMENT = ?, " +
@@ -95,12 +96,12 @@ public class Payment extends TPCCProcedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payInsertHistSQL = new SQLStmt(
+  public static InstrumentedSQLStmt payInsertHistSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_HISTORY +
       " (H_C_D_ID, H_C_W_ID, H_C_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA) " +
       " VALUES (?,?,?,?,?,?,?,?)");
 
-  public SQLStmt customerByNameSQL = new SQLStmt(
+  public static InstrumentedSQLStmt customerByNameSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_ID, C_STREET_1, C_STREET_2, C_CITY, " +
       "       C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, " +
       "       C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -111,40 +112,29 @@ public class Payment extends TPCCProcedure {
       " ORDER BY C_FIRST");
 
   // Payment Txn
-  private PreparedStatement payUpdateWhse = null;
-  private PreparedStatement payGetWhse = null;
-  private PreparedStatement payUpdateDist = null;
-  private PreparedStatement payGetDist = null;
-  private PreparedStatement payGetCust = null;
-  private PreparedStatement payGetCustCdata = null;
-  private PreparedStatement payUpdateCustBalCdata = null;
-  private PreparedStatement payUpdateCustBal = null;
-  private PreparedStatement payInsertHist = null;
-  private PreparedStatement customerByName = null;
-
-  private static Histogram latencyUpdateWhse = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyGetWhse = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyUpdateDist = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyGetDist = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyGetCust = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyGetCustCdata = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyUpdateCustBalCdata = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyUpdateCustBal = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyInsertHist = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyCustomerByName = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private InstrumentedPreparedStatement payUpdateWhse = null;
+  private InstrumentedPreparedStatement payGetWhse = null;
+  private InstrumentedPreparedStatement payUpdateDist = null;
+  private InstrumentedPreparedStatement payGetDist = null;
+  private InstrumentedPreparedStatement payGetCust = null;
+  private InstrumentedPreparedStatement payGetCustCdata = null;
+  private InstrumentedPreparedStatement payUpdateCustBalCdata = null;
+  private InstrumentedPreparedStatement payUpdateCustBal = null;
+  private InstrumentedPreparedStatement payInsertHist = null;
+  private InstrumentedPreparedStatement customerByName = null;
 
   public static void printLatencyStats() {
     LOG.info("Payment : ");
-    LOG.info("latencyUpdateWhse " + TPCCProcedure.getStats(latencyUpdateWhse));
-    LOG.info("latencyGetWhse " + TPCCProcedure.getStats(latencyGetWhse));
-    LOG.info("latencyUpdateDist " + TPCCProcedure.getStats(latencyUpdateDist));
-    LOG.info("latencyGetDist " + TPCCProcedure.getStats(latencyGetDist));
-    LOG.info("latencyGetCust " + TPCCProcedure.getStats(latencyGetCust));
-    LOG.info("latencyGetCustCdata " + TPCCProcedure.getStats(latencyGetCustCdata));
-    LOG.info("latencyUpdateCustBalCdata " + TPCCProcedure.getStats(latencyUpdateCustBalCdata));
-    LOG.info("latencyUpdateCustBal " + TPCCProcedure.getStats(latencyUpdateCustBal));
-    LOG.info("latencyInsertHist " + TPCCProcedure.getStats(latencyInsertHist));
-    LOG.info("latencyCustomerByName " + TPCCProcedure.getStats(latencyCustomerByName));
+    LOG.info("latency UpdateWhse " + payUpdateWhseSQL.getStats());
+    LOG.info("latency GetWhse " + payGetWhseSQL.getStats());
+    LOG.info("latency UpdateDist " + payUpdateDistSQL.getStats());
+    LOG.info("latency GetDist " + payGetDistSQL.getStats());
+    LOG.info("latency GetCust " + payGetCustSQL.getStats());
+    LOG.info("latency GetCustCdata " + payGetCustCdataSQL.getStats());
+    LOG.info("latency UpdateCustBalCdata " + payUpdateCustBalCdataSQL.getStats());
+    LOG.info("latency UpdateCustBal " + payUpdateCustBalSQL.getStats());
+    LOG.info("latency InsertHist " + payInsertHistSQL.getStats());
+    LOG.info("latency CustomerByName " + customerByNameSQL.getStats());
   }
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
@@ -197,18 +187,12 @@ public class Payment extends TPCCProcedure {
     payUpdateWhse.setInt(2, w_id);
     // MySQL reports deadlocks due to lock upgrades:
     // t1: read w_id = x; t2: update w_id = x; t1 update w_id = x
-    long start = System.nanoTime();
     int result = payUpdateWhse.executeUpdate();
-    long end = System.nanoTime();
-    latencyUpdateWhse.recordValue((end - start) / 1000);
     if (result == 0)
         throw new RuntimeException("W_ID=" + w_id + " not found!");
 
     payGetWhse.setInt(1, w_id);
-    start = System.nanoTime();
     ResultSet rs = payGetWhse.executeQuery();
-    end = System.nanoTime();
-    latencyGetWhse.recordValue((end - start) / 1000);
     if (!rs.next())
         throw new RuntimeException("W_ID=" + w_id + " not found!");
     w_street_1 = rs.getString("W_STREET_1");
@@ -222,19 +206,13 @@ public class Payment extends TPCCProcedure {
     payUpdateDist.setDouble(1, paymentAmount);
     payUpdateDist.setInt(2, w_id);
     payUpdateDist.setInt(3, districtID);
-    start = System.nanoTime();
     result = payUpdateDist.executeUpdate();
-    end = System.nanoTime();
-    latencyUpdateDist.recordValue((end - start) / 1000);
     if (result == 0)
       throw new RuntimeException("D_ID=" + districtID + " D_W_ID=" + w_id + " not found!");
 
     payGetDist.setInt(1, w_id);
     payGetDist.setInt(2, districtID);
-    start = System.nanoTime();
     rs = payGetDist.executeQuery();
-    end = System.nanoTime();
-    latencyGetDist.recordValue((end - start) / 1000);
     if (!rs.next())
         throw new RuntimeException("D_ID=" + districtID + " D_W_ID=" + w_id + " not found!");
     d_street_1 = rs.getString("D_STREET_1");
@@ -253,10 +231,7 @@ public class Payment extends TPCCProcedure {
       payGetCustCdata.setInt(1, customerWarehouseID);
       payGetCustCdata.setInt(2, customerDistrictID);
       payGetCustCdata.setInt(3, c.c_id);
-      start = System.nanoTime();
       rs = payGetCustCdata.executeQuery();
-      end = System.nanoTime();
-      latencyGetCustCdata.recordValue((end - start) / 1000);
       if (!rs.next())
         throw new RuntimeException("C_ID=" + c.c_id + " C_W_ID=" + customerWarehouseID +
                                    " C_D_ID=" + customerDistrictID + " not found!");
@@ -275,10 +250,7 @@ public class Payment extends TPCCProcedure {
       payUpdateCustBalCdata.setInt(5, customerWarehouseID);
       payUpdateCustBalCdata.setInt(6, customerDistrictID);
       payUpdateCustBalCdata.setInt(7, c.c_id);
-      start = System.nanoTime();
       result = payUpdateCustBalCdata.executeUpdate();
-      end = System.nanoTime();
-      latencyUpdateCustBalCdata.recordValue((end - start) / 1000);
 
       if (result == 0)
         throw new RuntimeException("Error in PYMNT Txn updating Customer C_ID=" + c.c_id +
@@ -291,10 +263,7 @@ public class Payment extends TPCCProcedure {
       payUpdateCustBal.setInt(4, customerWarehouseID);
       payUpdateCustBal.setInt(5, customerDistrictID);
       payUpdateCustBal.setInt(6, c.c_id);
-      start = System.nanoTime();
       result = payUpdateCustBal.executeUpdate();
-      end = System.nanoTime();
-      latencyUpdateCustBal.recordValue((end - start) / 1000);
 
       if (result == 0)
         throw new RuntimeException("C_ID=" + c.c_id + " C_W_ID=" + customerWarehouseID +
@@ -314,10 +283,7 @@ public class Payment extends TPCCProcedure {
     payInsertHist.setTimestamp(6, w.getBenchmarkModule().getTimestamp(System.currentTimeMillis()));
     payInsertHist.setDouble(7, paymentAmount);
     payInsertHist.setString(8, h_data);
-    start = System.nanoTime();
     payInsertHist.executeUpdate();
-    end = System.nanoTime();
-    latencyInsertHist.recordValue((end - start) / 1000);
 
     conn.commit();
 
@@ -406,10 +372,7 @@ public class Payment extends TPCCProcedure {
     payGetCust.setInt(1, c_w_id);
     payGetCust.setInt(2, c_d_id);
     payGetCust.setInt(3, c_id);
-    long start = System.nanoTime();
     ResultSet rs = payGetCust.executeQuery();
-    long end = System.nanoTime();
-    latencyGetCust.recordValue((end - start) / 1000);
     if (!rs.next()) {
       throw new RuntimeException("C_ID=" + c_id + " C_D_ID=" + c_d_id + " C_W_ID=" + c_w_id +
                                  " not found!");
@@ -430,10 +393,7 @@ public class Payment extends TPCCProcedure {
     customerByName.setInt(1, c_w_id);
     customerByName.setInt(2, c_d_id);
     customerByName.setString(3, customerLastName);
-    long start = System.nanoTime();
     ResultSet rs = customerByName.executeQuery();
-    long end = System.nanoTime();
-    latencyCustomerByName.recordValue((end - start) / 1000);
     if (LOG.isTraceEnabled())
       LOG.trace("C_LAST=" + customerLastName + " C_D_ID=" + c_d_id + " C_W_ID=" + c_w_id);
 

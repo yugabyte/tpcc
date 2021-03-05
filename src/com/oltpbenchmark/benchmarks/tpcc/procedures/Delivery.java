@@ -17,17 +17,17 @@
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
@@ -37,47 +37,47 @@ public class Delivery extends TPCCProcedure {
 
   private static final Logger LOG = Logger.getLogger(Delivery.class);
 
-  public SQLStmt delivGetOrderIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivGetOrderIdSQL = new InstrumentedSQLStmt(
       "SELECT NO_O_ID FROM " + TPCCConstants.TABLENAME_NEWORDER +
       " WHERE NO_D_ID = ? " +
       "   AND NO_W_ID = ? " +
       " ORDER BY NO_O_ID ASC " +
       " LIMIT 1");
 
-  public SQLStmt delivDeleteNewOrderSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivDeleteNewOrderSQL = new InstrumentedSQLStmt(
       "DELETE FROM " + TPCCConstants.TABLENAME_NEWORDER +
       " WHERE NO_O_ID = ? " +
       "   AND NO_D_ID = ?" +
       "   AND NO_W_ID = ?");
 
-  public SQLStmt delivGetCustIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivGetCustIdSQL = new InstrumentedSQLStmt(
       "SELECT O_C_ID FROM " + TPCCConstants.TABLENAME_OPENORDER +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ? " +
       "   AND O_W_ID = ?");
 
-  public SQLStmt delivUpdateCarrierIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivUpdateCarrierIdSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_OPENORDER +
       "   SET O_CARRIER_ID = ? " +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ?" +
       "   AND O_W_ID = ?");
 
-  public SQLStmt delivUpdateDeliveryDateSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivUpdateDeliveryDateSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_ORDERLINE +
       "   SET OL_DELIVERY_D = ? " +
       " WHERE OL_O_ID = ? " +
       "   AND OL_D_ID = ? " +
       "   AND OL_W_ID = ? ");
 
-  public SQLStmt delivSumOrderAmountSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivSumOrderAmountSQL = new InstrumentedSQLStmt(
       "SELECT SUM(OL_AMOUNT) AS OL_TOTAL " +
       "  FROM " + TPCCConstants.TABLENAME_ORDERLINE +
       " WHERE OL_O_ID = ? " +
       "   AND OL_D_ID = ? " +
       "   AND OL_W_ID = ?");
 
-  public SQLStmt delivUpdateCustBalDelivCntSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivUpdateCustBalDelivCntSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = C_BALANCE + ?," +
       "       C_DELIVERY_CNT = C_DELIVERY_CNT + 1 " +
@@ -86,36 +86,23 @@ public class Delivery extends TPCCProcedure {
       "   AND C_ID = ? ");
 
   // Delivery Txn
-  private PreparedStatement delivGetOrderId = null;
-  private PreparedStatement delivDeleteNewOrder = null;
-  private PreparedStatement delivGetCustId = null;
-  private PreparedStatement delivUpdateCarrierId = null;
-  private PreparedStatement delivUpdateDeliveryDate = null;
-  private PreparedStatement delivSumOrderAmount = null;
-  private PreparedStatement delivUpdateCustBalDelivCnt = null;
-
-  private static Histogram latencyGetOrderId = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyDeleteNewOrder = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyGetCustId = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyUpdateCarrierId = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyUpdateDeliveryDate = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencySumOrderAmount = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyUpdateCustBalDelivCnt = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencySingleDistLoop = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
-  private static Histogram latencyFullDistLoop = new ConcurrentHistogram(TPCCProcedure.numSigDigits);
+  private InstrumentedPreparedStatement delivGetOrderId = null;
+  private InstrumentedPreparedStatement delivDeleteNewOrder = null;
+  private InstrumentedPreparedStatement delivGetCustId = null;
+  private InstrumentedPreparedStatement delivUpdateCarrierId = null;
+  private InstrumentedPreparedStatement delivUpdateDeliveryDate = null;
+  private InstrumentedPreparedStatement delivSumOrderAmount = null;
+  private InstrumentedPreparedStatement delivUpdateCustBalDelivCnt = null;
 
   public static void printLatencyStats() {
     LOG.info("Delivery : ");
-    LOG.info("latencyGetOrderId " + TPCCProcedure.getStats(latencyGetOrderId));
-    LOG.info("latencyDeleteNewOrder " + TPCCProcedure.getStats(latencyDeleteNewOrder));
-    LOG.info("latencyGetCustId " + TPCCProcedure.getStats(latencyGetCustId));
-    LOG.info("latencyUpdateCarrierId " + TPCCProcedure.getStats(latencyUpdateCarrierId));
-    LOG.info("latencyUpdateDeliveryDate " + TPCCProcedure.getStats(latencyUpdateDeliveryDate));
-    LOG.info("latencySumOrderAmount " + TPCCProcedure.getStats(latencySumOrderAmount));
-    LOG.info("latencyUpdateCustBalDelivCnt " + TPCCProcedure.getStats(latencyUpdateCustBalDelivCnt));
-    LOG.info("----------------------------");
-    LOG.info("latencySingleDistLoop " + TPCCProcedure.getStats(latencySingleDistLoop));
-    LOG.info("latencyFullDistLoop " + TPCCProcedure.getStats(latencyFullDistLoop));
+    LOG.info("latency GetOrderId " + delivGetOrderIdSQL.getStats());
+    LOG.info("latency DeleteNewOrder " + delivDeleteNewOrderSQL.getStats());
+    LOG.info("latency GetCustId " + delivGetCustIdSQL.getStats());
+    LOG.info("latency UpdateCarrierId " + delivUpdateCarrierIdSQL.getStats());
+    LOG.info("latency UpdateDeliveryDate " + delivUpdateDeliveryDateSQL.getStats());
+    LOG.info("latency SumOrderAmount " + delivSumOrderAmountSQL.getStats());
+    LOG.info("latency UpdateCustBalDelivCnt " + delivUpdateCustBalDelivCntSQL.getStats());
   }
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
@@ -137,16 +124,11 @@ public class Delivery extends TPCCProcedure {
     int[] orderIDs;
 
     orderIDs = new int[10];
-    long whole_loop_start = System.nanoTime();
     for (d_id = 1; d_id <= terminalDistrictUpperID; d_id++) {
-      long loop_start = System.nanoTime();
       delivGetOrderId.setInt(1, d_id);
       delivGetOrderId.setInt(2, w_id);
       if (trace) LOG.trace("delivGetOrderId START");
-      long start = System.nanoTime();
       ResultSet rs = delivGetOrderId.executeQuery();
-      long end = System.nanoTime();
-      latencyGetOrderId.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivGetOrderId END");
       if (!rs.next()) {
         // This district has no new orders
@@ -163,10 +145,7 @@ public class Delivery extends TPCCProcedure {
       delivDeleteNewOrder.setInt(2, d_id);
       delivDeleteNewOrder.setInt(3, w_id);
       if (trace) LOG.trace("delivDeleteNewOrder START");
-      start = System.nanoTime();
       int result = delivDeleteNewOrder.executeUpdate();
-      end = System.nanoTime();
-      latencyDeleteNewOrder.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivDeleteNewOrder END");
       if (result != 1) {
         // This code used to run in a loop in an attempt to make this work
@@ -183,10 +162,7 @@ public class Delivery extends TPCCProcedure {
       delivGetCustId.setInt(2, d_id);
       delivGetCustId.setInt(3, w_id);
       if (trace) LOG.trace("delivGetCustId START");
-      start = System.nanoTime();
       rs = delivGetCustId.executeQuery();
-      end = System.nanoTime();
-      latencyGetCustId.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivGetCustId END");
 
       if (!rs.next()) {
@@ -203,10 +179,7 @@ public class Delivery extends TPCCProcedure {
       delivUpdateCarrierId.setInt(3, d_id);
       delivUpdateCarrierId.setInt(4, w_id);
       if (trace) LOG.trace("delivUpdateCarrierId START");
-      start = System.nanoTime();
       result = delivUpdateCarrierId.executeUpdate();
-      end = System.nanoTime();
-      latencyUpdateCarrierId.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivUpdateCarrierId END");
 
       if (result != 1) {
@@ -221,10 +194,7 @@ public class Delivery extends TPCCProcedure {
       delivUpdateDeliveryDate.setInt(3, d_id);
       delivUpdateDeliveryDate.setInt(4, w_id);
       if (trace) LOG.trace("delivUpdateDeliveryDate START");
-      start = System.nanoTime();
       result = delivUpdateDeliveryDate.executeUpdate();
-      end = System.nanoTime();
-      latencyUpdateDeliveryDate.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivUpdateDeliveryDate END");
 
       if (result == 0){
@@ -238,10 +208,7 @@ public class Delivery extends TPCCProcedure {
       delivSumOrderAmount.setInt(2, d_id);
       delivSumOrderAmount.setInt(3, w_id);
       if (trace) LOG.trace("delivSumOrderAmount START");
-      start = System.nanoTime();
       rs = delivSumOrderAmount.executeQuery();
-      end = System.nanoTime();
-      latencySumOrderAmount.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivSumOrderAmount END");
 
       if (!rs.next()) {
@@ -259,10 +226,7 @@ public class Delivery extends TPCCProcedure {
       delivUpdateCustBalDelivCnt.setInt(++idx, d_id);
       delivUpdateCustBalDelivCnt.setInt(++idx, c_id);
       if (trace) LOG.trace("delivUpdateCustBalDelivCnt START");
-      start = System.nanoTime();
       result = delivUpdateCustBalDelivCnt.executeUpdate();
-      end = System.nanoTime();
-      latencyUpdateCustBalDelivCnt.recordValue((end - start) / 1000);
       if (trace) LOG.trace("delivUpdateCustBalDelivCnt END");
 
       if (result == 0) {
@@ -271,11 +235,7 @@ public class Delivery extends TPCCProcedure {
         if (trace) LOG.warn(msg);
         throw new RuntimeException(msg);
       }
-      long loop_end = System.nanoTime();
-      latencySingleDistLoop.recordValue((loop_end - loop_start) / 1000);
     }
-    long whole_loop_end = System.nanoTime();
-    latencyFullDistLoop.recordValue((whole_loop_end - whole_loop_start) / 1000);
 
     conn.commit();
 

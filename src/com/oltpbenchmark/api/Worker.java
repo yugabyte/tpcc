@@ -39,7 +39,6 @@ import com.oltpbenchmark.SubmittedProcedure;
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.WorkloadState;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
-import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.types.TransactionStatus;
 
@@ -494,7 +493,6 @@ public class Worker implements Runnable {
         long endConnection = 0;
 
         TransactionStatus status = TransactionStatus.RETRY;
-        final DatabaseType dbType = wrkld.getDBType();
 
         Connection conn;
         try {
@@ -609,14 +607,9 @@ public class Worker implements Runnable {
             } // WHILE
             conn.close();
         } catch (SQLException ex) {
-            String msg = String.format("Unexpected fatal, error in '%s' when executing '%s' [%s]",
-                                       this, next, dbType);
-            if (dbType == DatabaseType.NOISEPAGE) {
-                msg += "\nBut we are not stopping because " + dbType + " cannot handle this correctly";
-                LOG.warn(msg);
-            } else {
-                throw new RuntimeException(msg, ex);
-            }
+            String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
+                                       this, next);
+            throw new RuntimeException(msg, ex);
         }
 
         return new TransactionExecutionState(startOperation, endOperation,

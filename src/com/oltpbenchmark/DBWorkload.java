@@ -38,7 +38,6 @@ import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.TransactionTypes;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.FileUtil;
 import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;
@@ -259,7 +258,6 @@ public class DBWorkload {
       }
 
       // Pull in database configuration
-      wrkld.setDBType(DatabaseType.get(xmlConfig.getString("dbtype")));
       wrkld.setDBDriver(xmlConfig.getString("driver"));
 
       wrkld.setNodes(nodes);
@@ -368,7 +366,6 @@ public class DBWorkload {
       Map<String, Object> initDebug = new ListOrderedMap<>();
       initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "BenchmarkModule"));
       initDebug.put("Configuration", configFile);
-      initDebug.put("Type", wrkld.getDBType());
       initDebug.put("Driver", wrkld.getDBDriver());
       initDebug.put("URL", wrkld.getNodes());
       initDebug.put("Isolation", wrkld.getIsolationString());

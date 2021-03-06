@@ -319,6 +319,10 @@ public class DBWorkload {
         wrkld.setMaxLoaderRetries(xmlConfig.getInt("maxLoaderRetries"));
       }
 
+      if (xmlConfig.containsKey("trackPerSQLStmtLatencies")) {
+        InstrumentedPreparedStatement.trackLatencyMetrics(xmlConfig.getBoolean("trackPerSQLStmtLatencies"));
+      }
+
       if (xmlConfig.containsKey("port")) {
         wrkld.setPort(xmlConfig.getInt("port"));
       }
@@ -982,12 +986,6 @@ public class DBWorkload {
       }
     }
 
-    NewOrder.printLatencyStats();
-    Payment.printLatencyStats();
-    OrderStatus.printLatencyStats();
-    Delivery.printLatencyStats();
-    StockLevel.printLatencyStats();
-
     if (!displayEnhancedLatencyMetrics) {
       for (int i = 0; i < list_latencies.size(); ++i) {
         LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
@@ -995,6 +993,12 @@ public class DBWorkload {
       }
       return;
     }
+
+    NewOrder.printLatencyStats();
+    Payment.printLatencyStats();
+    OrderStatus.printLatencyStats();
+    Delivery.printLatencyStats();
+    StockLevel.printLatencyStats();
 
     for (int i = 0; i < list_latencies.size(); ++i) {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),

@@ -36,6 +36,8 @@ public class InstrumentedPreparedStatement {
     private final PreparedStatement stmt;
     private final Histogram histogram;
 
+    private static boolean trackLatencies = true;
+
     public InstrumentedPreparedStatement(PreparedStatement stmt, Histogram histogram) {
         this.stmt = stmt;
         this.histogram = histogram;
@@ -45,7 +47,15 @@ public class InstrumentedPreparedStatement {
         this(stmt, sqlStmt.getHistogram());
     }
 
+    public void TrackLatencies(bool track) {
+        trackLatencies = track;
+    }
+
     public ResultSet executeQuery() throws SQLException {
+        if (!trackLatencies) {
+            return this.stmt.executeQuery();
+        }
+
         long start = System.nanoTime();
         try {
             return this.stmt.executeQuery();
@@ -56,6 +66,10 @@ public class InstrumentedPreparedStatement {
     }
 
     public int executeUpdate() throws SQLException {
+        if (!trackLatencies) {
+            return this.stmt.executeUpdate();
+        }
+
         long start = System.nanoTime();
         try {
             return this.stmt.executeUpdate();
@@ -66,6 +80,10 @@ public class InstrumentedPreparedStatement {
     }
 
     public boolean execute() throws SQLException {
+        if (!trackLatencies) {
+            return this.stmt.execute();
+        }
+
         long start = System.nanoTime();
         try {
             return this.stmt.execute();
@@ -76,6 +94,10 @@ public class InstrumentedPreparedStatement {
     }
 
     public int[] executeBatch() throws SQLException {
+        if (!trackLatencies) {
+            return this.stmt.executeBatch();
+        }
+
         long start = System.nanoTime();
         try {
             return this.stmt.executeBatch();

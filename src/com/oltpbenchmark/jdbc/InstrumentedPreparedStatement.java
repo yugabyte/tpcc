@@ -33,18 +33,16 @@ import org.HdrHistogram.Histogram;
 import com.oltpbenchmark.api.SQLStmt;
 
 public class InstrumentedPreparedStatement {
-
     private final PreparedStatement stmt;
     private final Histogram histogram;
-
-    public InstrumentedPreparedStatement(PreparedStatement stmt, InstrumentedSQLStmt sqlStmt) {
-        this.stmt = stmt;
-        this.histogram = sqlStmt.getHistogram();
-    }
 
     public InstrumentedPreparedStatement(PreparedStatement stmt, Histogram histogram) {
         this.stmt = stmt;
         this.histogram = histogram;
+    }
+
+    public InstrumentedPreparedStatement(PreparedStatement stmt, InstrumentedSQLStmt sqlStmt) {
+        this(stmt, sqlStmt.getHistogram());
     }
 
     public ResultSet executeQuery() throws SQLException {

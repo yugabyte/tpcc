@@ -74,14 +74,6 @@ public abstract class Procedure {
     }
 
     public final InstrumentedPreparedStatement getPreparedStatement(Connection conn,
-                                                                    SQLStmt sql,
-                                                                    Histogram histogram,
-                                                                    Object...params) throws SQLException {
-        InstrumentedSQLStmt stmt = new InstrumentedSQLStmt(histogram, sql);
-        return getPreparedStatement(conn, stmt, params);
-    }
-
-    public final InstrumentedPreparedStatement getPreparedStatement(Connection conn,
                                                                     InstrumentedSQLStmt stmt,
                                                                     Object...params) throws SQLException {
         PreparedStatement pStmt = this.getPreparedStatement(conn, stmt.getSqlStmt(), params);

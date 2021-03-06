@@ -400,7 +400,7 @@ public class NewOrder extends Procedure {
     }
 
     for (Map.Entry<Integer, HashSet<Integer>> entry : input.entrySet()) {
-      stmtGetItem = this.getPreparedStatement(conn, stmtGetItemSQLArr[entry.getValue().size() - 1], stmtGetItemSQL.getHistogram());
+      stmtGetItem = this.getPreparedStatement(conn, stmtGetItemSQLArr[entry.getValue().size() - 1]);
       int k = 1;
       for (int itemId : entry.getValue()) {
         stmtGetItem.setInt(k++,  itemId);
@@ -408,7 +408,7 @@ public class NewOrder extends Procedure {
       ResultSet rs1 = stmtGetItem.executeQuery();
 
       stmtGetStock =
-        this.getPreparedStatement(conn, stmtGetStockSQLArr[entry.getValue().size() - 1], stmtGetStockSQL.getHistogram());
+        this.getPreparedStatement(conn, stmtGetStockSQLArr[entry.getValue().size() - 1]);
       k = 1;
       stmtGetStock.setInt(k++, entry.getKey() /* supplier WH */);
       for (int itemId: entry.getValue()) {
@@ -542,7 +542,7 @@ public class NewOrder extends Procedure {
     for (Map.Entry<Integer, List<Integer>> entry : input.entrySet()) {
       int whId = entry.getKey();
       int numEntries = entry.getValue().size();
-      stmtUpdateStockProcedure = this.getPreparedStatement(conn, stmtUpdateStockProcedureSQL[numEntries - 1], latencyUpdateStockProcedure);
+      stmtUpdateStockProcedure = this.getPreparedStatement(conn, stmtUpdateStockProcedureSQL[numEntries - 1]);
 
       int i = 1;
       stmtUpdateStockProcedure.setInt(i++, whId);
@@ -633,7 +633,7 @@ public class NewOrder extends Procedure {
                        Connection conn) throws SQLException {
     int total_amount = 0;
     int k = 1;
-    stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5], stmtInsertOrderLineSQL.getHistogram());
+    stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5]);
     for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
       int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
       int ol_i_id = itemIDs[ol_number - 1];

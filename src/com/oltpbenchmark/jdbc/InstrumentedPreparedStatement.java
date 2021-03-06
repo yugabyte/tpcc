@@ -47,8 +47,12 @@ public class InstrumentedPreparedStatement {
         this(stmt, sqlStmt.getHistogram());
     }
 
-    public void TrackLatencies(bool track) {
+    public static void trackLatencyMetrics(boolean track) {
         trackLatencies = track;
+    }
+
+    public static boolean isTrackingLatencyMetrics() {
+        return trackLatencies;
     }
 
     public ResultSet executeQuery() throws SQLException {

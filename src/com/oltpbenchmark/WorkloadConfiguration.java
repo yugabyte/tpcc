@@ -18,7 +18,6 @@
 package com.oltpbenchmark;
 
 import com.oltpbenchmark.api.TransactionTypes;
-import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.StringUtil;
 import com.oltpbenchmark.util.ThreadUtil;
 import org.apache.commons.collections15.map.ListOrderedMap;
@@ -30,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 public class WorkloadConfiguration {
-
-  private DatabaseType db_type;
   private String benchmarkName;
 
   public void setBenchmarkName(String benchmarkName) {
@@ -100,14 +97,6 @@ public class WorkloadConfiguration {
     works.add(new Phase(benchmarkName, numberOfPhases, time, warmup, rate, weights, rateLimited,
                         disabled, serial, timed, active_terminals, arrival));
     numberOfPhases++;
-  }
-
-  public void setDBType(DatabaseType dbType) {
-    db_type = dbType;
-  }
-
-  public DatabaseType getDBType() {
-    return db_type;
   }
 
   public void setNodes(List<String> nodes) {

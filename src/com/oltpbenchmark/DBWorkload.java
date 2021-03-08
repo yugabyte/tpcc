@@ -261,7 +261,6 @@ public class DBWorkload {
       }
 
       // Pull in database configuration
-      wrkld.setDBType(DatabaseType.get(xmlConfig.getString("dbtype")));
       wrkld.setDBDriver(xmlConfig.getString("driver"));
 
       wrkld.setNodes(nodes);
@@ -374,7 +373,6 @@ public class DBWorkload {
       Map<String, Object> initDebug = new ListOrderedMap<>();
       initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "BenchmarkModule"));
       initDebug.put("Configuration", configFile);
-      initDebug.put("Type", wrkld.getDBType());
       initDebug.put("Driver", wrkld.getDBDriver());
       initDebug.put("URL", wrkld.getNodes());
       initDebug.put("Isolation", wrkld.getIsolationString());

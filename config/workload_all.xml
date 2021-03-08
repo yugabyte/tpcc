@@ -23,7 +23,7 @@
     <hikariConnectionTimeoutMs>180000</hikariConnectionTimeoutMs>
     <useStoredProcedures>true</useStoredProcedures>
     <displayEnhancedLatencyMetrics>false</displayEnhancedLatencyMetrics>
-    <trackPerSQLStmtLatencies>true</trackPerSQLStmtLatencies>
+    <trackPerSQLStmtLatencies>false</trackPerSQLStmtLatencies>
 
    	<transactiontypes>
     	<transactiontype>

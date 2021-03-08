@@ -40,7 +40,6 @@ import com.oltpbenchmark.api.TransactionTypes;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
-import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.FileUtil;
 import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;

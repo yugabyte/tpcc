@@ -60,7 +60,9 @@ public abstract class FileUtil {
             if (p == null)
                 continue;
             File f = new File(p);
-            assert f.exists() || f.mkdirs();
+            if (!f.exists()) {
+                f.mkdirs();
+            }
         } // FOR
     }
 

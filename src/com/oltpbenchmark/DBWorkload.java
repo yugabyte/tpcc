@@ -38,6 +38,9 @@ import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.TransactionTypes;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.FileUtil;
 import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;
@@ -314,6 +317,10 @@ public class DBWorkload {
 
       if (xmlConfig.containsKey("maxLoaderRetries")) {
         wrkld.setMaxLoaderRetries(xmlConfig.getInt("maxLoaderRetries"));
+      }
+
+      if (xmlConfig.containsKey("trackPerSQLStmtLatencies")) {
+        InstrumentedPreparedStatement.trackLatencyMetrics(xmlConfig.getBoolean("trackPerSQLStmtLatencies"));
       }
 
       if (xmlConfig.containsKey("port")) {
@@ -976,6 +983,14 @@ public class DBWorkload {
           list_enhanced_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
         }
       }
+    }
+
+    if (InstrumentedPreparedStatement.isTrackingLatencyMetrics()) {
+      NewOrder.printLatencyStats();
+      Payment.printLatencyStats();
+      OrderStatus.printLatencyStats();
+      Delivery.printLatencyStats();
+      StockLevel.printLatencyStats();
     }
 
     if (!displayEnhancedLatencyMetrics) {

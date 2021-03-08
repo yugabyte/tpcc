@@ -17,17 +17,20 @@
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+
+import org.HdrHistogram.ConcurrentHistogram;
+import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
@@ -36,47 +39,47 @@ public class Delivery extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(Delivery.class);
 
-  public SQLStmt delivGetOrderIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivGetOrderIdSQL = new InstrumentedSQLStmt(
       "SELECT NO_O_ID FROM " + TPCCConstants.TABLENAME_NEWORDER +
       " WHERE NO_D_ID = ? " +
       "   AND NO_W_ID = ? " +
       " ORDER BY NO_O_ID ASC " +
       " LIMIT 1");
 
-  public SQLStmt delivDeleteNewOrderSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivDeleteNewOrderSQL = new InstrumentedSQLStmt(
       "DELETE FROM " + TPCCConstants.TABLENAME_NEWORDER +
       " WHERE NO_O_ID = ? " +
       "   AND NO_D_ID = ?" +
       "   AND NO_W_ID = ?");
 
-  public SQLStmt delivGetCustIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivGetCustIdSQL = new InstrumentedSQLStmt(
       "SELECT O_C_ID FROM " + TPCCConstants.TABLENAME_OPENORDER +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ? " +
       "   AND O_W_ID = ?");
 
-  public SQLStmt delivUpdateCarrierIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivUpdateCarrierIdSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_OPENORDER +
       "   SET O_CARRIER_ID = ? " +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ?" +
       "   AND O_W_ID = ?");
 
-  public SQLStmt delivUpdateDeliveryDateSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivUpdateDeliveryDateSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_ORDERLINE +
       "   SET OL_DELIVERY_D = ? " +
       " WHERE OL_O_ID = ? " +
       "   AND OL_D_ID = ? " +
       "   AND OL_W_ID = ? ");
 
-  public SQLStmt delivSumOrderAmountSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivSumOrderAmountSQL = new InstrumentedSQLStmt(
       "SELECT SUM(OL_AMOUNT) AS OL_TOTAL " +
       "  FROM " + TPCCConstants.TABLENAME_ORDERLINE +
       " WHERE OL_O_ID = ? " +
       "   AND OL_D_ID = ? " +
       "   AND OL_W_ID = ?");
 
-  public SQLStmt delivUpdateCustBalDelivCntSQL = new SQLStmt(
+  public static InstrumentedSQLStmt delivUpdateCustBalDelivCntSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = C_BALANCE + ?," +
       "       C_DELIVERY_CNT = C_DELIVERY_CNT + 1 " +
@@ -85,15 +88,24 @@ public class Delivery extends Procedure {
       "   AND C_ID = ? ");
 
   // Delivery Txn
-  private PreparedStatement delivGetOrderId = null;
-  private PreparedStatement delivDeleteNewOrder = null;
-  private PreparedStatement delivGetCustId = null;
-  private PreparedStatement delivUpdateCarrierId = null;
-  private PreparedStatement delivUpdateDeliveryDate = null;
-  private PreparedStatement delivSumOrderAmount = null;
-  private PreparedStatement delivUpdateCustBalDelivCnt = null;
+  private InstrumentedPreparedStatement delivGetOrderId = null;
+  private InstrumentedPreparedStatement delivDeleteNewOrder = null;
+  private InstrumentedPreparedStatement delivGetCustId = null;
+  private InstrumentedPreparedStatement delivUpdateCarrierId = null;
+  private InstrumentedPreparedStatement delivUpdateDeliveryDate = null;
+  private InstrumentedPreparedStatement delivSumOrderAmount = null;
+  private InstrumentedPreparedStatement delivUpdateCustBalDelivCnt = null;
 
-
+  public static void printLatencyStats() {
+    LOG.info("Delivery : ");
+    LOG.info("latency GetOrderId " + delivGetOrderIdSQL.getStats());
+    LOG.info("latency DeleteNewOrder " + delivDeleteNewOrderSQL.getStats());
+    LOG.info("latency GetCustId " + delivGetCustIdSQL.getStats());
+    LOG.info("latency UpdateCarrierId " + delivUpdateCarrierIdSQL.getStats());
+    LOG.info("latency UpdateDeliveryDate " + delivUpdateDeliveryDateSQL.getStats());
+    LOG.info("latency SumOrderAmount " + delivSumOrderAmountSQL.getStats());
+    LOG.info("latency UpdateCustBalDelivCnt " + delivUpdateCustBalDelivCntSQL.getStats());
+  }
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,

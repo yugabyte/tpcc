@@ -19,11 +19,15 @@ package com.oltpbenchmark.benchmarks.tpcc.procedures;
 import java.sql.*;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+
+import org.HdrHistogram.ConcurrentHistogram;
+import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 
@@ -31,7 +35,7 @@ public class StockLevel extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(StockLevel.class);
 
-  public SQLStmt stockGetDistOrderIdSQL = new SQLStmt(
+  public static InstrumentedSQLStmt stockGetDistOrderIdSQL = new InstrumentedSQLStmt(
       "SELECT D_NEXT_O_ID " +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? " +
@@ -39,7 +43,7 @@ public class StockLevel extends Procedure {
 
   private static final String GET_STOCK_COUNTS_PROC_NAME = "getstockcounts";
 
-  public SQLStmt stockGetCountStockSQL = new SQLStmt(
+  public static InstrumentedSQLStmt stockGetCountStockSQL = new InstrumentedSQLStmt(
       String.format("{ ? = call %s( ?, ?, ?, ? ) }", GET_STOCK_COUNTS_PROC_NAME));
 
   public static void InitializeGetStockCountProc(Connection conn) throws SQLException {
@@ -63,9 +67,16 @@ public class StockLevel extends Procedure {
   }
 
   // Stock Level Txn
-  private PreparedStatement stockGetDistOrderId = null;
+  private InstrumentedPreparedStatement stockGetDistOrderId = null;
 
-  private CallableStatement stockGetCountStockFunc = null;
+  private static Histogram stockGetCountStockFuncLatency = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
+  private InstrumentedPreparedStatement stockGetCountStockFunc = null;
+
+  public static void printLatencyStats() {
+    LOG.info("StockLevel : ");
+    LOG.info("latency GetDistOrderId " + stockGetDistOrderIdSQL.getStats());
+    LOG.info("latency GetCountStock " + stockGetCountStockSQL.getStats());
+  }
 
   public ResultSet run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
@@ -73,7 +84,8 @@ public class StockLevel extends Procedure {
                   Worker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
     stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
-    stockGetCountStockFunc = conn.prepareCall(stockGetCountStockSQL.getSQL());
+    stockGetCountStockFunc = new InstrumentedPreparedStatement(conn.prepareCall(stockGetCountStockSQL.getSqlStmt().getSQL()),
+                                                               stockGetCountStockFuncLatency);
 
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);

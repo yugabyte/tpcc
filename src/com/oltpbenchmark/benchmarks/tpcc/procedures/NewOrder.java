@@ -28,11 +28,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+
+import org.HdrHistogram.ConcurrentHistogram;
+import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
@@ -41,52 +45,52 @@ public class NewOrder extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(NewOrder.class);
 
-  public final SQLStmt stmtGetCustSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt stmtGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_DISCOUNT, C_LAST, C_CREDIT" +
       "  FROM " + TPCCConstants.TABLENAME_CUSTOMER +
       " WHERE C_W_ID = ? " +
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public final SQLStmt stmtGetWhseSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt stmtGetWhseSQL = new InstrumentedSQLStmt(
       "SELECT W_TAX " +
       "  FROM " + TPCCConstants.TABLENAME_WAREHOUSE +
       " WHERE W_ID = ?");
 
-  public final SQLStmt stmtGetDistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt stmtGetDistSQL = new InstrumentedSQLStmt(
       "SELECT D_NEXT_O_ID, D_TAX " +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? AND D_ID = ?");
 
-  public final SQLStmt  stmtInsertNewOrderSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtInsertNewOrderSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_NEWORDER +
       " (NO_O_ID, NO_D_ID, NO_W_ID) " +
       " VALUES ( ?, ?, ?)");
 
-  public final SQLStmt  stmtUpdateDistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtUpdateDistSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_DISTRICT +
       " SET D_NEXT_O_ID = D_NEXT_O_ID + 1 " +
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public final SQLStmt  stmtGetItemSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtGetItemSQL = new InstrumentedSQLStmt(
       "SELECT I_PRICE, I_NAME , I_DATA " +
       "  FROM " + TPCCConstants.TABLENAME_ITEM +
       " WHERE I_ID = ?");
 
-  public final SQLStmt  stmtGetStockSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtGetStockSQL = new InstrumentedSQLStmt(
       "SELECT S_QUANTITY, S_DATA, S_DIST_01, S_DIST_02, S_DIST_03, S_DIST_04, S_DIST_05, " +
       "       S_DIST_06, S_DIST_07, S_DIST_08, S_DIST_09, S_DIST_10" +
       "  FROM " + TPCCConstants.TABLENAME_STOCK +
       " WHERE S_I_ID = ? " +
       "   AND S_W_ID = ?");
 
-  public final SQLStmt  stmtInsertOOrderSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtInsertOOrderSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_OPENORDER +
       " (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_OL_CNT, O_ALL_LOCAL)" +
       " VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-  public final SQLStmt  stmtUpdateStockSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtUpdateStockSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_STOCK +
       "   SET S_QUANTITY = ? , " +
       "       S_YTD = S_YTD + ?, " +
@@ -95,7 +99,7 @@ public class NewOrder extends Procedure {
       " WHERE S_I_ID = ? " +
       "   AND S_W_ID = ?");
 
-  public final SQLStmt  stmtInsertOrderLineSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt  stmtInsertOrderLineSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_ORDERLINE +
       " (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, " +
       "OL_AMOUNT, OL_DIST_INFO)  VALUES (?,?,?,?,?,?,?,?,?)");
@@ -103,29 +107,47 @@ public class NewOrder extends Procedure {
   // We will have multiple statements for selecting from the ITEM table or STOCK table as also for
   // inserting into the ORDER_LINE tables based on the O_OL_CNT that is part of the NewOrder
   // transaction. These statements are created dynamically.
-  public SQLStmt[] stmtGetItemSQLArr;
-  public SQLStmt[] stmtGetStockSQLArr;
-  public SQLStmt[] stmtUpdateStockProcedureSQL;
-  public SQLStmt[] stmtInsertOrderLineSQLArr;
+  public InstrumentedSQLStmt[] stmtGetItemSQLArr;
+  public InstrumentedSQLStmt[] stmtGetStockSQLArr;
+  public InstrumentedSQLStmt[] stmtUpdateStockProcedureSQL;
+  public InstrumentedSQLStmt[] stmtInsertOrderLineSQLArr;
+
+  public static Histogram latencyUpdateStockProcedure = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
+
 
   // NewOrder Txn
-  private PreparedStatement stmtGetCust = null;
-  private PreparedStatement stmtGetWhse = null;
-  private PreparedStatement stmtGetDist = null;
-  private PreparedStatement stmtInsertNewOrder = null;
-  private PreparedStatement stmtUpdateDist = null;
-  private PreparedStatement stmtInsertOOrder = null;
-  private PreparedStatement stmtGetItem = null;
-  private PreparedStatement stmtGetStock = null;
-  private PreparedStatement stmtUpdateStock = null;
-  private PreparedStatement stmtUpdateStockProcedure = null;
-  private PreparedStatement stmtInsertOrderLine = null;
+  private InstrumentedPreparedStatement stmtGetCust = null;
+  private InstrumentedPreparedStatement stmtGetWhse = null;
+  private InstrumentedPreparedStatement stmtGetDist = null;
+  private InstrumentedPreparedStatement stmtInsertNewOrder = null;
+  private InstrumentedPreparedStatement stmtUpdateDist = null;
+  private InstrumentedPreparedStatement stmtInsertOOrder = null;
+  private InstrumentedPreparedStatement stmtGetItem = null;
+  private InstrumentedPreparedStatement stmtGetStock = null;
+  private InstrumentedPreparedStatement stmtUpdateStock = null;
+  private InstrumentedPreparedStatement stmtUpdateStockProcedure = null;
+  private InstrumentedPreparedStatement stmtInsertOrderLine = null;
+
+  public static void printLatencyStats() {
+    LOG.info("NewOrder : ");
+    LOG.info("latency GetCust " + stmtGetCustSQL.getStats());
+    LOG.info("latency GetWhse " + stmtGetWhseSQL.getStats());
+    LOG.info("latency GetDist " + stmtGetDistSQL.getStats());
+    LOG.info("latency InsertNewOrder " + stmtInsertNewOrderSQL.getStats());
+    LOG.info("latency UpdateDist " + stmtUpdateDistSQL.getStats());
+    LOG.info("latency InsertOOrder " + stmtInsertOOrderSQL.getStats());
+    LOG.info("latency GetItem " + stmtGetItemSQL.getStats());
+    LOG.info("latency GetStock " + stmtGetStockSQL.getStats());
+    LOG.info("latency UpdateStock " + stmtUpdateStockSQL.getStats());
+    LOG.info("latency UpdateStockProcedure " + InstrumentedSQLStmt.getOperationLatencyString(latencyUpdateStockProcedure));
+    LOG.info("latency InsertOrderLine " + stmtInsertOrderLineSQL.getStats());
+  }
 
   public NewOrder() {
-    stmtGetItemSQLArr = new SQLStmt[15];
-    stmtGetStockSQLArr = new SQLStmt[15];
-    stmtUpdateStockProcedureSQL = new SQLStmt[15];
-    stmtInsertOrderLineSQLArr = new SQLStmt[11];
+    stmtGetItemSQLArr = new InstrumentedSQLStmt[15];
+    stmtGetStockSQLArr = new InstrumentedSQLStmt[15];
+    stmtUpdateStockProcedureSQL = new InstrumentedSQLStmt[15];
+    stmtInsertOrderLineSQLArr = new InstrumentedSQLStmt[11];
 
     // We create 15 statements for selecting rows from the `ITEM` table with varying number of ITEM
     // ids.  Each string looks like:
@@ -141,7 +163,7 @@ public class NewOrder extends Procedure {
       } else {
         sb.append(",?");
       }
-      stmtGetItemSQLArr[i - 1] = new SQLStmt(sb.toString() + ")");
+      stmtGetItemSQLArr[i - 1] = new InstrumentedSQLStmt(stmtGetItemSQL.getHistogram(), sb.toString() + ")");
     }
 
     // We create 15 statements for selecting rows from the `STOCK` table with varying number of
@@ -161,7 +183,7 @@ public class NewOrder extends Procedure {
       } else {
         sb.append(",?");
       }
-      stmtGetStockSQLArr[i - 1] = new SQLStmt(sb.toString() + ") FOR UPDATE");
+      stmtGetStockSQLArr[i - 1] = new InstrumentedSQLStmt(stmtGetStockSQL.getHistogram(), sb.toString() + ") FOR UPDATE");
     }
 
     // We create 15 statements to update the rows in `STOCK` table. Each string looks like:
@@ -170,7 +192,7 @@ public class NewOrder extends Procedure {
     sb.append("?");
     for (int i = 1; i <= 15; ++i) {
       sb.append(", ?, ?, ?, ?");
-      stmtUpdateStockProcedureSQL[i - 1] = new SQLStmt(String.format("CALL updatestock%d(%s)",
+      stmtUpdateStockProcedureSQL[i - 1] = new InstrumentedSQLStmt(latencyUpdateStockProcedure, String.format("CALL updatestock%d(%s)",
                                                                       i, sb.toString()));
     }
     // We create 11 statements that insert into `ORDERLINE`. Each string looks like:
@@ -189,7 +211,7 @@ public class NewOrder extends Procedure {
         sb.append(", (?,?,?,?,?,?,?,?,?)");
       }
       if (i >= 5) {
-        stmtInsertOrderLineSQLArr[i - 5] = new SQLStmt(sb.toString());
+        stmtInsertOrderLineSQLArr[i - 5] = new InstrumentedSQLStmt(stmtInsertOrderLineSQL.getHistogram(), sb.toString());
       }
     }
   }
@@ -611,7 +633,7 @@ public class NewOrder extends Procedure {
                        Connection conn) throws SQLException {
     int total_amount = 0;
     int k = 1;
-    stmtInsertOrderLine =this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5]);
+    stmtInsertOrderLine = this.getPreparedStatement(conn, stmtInsertOrderLineSQLArr[o_ol_cnt - 5]);
     for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
       int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
       int ol_i_id = itemIDs[ol_number - 1];

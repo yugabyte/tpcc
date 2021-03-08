@@ -35,9 +35,6 @@ import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.api.Loader.LoaderThread;
-import com.oltpbenchmark.catalog.Catalog;
-import com.oltpbenchmark.catalog.Table;
-import com.oltpbenchmark.types.DatabaseType;
 import com.oltpbenchmark.util.ScriptRunner;
 import com.oltpbenchmark.util.ThreadUtil;
 
@@ -64,11 +61,6 @@ public class BenchmarkModule {
     protected final WorkloadConfiguration workConf;
 
     /**
-     * Database Catalog
-     */
-    protected final Catalog catalog;
-
-    /**
      * A single Random object that should be re-used by all a benchmark's components
      */
     private final Random rng = new Random();
@@ -78,7 +70,6 @@ public class BenchmarkModule {
 
         this.benchmarkName = "tpcc";
         this.workConf = workConf;
-        this.catalog = new Catalog(this);
         if (workConf.getNeedsExecution()) {
             try {
                 createDataSource();
@@ -193,23 +184,12 @@ public class BenchmarkModule {
      * Return the URL handle to the DDL used to load the benchmark's database
      * schema.
      */
-    public URL getDatabaseDDL(DatabaseType db_type) {
-        String[] ddlNames = {
-            this.benchmarkName + "-" + (db_type != null ? db_type.name().toLowerCase() : "") + "-ddl.sql",
-            this.benchmarkName + "-ddl.sql",
-        };
-
-        for (String ddlName : ddlNames) {
-            URL ddlURL = this.getClass().getResource(DDLS_DIR + File.separator + ddlName);
-            if (ddlURL != null) {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("Found DDL file for " + db_type + ": " + ddlURL );
-                return ddlURL;
-            }
-        } // FOR
-        LOG.trace(ddlNames[0]+" :or: "+ddlNames[1]);
-        LOG.error("Failed to find DDL file for " + this.benchmarkName);
-        return null;
+    public URL getDatabaseDDL() {
+        URL ddlURL = this.getClass().getResource(DDLS_DIR + File.separator + "tpcc-postgres-ddl.sql");
+        if (ddlURL == null) {
+            LOG.error("Failed to find DDL file at " + ddlURL.getPath());
+        }
+        return ddlURL;
     }
 
     public final List<Worker> makeWorkers() {
@@ -224,26 +204,10 @@ public class BenchmarkModule {
     public final void createDatabase() {
         try {
             Connection conn = makeConnection();
-            this.createDatabase(this.workConf.getDBType(), conn);
+            SchemaManager schemaManager = new SchemaManager(conn);
+            schemaManager.create();
             conn.close();
         } catch (SQLException ex) {
-            throw new RuntimeException(String.format("Unexpected error when trying to create the %s database", this.benchmarkName), ex);
-        }
-    }
-
-    /**
-     * Create the Benchmark Database
-     * This is the main method used to create all the database
-     * objects (e.g., table, indexes, etc) needed for this benchmark
-     */
-    public final void createDatabase(DatabaseType dbType, Connection conn) {
-        try {
-            URL ddl = this.getDatabaseDDL(dbType);
-            assert(ddl != null) : "Failed to get DDL for " + this;
-            ScriptRunner runner = new ScriptRunner(conn, true, true);
-            if (LOG.isDebugEnabled()) LOG.debug("Executing script '" + ddl + "'");
-            runner.runScript(ddl);
-        } catch (Exception ex) {
             throw new RuntimeException(String.format("Unexpected error when trying to create the %s database", this.benchmarkName), ex);
         }
     }
@@ -319,26 +283,11 @@ public class BenchmarkModule {
     public final String getBenchmarkName() {
         return (this.benchmarkName);
     }
-    /**
-     * Return the database's catalog
-     */
-    public final Catalog getCatalog() {
-        return (this.catalog);
-    }
-    /**
-     * Get the catalog object for the given table name
-     */
-    public Table getTableCatalog(String tableName) {
-        Table catalog_tbl = this.catalog.getTable(tableName.toUpperCase());
-        assert (catalog_tbl != null) : "Invalid table name '" + tableName + "'";
-        return (catalog_tbl);
-    }
 
     @Override
     public final String toString() {
         return benchmarkName.toUpperCase();
     }
-
 
     /**
      * Initialize a TransactionType handle for the get procedure name and id
@@ -463,18 +412,9 @@ public class BenchmarkModule {
        * @param time - millis since epoch
        * @return Timestamp
        */
-      public Timestamp getTimestamp(long time) {
-        Timestamp timestamp;
-
-        // HACK: NoisePage doesn't support JDBC timestamps.
-        // We have to use the postgres-specific type
-        if (this.workConf.getDBType() == DatabaseType.NOISEPAGE) {
-          timestamp = new org.postgresql.util.PGTimestamp(time);
-        } else {
-          timestamp = new Timestamp(time);
-        }
-        return (timestamp);
-      }
+    public Timestamp getTimestamp(long time) {
+      return new Timestamp(time);
+    }
 
     public void enableForeignKeys() throws Exception {
         Loader loader = new Loader(this);

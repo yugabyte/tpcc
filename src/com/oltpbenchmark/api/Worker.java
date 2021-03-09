@@ -69,7 +69,7 @@ public class Worker implements Runnable {
 
     private boolean seenDone = false;
 
-    int[] totalRetries;
+    int[][] totalTries;
     int[] totalFailures;
     int totalAttemptsPerTransaction = 1;
 
@@ -82,8 +82,6 @@ public class Worker implements Runnable {
         Worker.wrkld = this.benchmarkModule.getWorkloadConfiguration();
         Worker.wrkldState = Worker.wrkld.getWorkloadState();
         this.currStatement = null;
-        totalRetries = new int[wrkld.getNumTxnTypes()];
-        totalFailures = new int[wrkld.getNumTxnTypes()];
         InitializeProcedures();
 
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
@@ -93,6 +91,8 @@ public class Worker implements Runnable {
             throw new RuntimeException("Failed to connect to database", ex);
         }
         totalAttemptsPerTransaction = wrkld.getMaxRetriesPerTransaction() + 1;
+        totalTries = new int[wrkld.getNumTxnTypes()][totalAttemptsPerTransaction];
+        totalFailures = new int[wrkld.getNumTxnTypes()];
         this.terminalWarehouseID = terminalWarehouseID;
 
         assert terminalDistrictLowerID >= 1;
@@ -125,8 +125,8 @@ public class Worker implements Runnable {
         return this.id;
     }
 
-    public final int[] getTotalRetries() {
-      return totalRetries;
+    public final int[][] getTotalTries() {
+      return totalTries;
     }
 
     public final int[] getTotalFailures() {
@@ -516,9 +516,7 @@ public class Worker implements Runnable {
                    this.wrkldState.getGlobalState() != State.DONE &&
                    ++attempt <= totalAttemptsPerTransaction) {
 
-                if (attempt > 1) {
-                    ++totalRetries[pieceOfWork.getType() - 1];
-                }
+                ++totalTries[pieceOfWork.getType() - 1][attempt - 1];
                 assert (next.isSupplemental() == false) : "Trying to select a supplemental transaction " + next;
 
                 try {

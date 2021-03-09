@@ -924,10 +924,27 @@ public class DBWorkload {
     r.startTime = start;
     r.endTime = end;
 
+    PrintToplineResults(workers, r);
+    PrintLatencies(workers);
+    PrintQueryAttempts(workers, workConfs.get(0));
+
+    // TODO -- pretty print these items.
+    if (InstrumentedPreparedStatement.isTrackingLatencyMetrics()) {
+      NewOrder.printLatencyStats();
+      Payment.printLatencyStats();
+      OrderStatus.printLatencyStats();
+      Delivery.printLatencyStats();
+      StockLevel.printLatencyStats();
+    }
+
+    return r;
+  }
+
+  private static void PrintToplineResults(List<Worker> workers, Results r) {
     long numNewOrderTransactions = 0;
     for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
-        if (sample.tranType == newOrderTxnId && sample.startNs + 1000L * sample.latencyUs <= end) {
+        if (sample.tranType == newOrderTxnId && sample.startNs + 1000L * sample.latencyUs <= r.endTime) {
           ++numNewOrderTransactions;
         }
       }
@@ -939,32 +956,16 @@ public class DBWorkload {
     DecimalFormat df = new DecimalFormat();
     df.setMaximumFractionDigits(2);
 
-    LOG.info("Throughput: " + r + " reqs/sec");
-    LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
-    LOG.info("TPM-C: " + df.format(tpmc));
-    LOG.info("Efficiency : " + df.format(efficiency) + "%");
-
-    boolean displayEnhancedLatencyMetrics =
-      xmlConfig.containsKey("displayEnhancedLatencyMetrics") &&
-      xmlConfig.getBoolean("displayEnhancedLatencyMetrics");
-    PrintLatencies(workers, displayEnhancedLatencyMetrics);
-
-    int numTxnTypes = workConfs.get(0).getNumTxnTypes();
-    int[] totalRetries = new int[numTxnTypes];
-    int[] totalFailures = new int[numTxnTypes];
-    for (Worker w : workers) {
-      for (int i = 0; i < numTxnTypes; ++i) {
-        totalRetries[i] += w.getTotalRetries()[i];
-        totalFailures[i] += w.getTotalFailures()[i];
-      }
-    }
-    LOG.info(String.format("Total retries: %s Total failures: %s",
-                           Arrays.toString(totalRetries), Arrays.toString(totalFailures)));
-    return r;
+    StringBuilder resultOut = new StringBuilder();
+    resultOut.append("\n");
+    resultOut.append("================RESULTS================\n");
+    resultOut.append(String.format("%18s | %18.2f\n", "TPM-C", tpmc));
+    resultOut.append(String.format("%18s | %17.2f%%\n", "Efficiency", efficiency));
+    resultOut.append(String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond()));
+    LOG.info(resultOut.toString());
   }
 
-  private static void PrintLatencies(List<Worker> workers,
-                                     boolean displayEnhancedLatencyMetrics) {
+  private static void PrintLatencies(List<Worker> workers) {
     List<List<Integer>> list_latencies = new ArrayList<>();
     List<List<Integer>> list_enhanced_latencies = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
@@ -976,44 +977,65 @@ public class DBWorkload {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
       }
+    }
 
-      if (displayEnhancedLatencyMetrics) {
-        for (LatencyRecord.Sample sample : w.getWholeOperationLatencyRecords()) {
-          list_enhanced_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
+    StringBuilder resultOut = new StringBuilder();
+    resultOut.append("\n");
+    resultOut.append("================LATENCIES===============\n");
+    resultOut.append(" Operation  | Avg. Latency | P99 Latency\n");
+    for (int i = 0; i < list_latencies.size(); ++i) {
+      String op = transactionTypes.get(i + 1);
+      List<Integer> latencies = list_latencies.get(i);
+      resultOut.append(String.format(
+          "%11s |%13.2f |%12.2f\n", op, getAverageLatency(latencies), getP99Latency(latencies)));
+    }
+    LOG.info(resultOut.toString());
+  }
+
+  private static void PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {
+    int numTxnTypes = workConf.getNumTxnTypes();
+    int numTriesPerProc = workConf.getMaxRetriesPerTransaction() + 1;
+    int[][] totalRetries = new int[numTxnTypes][numTriesPerProc];
+    int[] totalFailures = new int[numTxnTypes];
+    for (Worker w : workers) {
+      for (int i = 0; i < numTxnTypes; ++i) {
+        totalFailures[i] += w.getTotalFailures()[i];
+        for (int tryIdx = 0; tryIdx < numTriesPerProc; ++tryIdx) {
+          totalRetries[i][tryIdx] += w.getTotalTries()[i][tryIdx];
         }
       }
     }
 
-    if (InstrumentedPreparedStatement.isTrackingLatencyMetrics()) {
-      NewOrder.printLatencyStats();
-      Payment.printLatencyStats();
-      OrderStatus.printLatencyStats();
-      Delivery.printLatencyStats();
-      StockLevel.printLatencyStats();
-    }
+    StringBuilder resultOut = new StringBuilder();
 
-    if (!displayEnhancedLatencyMetrics) {
-      for (int i = 0; i < list_latencies.size(); ++i) {
-        LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
-                                           list_latencies.get(i)));
+    resultOut.append("\n");
+    resultOut.append("====================RETRIES===================\n");
+    resultOut.append("   Operation   | Total Created |");
+    for (int i = 1; i < numTriesPerProc; ++i) {
+      resultOut.append(String.format(" Retry Number %1d |", i));
+    }
+    resultOut.append("     Failures  \n");
+
+    for (int i = 0; i < numTxnTypes; ++i) {
+      String op = transactionTypes.get(i + 1);
+      int totalCreated = totalRetries[i][0];
+      resultOut.append(String.format("%14s |%14d |", op, totalCreated));
+      for (int retry = 1; retry < numTriesPerProc; ++retry) {
+        int numRetries = totalRetries[i][retry];
+        double pctRetried = numRetries;
+        pctRetried /= totalCreated;
+        pctRetried *= 100.0;
+        resultOut.append(String.format("%6d (%5.2f%%) |", numRetries, pctRetried));
       }
-      return;
+
+      int numFailed = totalFailures[i];
+      double pctFailed = numFailed;
+      pctFailed *= 100.0;
+      pctFailed /= totalCreated;
+      resultOut.append(String.format("%6d (%5.2f%%)\n", numFailed, pctFailed));
     }
 
-    for (int i = 0; i < list_latencies.size(); ++i) {
-      LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
-                                         list_latencies.get(i)) +
-               getOperationLatencyString(", Whole operation",
-                                         list_enhanced_latencies.get(i)));
-    }
-
-    List<Integer> acqConnectionLatency = new ArrayList<>();
-    for (Worker w : workers) {
-      for (LatencyRecord.Sample sample : w.getAcqConnectionLatencyRecords()) {
-        acqConnectionLatency.add(sample.operationLatencyUs);
-      }
-    }
-    LOG.info(getOperationLatencyString("Acquire Connection", acqConnectionLatency));
+    LOG.info(resultOut.toString());
   }
 
   private static String getOperationLatencyString(String operation, List<Integer> latencies) {
@@ -1031,6 +1053,26 @@ public class DBWorkload {
 
     return operation + ", Avg Latency: " + avgLatency +
            " msecs, p99 Latency: " + p99Latency + " msecs";
+  }
+
+  private static double getAverageLatency(List<Integer> latencies) {
+    if (latencies.size() == 0) {
+      return -1;
+    }
+    long sum = 0;
+    for (int val : latencies) {
+      sum += val;
+    }
+    return sum * 1.0 / latencies.size() / 1000;
+  }
+
+  private static double getP99Latency(List<Integer> latencies) {
+    if (latencies.size() == 0) {
+      return -1;
+    }
+    Collections.sort(latencies);
+    int p99Index = (int)(latencies.size() * 0.99);
+    return latencies.get(p99Index) * 1.0 / 1000;
   }
 
   public static void mergeResults(String dirPath, String[] fileNames) {

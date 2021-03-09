@@ -243,6 +243,8 @@ public class NewOrder extends Procedure {
     }
 
     // we need to cause 1% of the new orders to be rolled back.
+    // TODO -- in this case, lets make sure our retry/failure bookkeeping is smart enough to distinguish between this
+    // vs. unexpected failures.
     if (TPCCUtil.randomNumber(1, 100, gen) == 1)
       itemIDs[numItems - 1] = TPCCConfig.INVALID_ITEM_ID;
 

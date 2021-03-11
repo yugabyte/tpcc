@@ -19,7 +19,6 @@ package com.oltpbenchmark.api;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -28,7 +27,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
-import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
 public abstract class Procedure {
@@ -65,36 +63,12 @@ public abstract class Procedure {
      * for the target DBMS is used for this SQLStmt.
      * This will automatically call setObject for all the parameters you pass in.
      */
-    public final PreparedStatement getPreparedStatement(Connection conn, SQLStmt stmt, Object...params) throws SQLException {
-        PreparedStatement pStmt = this.getPreparedStatementReturnKeys(conn, stmt);
-        for (int i = 0; i < params.length; i++) {
-            pStmt.setObject(i+1, params[i]);
-        } // FOR
-        return (pStmt);
-    }
-
     public final InstrumentedPreparedStatement getPreparedStatement(Connection conn,
-                                                                    InstrumentedSQLStmt stmt,
-                                                                    Object...params) throws SQLException {
-        PreparedStatement pStmt = this.getPreparedStatement(conn, stmt.getSqlStmt(), params);
-        return new InstrumentedPreparedStatement(pStmt, stmt);
-    }
-
-
-    /**
-     * Return a PreparedStatement for the given SQLStmt handle
-     * The underlying Procedure API will make sure that the proper SQL
-     * for the target DBMS is used for this SQLStmt.
-     */
-    public final PreparedStatement getPreparedStatementReturnKeys(Connection conn, SQLStmt stmt) throws SQLException {
+                                                                    InstrumentedSQLStmt stmt) throws SQLException {
         assert(this.name_stmt_xref != null) : "The Procedure " + this + " has not been initialized yet!";
-        PreparedStatement pStmt;
         assert(this.stmt_name_xref.containsKey(stmt)) :
-            "Unexpected SQLStmt handle in " + this.getClass().getSimpleName() + "\n" + this.name_stmt_xref;
-
-        pStmt = conn.prepareStatement(stmt.getSQL());
-        assert(pStmt != null) : "Unexpected null PreparedStatement for " + stmt;
-        return (pStmt);
+                "Unexpected SQLStmt handle in " + this.getClass().getSimpleName() + "\n" + this.name_stmt_xref;
+        return new InstrumentedPreparedStatement(conn.prepareStatement(stmt.getSqlStmt().getSQL()), stmt);
     }
     
     protected static Map<String, SQLStmt> getStatments(Procedure proc) {

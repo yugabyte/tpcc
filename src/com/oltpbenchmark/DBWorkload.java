@@ -18,17 +18,17 @@
 package com.oltpbenchmark;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 
+import com.oltpbenchmark.api.*;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.BenchmarkModule;
-import com.oltpbenchmark.api.TransactionType;
-import com.oltpbenchmark.api.TransactionTypes;
-import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import com.oltpbenchmark.util.FileUtil;
@@ -367,6 +367,15 @@ public class DBWorkload {
       }
     }
 
+    if (options.getMode() == CommandLineOptions.Mode.RUN_ONE) {
+      String procName = options.getRunOneProc().orElseThrow(() -> new RuntimeException("Must specify --proc"));
+      Random r = new Random();
+      int wid = options.getRunOneWarehouse().orElse(r.nextInt(numWarehouses) + 1);
+      int lowerDistrictId = options.getRunDistrict().orElse(1);
+      int upperDistrictId = options.getRunDistrict().orElse(10);
+      runOne(benchList.get(0), procName, wid, numWarehouses, lowerDistrictId, upperDistrictId);
+    }
+
     // Execute Workload
     if (options.getMode() == CommandLineOptions.Mode.EXECUTE) {
       // Bombs away!
@@ -484,6 +493,25 @@ public class DBWorkload {
     }
 
     return r;
+  }
+
+  private static void runOne(
+        BenchmarkModule module, String txnType, int warehouseID, int numWarehouses, int lowerDistrictId,
+        int upperDistrictId) throws Exception {
+    InstrumentedPreparedStatement.trackLatencyMetrics(true);
+    module.createDataSource();
+    Worker w = new Worker(module, 1, warehouseID, lowerDistrictId, upperDistrictId);
+    Connection conn = module.makeConnection();
+    TransactionType txn = module.initTransactionType(txnType, 1);
+    // TODO -- make sure that connection establishment and prepared statement creation happens, and then wait some time,
+    // and then execute the procedure. This will allow timing info to be more accurate and allow easier tracking of
+    // traces in logs
+    assert txn != null;
+    long startTime = System.nanoTime();
+    w.executeWork(conn, txn);
+    LOG.info("Latency: - " + (System.nanoTime() - startTime) * 0.0000010 );
+    conn.close();
+    txn.getProcedureClass().getMethod("printLatencyStats").invoke(null);
   }
 
   private static void PrintToplineResults(List<Worker> workers, Results r) {

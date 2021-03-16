@@ -588,7 +588,7 @@ public class Worker implements Runnable {
     /**
      * Executes a single TPCC transaction of type transactionType.
      */
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction)
+    public TransactionStatus executeWork(Connection conn, TransactionType nextTransaction)
                                             throws UserAbortException, SQLException {
       try {
         Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());

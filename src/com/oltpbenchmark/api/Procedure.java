@@ -101,7 +101,11 @@ public abstract class Procedure {
                              int terminalDistrictLowerID, int terminalDistrictUpperID,
                              Worker w) throws SQLException;
 
+    public abstract void prepareStatements(Connection conn) throws SQLException;
+
     public void test(Connection conn, Worker w) throws Exception {}
+
+    public static void printLatencyStats() {}
 
     /**
      * Thrown from a Procedure to indicate to the Worker

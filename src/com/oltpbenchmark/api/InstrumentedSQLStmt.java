@@ -3,21 +3,12 @@ package com.oltpbenchmark.api;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 public class InstrumentedSQLStmt {
-    Histogram histogram;
-    SQLStmt sqlStmt;
+    final Histogram histogram;
+    final SQLStmt sqlStmt;
 
-    public static int numSigDigits = 4;
-    /**
-     * Constructor
-     *
-     * @param histogram
-     * @param sqlStmt
-     */
+    public static final int numSigDigits = 4;
+
     public InstrumentedSQLStmt(Histogram histogram, SQLStmt sqlStmt) {
         this.histogram = histogram;
         this.sqlStmt = sqlStmt;
@@ -35,10 +26,6 @@ public class InstrumentedSQLStmt {
 
     public Histogram getHistogram() {
         return histogram;
-    }
-
-    public void addLatency(long startNs, long endNs) {
-        histogram.recordValue((endNs - startNs) / 1000);
     }
 
     public String getStats() {

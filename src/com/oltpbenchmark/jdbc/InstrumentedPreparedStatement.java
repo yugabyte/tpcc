@@ -1,36 +1,11 @@
 package com.oltpbenchmark.jdbc;
 
-import java.io.InputStream;
-import java.io.Reader;
-import java.math.BigDecimal;
-import java.net.URL;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.NClob;
-import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
-import java.sql.Ref;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.RowId;
 import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.List;
 
 import com.oltpbenchmark.api.InstrumentedSQLStmt;
-import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.Histogram;
-
-import com.oltpbenchmark.api.SQLStmt;
 
 public class InstrumentedPreparedStatement {
     private final PreparedStatement stmt;
@@ -83,28 +58,30 @@ public class InstrumentedPreparedStatement {
         }
     }
 
-    public boolean execute() throws SQLException {
+    public void execute() throws SQLException {
         if (!trackLatencies) {
-            return this.stmt.execute();
+            this.stmt.execute();
+            return;
         }
 
         long start = System.nanoTime();
         try {
-            return this.stmt.execute();
+            this.stmt.execute();
         } finally {
             long end = System.nanoTime();
             addLatency(start, end);
         }
     }
 
-    public int[] executeBatch() throws SQLException {
+    public void executeBatch() throws SQLException {
         if (!trackLatencies) {
-            return this.stmt.executeBatch();
+            this.stmt.executeBatch();
+            return;
         }
 
         long start = System.nanoTime();
         try {
-            return this.stmt.executeBatch();
+            this.stmt.executeBatch();
         } finally {
             long end = System.nanoTime();
             addLatency(start, end);

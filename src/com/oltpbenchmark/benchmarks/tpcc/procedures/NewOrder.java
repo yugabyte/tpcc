@@ -17,7 +17,6 @@
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -107,12 +106,12 @@ public class NewOrder extends Procedure {
   // We will have multiple statements for selecting from the ITEM table or STOCK table as also for
   // inserting into the ORDER_LINE tables based on the O_OL_CNT that is part of the NewOrder
   // transaction. These statements are created dynamically.
-  public InstrumentedSQLStmt[] stmtGetItemSQLArr;
-  public InstrumentedSQLStmt[] stmtGetStockSQLArr;
-  public InstrumentedSQLStmt[] stmtUpdateStockProcedureSQL;
-  public InstrumentedSQLStmt[] stmtInsertOrderLineSQLArr;
+  public final InstrumentedSQLStmt[] stmtGetItemSQLArr;
+  public final InstrumentedSQLStmt[] stmtGetStockSQLArr;
+  public final InstrumentedSQLStmt[] stmtUpdateStockProcedureSQL;
+  public final InstrumentedSQLStmt[] stmtInsertOrderLineSQLArr;
 
-  public static Histogram latencyUpdateStockProcedure = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
+  public static final Histogram latencyUpdateStockProcedure = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
 
 
   // NewOrder Txn
@@ -216,7 +215,7 @@ public class NewOrder extends Procedure {
     }
   }
 
-  public ResultSet run(Connection conn, Random gen,
+  public void run(Connection conn, Random gen,
                   int terminalWarehouseID, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
@@ -260,7 +259,6 @@ public class NewOrder extends Procedure {
     newOrderTransaction(terminalWarehouseID, districtID,
                         customerID, numItems, allLocal, itemIDs,
                         supplierWarehouseIDs, orderQuantities, conn, w);
-    return null;
   }
 
   private void newOrderTransaction(int w_id, int d_id, int c_id,
@@ -268,7 +266,7 @@ public class NewOrder extends Procedure {
                                    int[] supplierWarehouseIDs, int[] orderQuantities,
                                    Connection conn, Worker w) throws SQLException {
     float c_discount, w_tax, d_tax, i_price;
-    int d_next_o_id, o_id = -1, s_quantity;
+    int d_next_o_id, o_id, s_quantity;
     String c_last, c_credit, i_name, i_data, s_data, ol_dist_info;
     float[] itemPrices = new float[o_ol_cnt];
     float[] orderLineAmounts = new float[o_ol_cnt];

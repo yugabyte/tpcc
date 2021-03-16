@@ -19,10 +19,8 @@ package com.oltpbenchmark.api;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -47,7 +45,7 @@ public class Worker implements Runnable {
 
     private static WorkloadState wrkldState;
     // This is the warehouse that is a constant for this terminal.
-    private int terminalWarehouseID;
+    private final int terminalWarehouseID;
     // This is the district ID used for StockLevel transactions.
     private final int terminalDistrictID;
     // private boolean debugMessages;
@@ -65,13 +63,13 @@ public class Worker implements Runnable {
     protected final HikariDataSource dataSource;
     protected static WorkloadConfiguration wrkld;
     protected TransactionTypes transactionTypes;
-    protected Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<>();
+    protected final Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<>();
 
     private boolean seenDone = false;
 
     int[][] totalTries;
     int[] totalFailures;
-    int totalAttemptsPerTransaction = 1;
+    int totalAttemptsPerTransaction;
 
     public Worker(
             BenchmarkModule benchmarkModule, int id, int terminalWarehouseID, int terminalDistrictLowerID,
@@ -296,13 +294,6 @@ public class Worker implements Runnable {
         wholeOperationLatencies = new LatencyRecord(wrkldState.getTestStartNs());
         acqConnectionLatencies = new LatencyRecord(wrkldState.getTestStartNs());
 
-        // Invoke the initialize callback
-        try {
-            this.initialize();
-        } catch (Throwable ex) {
-            throw new RuntimeException("Unexpected error when initializing " + this, ex);
-        }
-
         // wait for start
         wrkldState.blockForStart();
         State preState, postState;
@@ -419,10 +410,10 @@ public class Worker implements Runnable {
 
             // In case of transaction failures, the end times will not be populated.
             if (executionState.getEndOperation() == 0 || executionState.getEndConnection() == 0) {
-              if (this.wrkldState.getGlobalState() != State.DONE) {
+              if (wrkldState.getGlobalState() != State.DONE) {
                 ++totalFailures[pieceOfWork.getType() - 1];
               }
-              continue work;
+              continue;
             }
 
             // PART 4: Record results
@@ -476,8 +467,6 @@ public class Worker implements Runnable {
 
             wrkldState.finishedWork();
         }
-
-        tearDown(false);
     }
 
     /**
@@ -489,8 +478,8 @@ public class Worker implements Runnable {
         TransactionType next = null;
         long startOperation = 0;
         long endOperation = 0;
-        long startConnection = 0;
-        long endConnection = 0;
+        long startConnection;
+        long endConnection;
 
         TransactionStatus status = TransactionStatus.RETRY;
 
@@ -507,17 +496,16 @@ public class Worker implements Runnable {
                 // Isolation.
                 conn.setAutoCommit(false);
             }
-            conn.setTransactionIsolation(this.wrkld.getIsolationMode());
+            conn.setTransactionIsolation(wrkld.getIsolationMode());
 
             endConnection = System.nanoTime();
             int attempt = 0;
 
             while (status == TransactionStatus.RETRY &&
-                   this.wrkldState.getGlobalState() != State.DONE &&
+                   wrkldState.getGlobalState() != State.DONE &&
                    ++attempt <= totalAttemptsPerTransaction) {
 
                 ++totalTries[pieceOfWork.getType() - 1][attempt - 1];
-                assert (next.isSupplemental() == false) : "Trying to select a supplemental transaction " + next;
 
                 try {
                     status = TransactionStatus.UNKNOWN;
@@ -529,51 +517,39 @@ public class Worker implements Runnable {
                 // User Abort Handling
                 // These are not errors
                 } catch (UserAbortException ex) {
-                    if (LOG.isDebugEnabled())
-                        LOG.trace(next + " Aborted", ex);
                     if (!conn.getAutoCommit()) {
                         conn.rollback();
                     }
                     status = TransactionStatus.USER_ABORTED;
                     break;
-
                 // Database System Specific Exception Handling
                 } catch (SQLException ex) {
-                    // TODO: Handle acceptable error codes for every DBMS
-                     if (LOG.isDebugEnabled())
-                        LOG.warn(String.format("%s thrown when executing '%s' on '%s' " +
-                                               "[Message='%s', ErrorCode='%d', SQLState='%s']",
-                                               ex.getClass().getSimpleName(), next, this.toString(),
-                                               ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
+                    LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
+                                           "[Message='%s', ErrorCode='%d', SQLState='%s']",
+                                           ex.getClass().getSimpleName(), next, this.toString(),
+                                           ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
 
-		    if (!conn.getAutoCommit()) {
-                conn.rollback();
-		    }
+                    if (!conn.getAutoCommit()) {
+                        conn.rollback();
+                    }
 
-                    if (ex.getSQLState() == null) {
-                        continue;
-                    // ------------------
-                    // POSTGRES
-                    // ------------------
-                    } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
-                        // Postgres serialization
-                        status = TransactionStatus.RETRY;
-                        continue;
-                    } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("53200")) {
-                        // Postgres OOM error
-                        throw ex;
-                    } else if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("XX000")) {
-                        // Postgres no pinned buffers available
-                        throw ex;
-                    // ------------------
-                    // UNKNOWN!
-                    // ------------------
-                    } else {
-                        // UNKNOWN: In this case .. Retry as well!
-                        LOG.warn("The DBMS rejected the transaction without an error code", ex);
-                        continue;
-                        // FIXME Disable this for now
-                        // throw ex;
+                    if (ex.getSQLState() != null) {
+                        if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
+                            // Postgres serialization
+                            status = TransactionStatus.RETRY;
+                        } else if (
+                                ex.getErrorCode() == 0 &&
+                                ex.getSQLState() != null &&
+                                Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
+                            // 53200 - Postgres OOM error
+                            // XX000 - Postgres no pinned buffers available
+                            throw ex;
+                        } else {
+                            // UNKNOWN: In this case .. Retry as well!
+                            LOG.warn("The DBMS rejected the transaction without an error code", ex);
+                            // FIXME Disable this for now
+                            // throw ex;
+                        }
                     }
                 // Assertion Error
                 } catch (Error ex) {
@@ -585,23 +561,17 @@ public class Worker implements Runnable {
                     throw new RuntimeException(ex);
 
                 } finally {
-                     if (LOG.isDebugEnabled())
-                        LOG.debug(String.format("%s %s Result: %s", this, next, status));
+                    LOG.debug(String.format("%s %s Result: %s", this, next, status));
 
                     switch (status) {
                         case SUCCESS:
-                            break;
                         case RETRY_DIFFERENT:
-                            break;
                         case USER_ABORTED:
                             break;
-                        case RETRY:
-                            continue;
-                        default:
+                        case UNKNOWN:
                             assert (false) : String.format("Unexpected status '%s' for %s", status, next);
                     } // SWITCH
                 }
-
             } // WHILE
             conn.close();
         } catch (SQLException ex) {
@@ -613,14 +583,6 @@ public class Worker implements Runnable {
         return new TransactionExecutionState(startOperation, endOperation,
                 startConnection, endConnection,
                 next);
-    }
-
-    /**
-     * Optional callback that can be used to initialize the Worker right before
-     * the benchmark execution begins
-     */
-    protected void initialize() {
-        // The default is to do nothing
     }
 
     /**
@@ -656,11 +618,6 @@ public class Worker implements Runnable {
       }
       return (TransactionStatus.SUCCESS);
     }
-
-    /**
-     * Called at the end of the test to do any clean up that may be required.
-     */
-    public void tearDown(boolean error) { }
 
     public void initializeState() {
         assert (Worker.wrkldState == null);

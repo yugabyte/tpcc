@@ -18,7 +18,6 @@
 package com.oltpbenchmark.api;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.sql.*;
 import java.util.*;
@@ -35,7 +34,6 @@ import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.api.Loader.LoaderThread;
-import com.oltpbenchmark.util.ScriptRunner;
 import com.oltpbenchmark.util.ThreadUtil;
 
 /**
@@ -180,18 +178,6 @@ public class BenchmarkModule {
         return (this.rng);
     }
 
-    /**
-     * Return the URL handle to the DDL used to load the benchmark's database
-     * schema.
-     */
-    public URL getDatabaseDDL() {
-        URL ddlURL = this.getClass().getResource(DDLS_DIR + File.separator + "tpcc-postgres-ddl.sql");
-        if (ddlURL == null) {
-            LOG.error("Failed to find DDL file at " + ddlURL.getPath());
-        }
-        return ddlURL;
-    }
-
     public final List<Worker> makeWorkers() {
         return (this.makeWorkersImpl());
     }
@@ -209,23 +195,6 @@ public class BenchmarkModule {
             conn.close();
         } catch (SQLException ex) {
             throw new RuntimeException(String.format("Unexpected error when trying to create the %s database", this.benchmarkName), ex);
-        }
-    }
-
-    /**
-     * Run a script on a Database
-     */
-    public final void runScript(String script) {
-        try {
-            Connection conn = listDataSource.get(0).getConnection();
-            ScriptRunner runner = new ScriptRunner(conn, true, true);
-            File scriptFile= new File(script);
-            runner.runScript(scriptFile.toURI().toURL());
-            conn.close();
-        } catch (SQLException ex) {
-            throw new RuntimeException(String.format("Unexpected error when trying to run: %s", script), ex);
-        } catch (IOException ex) {
-            throw new RuntimeException(String.format("Unexpected error when trying to open: %s", script), ex);
         }
     }
 

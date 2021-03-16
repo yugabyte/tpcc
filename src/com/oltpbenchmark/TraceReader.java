@@ -35,9 +35,9 @@ public class TraceReader {
 
   // POD for tracking submitted/read procedures.
   private static class TraceElement {
-    int txnId;
-    int phaseId;
-    long startTimeNs;
+    final int txnId;
+    final int phaseId;
+    final long startTimeNs;
 
     public TraceElement(int txnId, int phaseId, long startTimeNs) {
       this.txnId = txnId;

@@ -27,8 +27,6 @@ import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 
-import org.HdrHistogram.ConcurrentHistogram;
-import org.HdrHistogram.Histogram;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
@@ -39,47 +37,47 @@ public class Delivery extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(Delivery.class);
 
-  public static InstrumentedSQLStmt delivGetOrderIdSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivGetOrderIdSQL = new InstrumentedSQLStmt(
       "SELECT NO_O_ID FROM " + TPCCConstants.TABLENAME_NEWORDER +
       " WHERE NO_D_ID = ? " +
       "   AND NO_W_ID = ? " +
       " ORDER BY NO_O_ID ASC " +
       " LIMIT 1");
 
-  public static InstrumentedSQLStmt delivDeleteNewOrderSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivDeleteNewOrderSQL = new InstrumentedSQLStmt(
       "DELETE FROM " + TPCCConstants.TABLENAME_NEWORDER +
       " WHERE NO_O_ID = ? " +
       "   AND NO_D_ID = ?" +
       "   AND NO_W_ID = ?");
 
-  public static InstrumentedSQLStmt delivGetCustIdSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivGetCustIdSQL = new InstrumentedSQLStmt(
       "SELECT O_C_ID FROM " + TPCCConstants.TABLENAME_OPENORDER +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ? " +
       "   AND O_W_ID = ?");
 
-  public static InstrumentedSQLStmt delivUpdateCarrierIdSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivUpdateCarrierIdSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_OPENORDER +
       "   SET O_CARRIER_ID = ? " +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ?" +
       "   AND O_W_ID = ?");
 
-  public static InstrumentedSQLStmt delivUpdateDeliveryDateSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivUpdateDeliveryDateSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_ORDERLINE +
       "   SET OL_DELIVERY_D = ? " +
       " WHERE OL_O_ID = ? " +
       "   AND OL_D_ID = ? " +
       "   AND OL_W_ID = ? ");
 
-  public static InstrumentedSQLStmt delivSumOrderAmountSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivSumOrderAmountSQL = new InstrumentedSQLStmt(
       "SELECT SUM(OL_AMOUNT) AS OL_TOTAL " +
       "  FROM " + TPCCConstants.TABLENAME_ORDERLINE +
       " WHERE OL_O_ID = ? " +
       "   AND OL_D_ID = ? " +
       "   AND OL_W_ID = ?");
 
-  public static InstrumentedSQLStmt delivUpdateCustBalDelivCntSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt delivUpdateCustBalDelivCntSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = C_BALANCE + ?," +
       "       C_DELIVERY_CNT = C_DELIVERY_CNT + 1 " +
@@ -106,7 +104,7 @@ public class Delivery extends Procedure {
     LOG.info("latency SumOrderAmount " + delivSumOrderAmountSQL.getStats());
     LOG.info("latency UpdateCustBalDelivCnt " + delivUpdateCustBalDelivCntSQL.getStats());
   }
-  public ResultSet run(Connection conn, Random gen,
+  public void run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
@@ -265,6 +263,5 @@ public class Delivery extends Procedure {
       terminalMessage.append("+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
-    return null;
   }
 }

@@ -98,7 +98,7 @@ public class Loader {
             EnableForeignKeyConstraints(conn);
           }
           if (workConf.getStartWarehouseIdForShard() == 1) {
-            loadItems(conn, TPCCConfig.configItemCount);
+            loadItems(conn);
           }
         }
       });
@@ -204,14 +204,12 @@ public class Loader {
       }
     }
 
-    protected void loadItems(Connection conn, int itemKount) {
-      boolean fail = false;
-
+    protected void loadItems(Connection conn) {
       try {
         PreparedStatement itemPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_ITEM);
         Item item = new Item();
         int batchSize = 0;
-        for (int i = 1; i <= itemKount; i++) {
+        for (int i = 1; i <= TPCCConfig.configItemCount; i++) {
           item.i_id = i;
           item.i_name = TPCCUtil.randomStr(TPCCUtil.randomNumber(14, 24, benchmark.rng()));
           item.i_price = TPCCUtil.randomNumber(100, 10000, benchmark.rng()) / 100.0;

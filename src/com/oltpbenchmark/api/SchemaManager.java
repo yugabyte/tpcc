@@ -4,16 +4,14 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import org.apache.log4j.Logger;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class Column {
-    String name;
-    String decl;
+    final String name;
+    final String decl;
     public Column(String name, String decl) {
         this.name = name;
         this.decl = decl;
@@ -22,13 +20,13 @@ class Column {
 
 class Table {
     private String name;
-    private List<Column> columns = new ArrayList<>();
+    private final List<Column> columns = new ArrayList<>();
     private String primaryKey = null;
 
     String name() { return name; }
 
     static class Builder {
-        private Table table = new Table();
+        private final Table table = new Table();
         Builder name(String name) {
             table.name = name;
             return this;
@@ -90,7 +88,7 @@ public class SchemaManager {
 
     private final Connection db_connection;
 
-    private static Map<String, Table> tables = Stream.of(
+    private static final Map<String, Table> tables = Stream.of(
         Table.Builder()
             .name(TPCCConstants.TABLENAME_ORDERLINE)
             .column("ol_w_id", "int NOT NULL")

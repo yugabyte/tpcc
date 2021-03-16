@@ -73,7 +73,7 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
   /** Stores the start time and latency for a single sample. Immutable. */
   public static final class Sample implements Comparable<Sample> {
     public final int tranType;
-    public long startNs;
+    public final long startNs;
     public final int latencyUs;
     public final int operationLatencyUs;
 

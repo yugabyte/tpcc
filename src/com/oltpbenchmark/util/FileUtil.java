@@ -61,7 +61,8 @@ public abstract class FileUtil {
                 continue;
             File f = new File(p);
             if (!f.exists()) {
-                f.mkdirs();
+                boolean madeDirs = f.mkdirs();
+                assert madeDirs;
             }
         } // FOR
     }

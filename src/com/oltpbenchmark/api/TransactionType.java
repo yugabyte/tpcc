@@ -17,7 +17,6 @@
 package com.oltpbenchmark.api;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Random;
 
@@ -25,10 +24,9 @@ public class TransactionType implements Comparable<TransactionType> {
 
     public static class Invalid extends Procedure {
 		@Override
-		public ResultSet run(
+		public void run(
 				Connection conn, Random gen, int terminalWarehouseID, int numWarehouses, int terminalDistrictLowerID,
-				int terminalDistrictUpperID, Worker w) throws SQLException {
-			return null;
+				int terminalDistrictUpperID, Worker w) {
 		}
 	}
     public static final int INVALID_ID = 0;
@@ -36,17 +34,11 @@ public class TransactionType implements Comparable<TransactionType> {
     
 	private final Class<? extends Procedure> procClass;
 	private final int id;
-	private final boolean supplemental;
 
-	protected TransactionType(Class<? extends Procedure> procClass, int id, boolean supplemental) {
+	protected TransactionType(Class<? extends Procedure> procClass, int id) {
 	    this.procClass = procClass;
         this.id = id;
-        this.supplemental = supplemental;
     }
-	
-	protected TransactionType(Class<? extends Procedure> procClass, int id) {
-	    this(procClass, id, false);
-	}
 
 	public Class<? extends Procedure> getProcedureClass() {
 	    return (this.procClass);
@@ -67,9 +59,6 @@ public class TransactionType implements Comparable<TransactionType> {
 	public int getId() {
 		return this.id;
 	}
-	public boolean isSupplemental() {
-        return this.supplemental;
-    }
 
 	@Override
 	public boolean equals(Object obj) {

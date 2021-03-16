@@ -4,9 +4,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class ConfigFileOptions {
     XMLConfiguration xmlConfig;
@@ -129,7 +127,4 @@ public class ConfigFileOptions {
         return getIntOpt("runtime");
     }
 
-    public Optional<String> getWeightsString() {
-        return getStringOpt("weights");
-    }
 }

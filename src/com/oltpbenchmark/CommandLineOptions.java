@@ -9,7 +9,7 @@ import java.util.Optional;
 public class CommandLineOptions {
     private CommandLine argsLine;
 
-    private static Options COMMAND_LINE_OPTS = new Options();
+    private static final Options COMMAND_LINE_OPTS = new Options();
     static {
         COMMAND_LINE_OPTS.addOption("h", "help", false, "Print this help");
         COMMAND_LINE_OPTS.addOption(

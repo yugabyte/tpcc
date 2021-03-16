@@ -35,7 +35,7 @@ public class StockLevel extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(StockLevel.class);
 
-  public static InstrumentedSQLStmt stockGetDistOrderIdSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt stockGetDistOrderIdSQL = new InstrumentedSQLStmt(
       "SELECT D_NEXT_O_ID " +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? " +
@@ -43,7 +43,7 @@ public class StockLevel extends Procedure {
 
   private static final String GET_STOCK_COUNTS_PROC_NAME = "getstockcounts";
 
-  public static InstrumentedSQLStmt stockGetCountStockSQL = new InstrumentedSQLStmt(
+  public static final InstrumentedSQLStmt stockGetCountStockSQL = new InstrumentedSQLStmt(
       String.format("{ ? = call %s( ?, ?, ?, ? ) }", GET_STOCK_COUNTS_PROC_NAME));
 
   public static void InitializeGetStockCountProc(Connection conn) throws SQLException {
@@ -69,7 +69,7 @@ public class StockLevel extends Procedure {
   // Stock Level Txn
   private InstrumentedPreparedStatement stockGetDistOrderId = null;
 
-  private static Histogram stockGetCountStockFuncLatency = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
+  private static final Histogram stockGetCountStockFuncLatency = new ConcurrentHistogram(InstrumentedSQLStmt.numSigDigits);
   private InstrumentedPreparedStatement stockGetCountStockFunc = null;
 
   public static void printLatencyStats() {
@@ -78,7 +78,7 @@ public class StockLevel extends Procedure {
     LOG.info("latency GetCountStock " + stockGetCountStockSQL.getStats());
   }
 
-  public ResultSet run(Connection conn, Random gen,
+  public void run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
@@ -91,7 +91,6 @@ public class StockLevel extends Procedure {
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
 
-    int stock_count = 0;
     stockGetDistOrderId.setInt(1, w_id);
     stockGetDistOrderId.setInt(2, d_id);
     if (trace)
@@ -122,7 +121,7 @@ public class StockLevel extends Procedure {
       if (trace) LOG.warn(msg);
       throw new RuntimeException(msg);
     }
-    stock_count = rs.getInt("result");
+    int stock_count = rs.getInt("result");
     if (trace) LOG.trace("stockGetCountStock RESULT=" + stock_count);
 
     rs.close();
@@ -140,6 +139,5 @@ public class StockLevel extends Procedure {
               "\n+-----------------------------------------------------------------+\n\n";
       LOG.trace(terminalMessage);
     }
-    return null;
   }
 }

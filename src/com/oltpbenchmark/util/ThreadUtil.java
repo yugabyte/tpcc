@@ -94,13 +94,10 @@ public abstract class ThreadUtil {
      * then all threads will be fired off at the same time
      */
 
-    private static final ThreadFactory factory = new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            return (t);
-        }
+    private static final ThreadFactory factory = r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        return (t);
     };
 
     private static class LatchRunnable implements Runnable {

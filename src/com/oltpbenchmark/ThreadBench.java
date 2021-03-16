@@ -30,7 +30,6 @@ import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.LatencyRecord.Sample;
-import com.oltpbenchmark.api.BenchmarkModule;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
@@ -46,7 +45,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   // private File profileFile;
   private final List<WorkloadConfiguration> workConfs;
   private final List<WorkloadState> workStates;
-  ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
+  final ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
   public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
@@ -210,7 +209,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
            */
 
           requests += w.getRequests();
-          w.tearDown(false);
       }
       testState = null;
       return requests;

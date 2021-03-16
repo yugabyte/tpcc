@@ -40,16 +40,11 @@ public class CommandLineOptions {
                 true,
                 "Workload configuration file [default: config/workload_all.xml]");
 
-        COMMAND_LINE_OPTS.addOption("v", "verbose", false, "Display Messages");
-        COMMAND_LINE_OPTS.addOption("s", "sample", true, "Sampling window");
         COMMAND_LINE_OPTS.addOption("im", "interval-monitor", true,
                 "Throughput Monitoring Interval in milliseconds");
-        COMMAND_LINE_OPTS.addOption("ss", false, "Verbose Sampling per Transaction");
-        COMMAND_LINE_OPTS.addOption("ts", "tracescript", true, "Script of transactions to execute");
         COMMAND_LINE_OPTS.addOption(null, "histograms", false, "Print txn histograms");
         COMMAND_LINE_OPTS.addOption(null, "output-raw", true, "Output raw data");
         COMMAND_LINE_OPTS.addOption(null, "output-samples", true, "Output sample data");
-
         COMMAND_LINE_OPTS.addOption(null, "nodes", true, "comma separated list of nodes (default 127.0.0.1)");
         COMMAND_LINE_OPTS.addOption(null, "warehouses", true, "Number of warehouses (default 10)");
         COMMAND_LINE_OPTS.addOption(null, "start-warehouse-id", true, "Start warehouse id");
@@ -58,20 +53,17 @@ public class CommandLineOptions {
         COMMAND_LINE_OPTS.addOption(null, "loaderthreads", true, "Number of loader threads (default 10)");
         COMMAND_LINE_OPTS.addOption(null, "enable-foreign-keys", true, "Whether to enable foregin keys");
         COMMAND_LINE_OPTS.addOption(null, "create-sql-procedures", true, "Creates the SQL procedures");
-
         COMMAND_LINE_OPTS.addOption(null, "warmup-time-secs", true, "Warmup time in seconds for the benchmark");
         COMMAND_LINE_OPTS.addOption(null, "initial-delay-secs", true,
                 "Delay in seconds for starting the benchmark");
         COMMAND_LINE_OPTS.addOption(null, "num-connections", true, "Number of connections used");
-
-
         COMMAND_LINE_OPTS.addOption(null, "merge-results", true, "Merge results from various output files");
         COMMAND_LINE_OPTS.addOption(null, "dir", true, "Directory containing the csv files");
     }
 
     public CommandLineOptions() {}
 
-    public static enum Mode {
+    public enum Mode {
         HELP,
         CREATE,
         CLEAR,

@@ -20,12 +20,8 @@ package com.oltpbenchmark;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.apache.commons.collections15.map.ListOrderedMap;
-import org.apache.commons.configuration.SubnodeConfiguration;
-import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -46,13 +42,8 @@ public class DBWorkload {
 
   private static final String SINGLE_LINE = StringUtils.repeat("=", 70);
 
-  private static final String RATE_DISABLED = "disabled";
-  private static final String RATE_UNLIMITED = "unlimited";
-
   private static int newOrderTxnId = -1;
   private static int numWarehouses = 10;
-  private static int startWarehouseIdForShard = -1;
-  private static int totalWarehousesAcrossShards = 10;
   private static int time = 0;
   private static int warmupTime = 0;
   private static final Map<Integer, String> transactionTypes = new HashMap<>();
@@ -109,13 +100,13 @@ public class DBWorkload {
     // Seconds
     int intervalMonitor = options.getIntervalMonitor().orElse(0);
 
-    List<String> nodes = options.getNodes().orElse(Arrays.asList("127.0.0.1"));
+    List<String> nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
 
     numWarehouses = options.getWarehouses().orElse(numWarehouses);
 
-    startWarehouseIdForShard = options.getStartWarehouseId().orElse(1);
+    int startWarehouseIdForShard = options.getStartWarehouseId().orElse(1);
 
-    totalWarehousesAcrossShards = options.getTotalWarehouses().orElse(numWarehouses);
+    int totalWarehousesAcrossShards = options.getTotalWarehouses().orElse(numWarehouses);
 
     int loaderThreads = options.getLoaderThreads().orElse(min(10, numWarehouses));
 
@@ -137,15 +128,12 @@ public class DBWorkload {
     // Load the configuration for each benchmark
     int lastTxnId = 0;
     for (String plugin : targetList) {
-      String pluginTest = "[@bench='" + plugin + "']";
-
       // ----------------------------------------------------------------
       // BEGIN LOADING WORKLOAD CONFIGURATION
       // ----------------------------------------------------------------
 
       WorkloadConfiguration wrkld = new WorkloadConfiguration();
       wrkld.setBenchmarkName(plugin);
-      boolean scriptRun = false;
 
       // Pull in database configuration
       wrkld.setDBDriver(configOptions.getDbDriver());
@@ -451,34 +439,6 @@ public class DBWorkload {
     rs.close();
   }
 
-  /* buggy piece of shit of Java XPath implementation made me do it
-     replaces good old [@bench="{plugin_name}", which doesn't work in Java XPath with lists
-   */
-  private static List<String> getWeights(String plugin, SubnodeConfiguration work) {
-
-    List<String> weight_strings = new LinkedList<>();
-    @SuppressWarnings("unchecked")
-    List<SubnodeConfiguration> weights = work.configurationsAt("weights");
-    boolean weights_started = false;
-
-    for (SubnodeConfiguration weight : weights) {
-      // stop if second attributed node encountered
-      if (weights_started && weight.getRootNode().getAttributeCount() > 0) {
-          break;
-      }
-      // start adding node values, if node with attribute equal to current
-      // plugin encountered
-      if (weight.getRootNode().getAttributeCount() > 0 &&
-          weight.getRootNode().getAttribute(0).getValue().equals(plugin)) {
-          weights_started = true;
-      }
-      if (weights_started) {
-          weight_strings.add(weight.getString(""));
-      }
-    }
-    return weight_strings;
-  }
-
   private static void runCreator(BenchmarkModule bench) {
     LOG.debug(String.format("Creating %s Database", bench));
     bench.createDatabase();
@@ -542,21 +502,18 @@ public class DBWorkload {
     DecimalFormat df = new DecimalFormat();
     df.setMaximumFractionDigits(2);
 
-    StringBuilder resultOut = new StringBuilder();
-    resultOut.append("\n");
-    resultOut.append("================RESULTS================\n");
-    resultOut.append(String.format("%18s | %18.2f\n", "TPM-C", tpmc));
-    resultOut.append(String.format("%18s | %17.2f%%\n", "Efficiency", efficiency));
-    resultOut.append(String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond()));
-    LOG.info(resultOut.toString());
+    String resultOut = "\n" +
+            "================RESULTS================\n" +
+            String.format("%18s | %18.2f\n", "TPM-C", tpmc) +
+            String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
+            String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
+    LOG.info(resultOut);
   }
 
   private static void PrintLatencies(List<Worker> workers) {
     List<List<Integer>> list_latencies = new ArrayList<>();
-    List<List<Integer>> list_enhanced_latencies = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
       list_latencies.add(new ArrayList<>());
-      list_enhanced_latencies.add(new ArrayList<>());
     }
 
     for (Worker w : workers) {

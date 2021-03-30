@@ -108,6 +108,7 @@ public class BenchmarkModule {
             if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
               config.setJdbcUrl(workConf.getJdbcURL());
             }
+            config.setTransactionIsolation(workConf.getIsolationString());
             listDataSource.add(new HikariDataSource(config));
         }
     }

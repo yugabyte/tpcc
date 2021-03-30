@@ -203,6 +203,15 @@ public class DBWorkload {
                ", dbConnections: " + wrkld.getNumDBConnections() +
                ", loaderThreads: " + wrkld.getLoaderThreads() );
 
+      options.getInitialDelaySeconds().ifPresent((initialDelay) -> {
+        LOG.info("Delaying execution of workload for " + initialDelay + " seconds");
+        try {
+          Thread.sleep(initialDelay * 1000L);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      });
+
       // ----------------------------------------------------------------
       // CREATE BENCHMARK MODULE
       // ----------------------------------------------------------------
@@ -303,15 +312,6 @@ public class DBWorkload {
     }
     assert(!benchList.isEmpty());
     assert(benchList.get(0) != null);
-
-    options.getInitialDelaySeconds().ifPresent((initialDelay) -> {
-      LOG.info("Delaying execution of workload for " + initialDelay + " seconds");
-      try {
-        Thread.sleep(initialDelay * 1000L);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    });
 
     // Create the Benchmark's Database
     if (options.getMode() == CommandLineOptions.Mode.CREATE) {

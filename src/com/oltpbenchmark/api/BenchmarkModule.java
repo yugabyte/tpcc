@@ -97,6 +97,7 @@ public class BenchmarkModule {
             props.setProperty("dataSource.databaseName", workConf.getDBName());
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
+            props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
               assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";

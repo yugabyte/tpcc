@@ -496,7 +496,8 @@ public class Worker implements Runnable {
                 // Isolation.
                 conn.setAutoCommit(false);
             }
-            if (conn.getTransactionIsolation() != wrkld.getIsolationMode()) {
+
+            if (LOG.isDebugEnabled() && conn.getTransactionIsolation() != wrkld.getIsolationMode()) {
                 throw new RuntimeException(String.format(
                     "Unexpected connection isolation level. Expected (%s), got (%s).",
                     wrkld.getIsolationMode(),

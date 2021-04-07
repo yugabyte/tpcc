@@ -32,6 +32,11 @@ public class CommandLineOptions {
                 "execute",
                 true,
                 "Execute the benchmark workload");
+        COMMAND_LINE_OPTS.addOption(
+                null,
+                "run_one",
+                true,
+                "Run one instance of the process specified by --proc");
 
 
         COMMAND_LINE_OPTS.addOption(
@@ -59,6 +64,11 @@ public class CommandLineOptions {
         COMMAND_LINE_OPTS.addOption(null, "num-connections", true, "Number of connections used");
         COMMAND_LINE_OPTS.addOption(null, "merge-results", true, "Merge results from various output files");
         COMMAND_LINE_OPTS.addOption(null, "dir", true, "Directory containing the csv files");
+
+        COMMAND_LINE_OPTS.addOption(null, "proc", true, "Process to run one of");
+
+        COMMAND_LINE_OPTS.addOption(null, "run_wid", true, "Warehouse ID for single run");
+        COMMAND_LINE_OPTS.addOption(null, "run_did", true, "District ID for single run");
     }
 
     public CommandLineOptions() {}
@@ -69,7 +79,8 @@ public class CommandLineOptions {
         CLEAR,
         LOAD,
         EXECUTE,
-        MERGE_RESULTS
+        MERGE_RESULTS,
+        RUN_ONE
     }
 
     void init(String[] args) throws ParseException {
@@ -91,6 +102,7 @@ public class CommandLineOptions {
         if (isBooleanOptionSet("create")) return Mode.CREATE;
         if (isBooleanOptionSet("load")) return Mode.LOAD;
         if (isBooleanOptionSet("execute")) return Mode.EXECUTE;
+        if (isBooleanOptionSet("run_one")) return Mode.RUN_ONE;
         assert isBooleanOptionSet("merge-results");
         return Mode.MERGE_RESULTS;
     }
@@ -171,5 +183,17 @@ public class CommandLineOptions {
 
     public boolean getIsOutputMetricHistogramsSet() {
         return isBooleanOptionSet("histograms");
+    }
+
+    public Optional<String> getRunOneProc() {
+        return getStringOpt("proc");
+    }
+
+    public Optional<Integer> getRunOneWarehouse() {
+        return getIntOpt("run_wid");
+    }
+
+    public Optional<Integer> getRunDistrict() {
+        return getIntOpt("run_did");
     }
 }

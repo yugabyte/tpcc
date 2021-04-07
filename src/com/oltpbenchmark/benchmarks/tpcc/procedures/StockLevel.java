@@ -83,10 +83,7 @@ public class StockLevel extends Procedure {
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
-    stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
-    stockGetCountStockFunc = new InstrumentedPreparedStatement(conn.prepareCall(stockGetCountStockSQL.getSqlStmt().getSQL()),
-                                                               stockGetCountStockFuncLatency);
-
+    prepareStatements(conn);
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
@@ -139,5 +136,12 @@ public class StockLevel extends Procedure {
               "\n+-----------------------------------------------------------------+\n\n";
       LOG.trace(terminalMessage);
     }
+  }
+
+  @Override
+  public void prepareStatements(Connection conn) throws SQLException {
+    stockGetDistOrderId = this.getPreparedStatement(conn, stockGetDistOrderIdSQL);
+    stockGetCountStockFunc = new InstrumentedPreparedStatement(conn.prepareCall(stockGetCountStockSQL.getSqlStmt().getSQL()),
+            stockGetCountStockFuncLatency);
   }
 }

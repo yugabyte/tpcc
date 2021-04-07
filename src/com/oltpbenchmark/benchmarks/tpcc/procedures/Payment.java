@@ -135,10 +135,8 @@ public class Payment extends Procedure {
     LOG.info("latency InsertHist " + payInsertHistSQL.getStats());
     LOG.info("latency CustomerByName " + customerByNameSQL.getStats());
   }
-  public void run(Connection conn, Random gen,
-                  int w_id, int numWarehouses,
-                  int terminalDistrictLowerID, int terminalDistrictUpperID,
-                  Worker w) throws SQLException {
+
+  public void prepareStatements(Connection conn) throws SQLException {
     payUpdateWhse = this.getPreparedStatement(conn, payUpdateWhseSQL);
     payGetWhse = this.getPreparedStatement(conn, payGetWhseSQL);
     payUpdateDist = this.getPreparedStatement(conn, payUpdateDistSQL);
@@ -149,7 +147,13 @@ public class Payment extends Procedure {
     payUpdateCustBal = this.getPreparedStatement(conn, payUpdateCustBalSQL);
     payInsertHist = this.getPreparedStatement(conn, payInsertHistSQL);
     customerByName = this.getPreparedStatement(conn, customerByNameSQL);
+  }
 
+  public void run(Connection conn, Random gen,
+                  int w_id, int numWarehouses,
+                  int terminalDistrictLowerID, int terminalDistrictUpperID,
+                  Worker w) throws SQLException {
+    prepareStatements(conn);
     int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
 
     int x = TPCCUtil.randomNumber(1, 100, gen);

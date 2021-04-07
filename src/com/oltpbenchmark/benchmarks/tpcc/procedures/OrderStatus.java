@@ -90,11 +90,7 @@ public class OrderStatus extends Procedure {
                   Worker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
 
-    // initializing all prepared statements
-    payGetCust = this.getPreparedStatement(conn, payGetCustSQL);
-    customerByName = this.getPreparedStatement(conn, customerByNameSQL);
-    ordStatGetNewestOrd = this.getPreparedStatement(conn, ordStatGetNewestOrdSQL);
-    ordStatGetOrderLines = this.getPreparedStatement(conn, ordStatGetOrderLinesSQL);
+    prepareStatements(conn);
 
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
     boolean c_by_name = false;
@@ -216,6 +212,14 @@ public class OrderStatus extends Procedure {
       LOG.trace(sb.toString());
     }
 
+  }
+
+  @Override
+  public void prepareStatements(Connection conn) throws SQLException {
+    payGetCust = this.getPreparedStatement(conn, payGetCustSQL);
+    customerByName = this.getPreparedStatement(conn, customerByNameSQL);
+    ordStatGetNewestOrd = this.getPreparedStatement(conn, ordStatGetNewestOrdSQL);
+    ordStatGetOrderLines = this.getPreparedStatement(conn, ordStatGetOrderLinesSQL);
   }
 
   // attention duplicated code across trans... ok for now to maintain separate

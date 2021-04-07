@@ -247,7 +247,15 @@ public class NewOrder extends Procedure {
     if (TPCCUtil.randomNumber(1, 100, gen) == 1)
       itemIDs[numItems - 1] = TPCCConfig.INVALID_ITEM_ID;
 
-    // Initializing all prepared statements.
+    prepareStatements(conn);
+
+    newOrderTransaction(terminalWarehouseID, districtID,
+                        customerID, numItems, allLocal, itemIDs,
+                        supplierWarehouseIDs, orderQuantities, conn, w);
+  }
+
+  @Override
+  public void prepareStatements(Connection conn) throws SQLException {
     stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
     stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
     stmtGetDist=this.getPreparedStatement(conn, stmtGetDistSQL);
@@ -255,10 +263,6 @@ public class NewOrder extends Procedure {
     stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
     stmtUpdateStock =this.getPreparedStatement(conn, stmtUpdateStockSQL);
     stmtInsertOOrder =this.getPreparedStatement(conn, stmtInsertOOrderSQL);
-
-    newOrderTransaction(terminalWarehouseID, districtID,
-                        customerID, numItems, allLocal, itemIDs,
-                        supplierWarehouseIDs, orderQuantities, conn, w);
   }
 
   private void newOrderTransaction(int w_id, int d_id, int c_id,

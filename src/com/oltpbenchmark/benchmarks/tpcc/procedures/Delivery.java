@@ -112,13 +112,7 @@ public class Delivery extends Procedure {
     boolean trace = LOG.isDebugEnabled();
     int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);
     Timestamp timestamp = w.getBenchmarkModule().getTimestamp(System.currentTimeMillis());
-    delivGetOrderId = this.getPreparedStatement(conn, delivGetOrderIdSQL);
-    delivDeleteNewOrder =  this.getPreparedStatement(conn, delivDeleteNewOrderSQL);
-    delivGetCustId = this.getPreparedStatement(conn, delivGetCustIdSQL);
-    delivUpdateCarrierId = this.getPreparedStatement(conn, delivUpdateCarrierIdSQL);
-    delivUpdateDeliveryDate = this.getPreparedStatement(conn, delivUpdateDeliveryDateSQL);
-    delivSumOrderAmount = this.getPreparedStatement(conn, delivSumOrderAmountSQL);
-    delivUpdateCustBalDelivCnt = this.getPreparedStatement(conn, delivUpdateCustBalDelivCntSQL);
+    prepareStatements(conn);
 
     int d_id, c_id;
     int[] orderIDs;
@@ -263,5 +257,16 @@ public class Delivery extends Procedure {
       terminalMessage.append("+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
+  }
+
+  @Override
+  public void prepareStatements(Connection conn) throws SQLException {
+    delivGetOrderId = this.getPreparedStatement(conn, delivGetOrderIdSQL);
+    delivDeleteNewOrder =  this.getPreparedStatement(conn, delivDeleteNewOrderSQL);
+    delivGetCustId = this.getPreparedStatement(conn, delivGetCustIdSQL);
+    delivUpdateCarrierId = this.getPreparedStatement(conn, delivUpdateCarrierIdSQL);
+    delivUpdateDeliveryDate = this.getPreparedStatement(conn, delivUpdateDeliveryDateSQL);
+    delivSumOrderAmount = this.getPreparedStatement(conn, delivSumOrderAmountSQL);
+    delivUpdateCustBalDelivCnt = this.getPreparedStatement(conn, delivUpdateCustBalDelivCntSQL);
   }
 }

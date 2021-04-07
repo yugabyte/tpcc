@@ -28,6 +28,9 @@ public class TransactionType implements Comparable<TransactionType> {
 				Connection conn, Random gen, int terminalWarehouseID, int numWarehouses, int terminalDistrictLowerID,
 				int terminalDistrictUpperID, Worker w) {
 		}
+
+		@Override
+		public void prepareStatements(Connection conn) throws SQLException {}
 	}
     public static final int INVALID_ID = 0;
     public static final TransactionType INVALID = new TransactionType(Invalid.class, INVALID_ID);

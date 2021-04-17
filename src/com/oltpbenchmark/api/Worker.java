@@ -436,8 +436,9 @@ public class Worker implements Runnable {
                           executionState.getStartOperation(), executionState.getEndOperation()
                         );
                         acqConnectionLatencies.addLatency(
-                          1, start, end,
-                          executionState.getStartConnection(),executionState.getEndOperation()
+                          executionState.getTransactionType().getId(),
+                          start, end,
+                          executionState.getStartConnection(), executionState.getEndConnection()
                         );
 
                         // The latency of the whole operation can be obtained by evaluating the

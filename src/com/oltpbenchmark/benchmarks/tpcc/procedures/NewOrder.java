@@ -182,7 +182,7 @@ public class NewOrder extends Procedure {
       } else {
         sb.append(",?");
       }
-      stmtGetStockSQLArr[i - 1] = new InstrumentedSQLStmt(stmtGetStockSQL.getHistogram(), sb.toString() + ") FOR UPDATE");
+      stmtGetStockSQLArr[i - 1] = new InstrumentedSQLStmt(stmtGetStockSQL.getHistogram(), sb.toString() + ")");
     }
 
     // We create 15 statements to update the rows in `STOCK` table. Each string looks like:

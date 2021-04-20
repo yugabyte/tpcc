@@ -355,7 +355,7 @@ public class DBWorkload {
       LOG.info(SINGLE_LINE);
     }
 
-    if (options.getIsEnableForeignKeysSet()) {
+    if (options.getMode() == CommandLineOptions.Mode.ENABLE_FOREIGN_KEYS) {
       for (BenchmarkModule benchmark : benchList) {
         benchmark.enableForeignKeys();
       }
@@ -512,25 +512,34 @@ public class DBWorkload {
 
   private static void PrintLatencies(List<Worker> workers) {
     List<List<Integer>> list_latencies = new ArrayList<>();
+    List<List<Integer>> list_conn_latencies = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
       list_latencies.add(new ArrayList<>());
+      list_conn_latencies.add(new ArrayList<>());
     }
 
     for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
       }
+      for (LatencyRecord.Sample sample : w.getAcqConnectionLatencyRecords()) {
+        list_conn_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
+      }
     }
 
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
     resultOut.append("================LATENCIES===============\n");
-    resultOut.append(" Operation  | Avg. Latency | P99 Latency\n");
+    resultOut.append(" Operation  | Avg. Latency | P99 Latency | Connection Acq Latency\n");
     for (int i = 0; i < list_latencies.size(); ++i) {
       String op = transactionTypes.get(i + 1);
       List<Integer> latencies = list_latencies.get(i);
+      List<Integer> conn_latencies = list_conn_latencies.get(i);
+
       resultOut.append(String.format(
-          "%11s |%13.2f |%12.2f\n", op, getAverageLatency(latencies), getP99Latency(latencies)));
+          "%11s |%13.2f |%12.2f |%23.2f\n",
+          op, getAverageLatency(latencies), getP99Latency(latencies),
+          getAverageLatency(conn_latencies)));
     }
     LOG.info(resultOut.toString());
   }

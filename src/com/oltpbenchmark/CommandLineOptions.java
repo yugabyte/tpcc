@@ -69,7 +69,8 @@ public class CommandLineOptions {
         CLEAR,
         LOAD,
         EXECUTE,
-        MERGE_RESULTS
+        MERGE_RESULTS,
+        ENABLE_FOREIGN_KEYS
     }
 
     void init(String[] args) throws ParseException {
@@ -91,6 +92,7 @@ public class CommandLineOptions {
         if (isBooleanOptionSet("create")) return Mode.CREATE;
         if (isBooleanOptionSet("load")) return Mode.LOAD;
         if (isBooleanOptionSet("execute")) return Mode.EXECUTE;
+        if (isBooleanOptionSet("enable-foreign-keys")) return Mode.ENABLE_FOREIGN_KEYS;
         assert isBooleanOptionSet("merge-results");
         return Mode.MERGE_RESULTS;
     }
@@ -150,15 +152,11 @@ public class CommandLineOptions {
     }
 
     public Optional<Integer> getWarmupTime() {
-        return getIntOpt("num-connections");
+        return getIntOpt("warmup-time-secs");
     }
 
     public Optional<Integer> getInitialDelaySeconds() {
         return getIntOpt("initial-delay-secs");
-    }
-
-    public boolean getIsEnableForeignKeysSet() {
-        return isBooleanOptionSet("enable-foreign-keys");
     }
 
     public boolean getIsCreateSqlProceduresSet() {

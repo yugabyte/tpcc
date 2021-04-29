@@ -127,6 +127,7 @@ public class Delivery extends Procedure {
     for (d_id = 1; d_id <= terminalDistrictUpperID; d_id++) {
       delivGetOrderId.setInt(1, d_id);
       delivGetOrderId.setInt(2, w_id);
+      //conn.createStatement().execute("begin transaction");
       if (trace) LOG.trace("delivGetOrderId START");
       ResultSet rs = delivGetOrderId.executeQuery();
       if (trace) LOG.trace("delivGetOrderId END");
@@ -235,9 +236,10 @@ public class Delivery extends Procedure {
         if (trace) LOG.warn(msg);
         throw new RuntimeException(msg);
       }
+      conn.commit();
     }
 
-    conn.commit();
+    //conn.commit();
 
     if (trace) {
       StringBuilder terminalMessage = new StringBuilder();

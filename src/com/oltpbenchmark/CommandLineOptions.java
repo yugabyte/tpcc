@@ -172,5 +172,5 @@ public class CommandLineOptions {
         return isBooleanOptionSet("histograms");
     }
 
-    public boolean getShouldOutputVerboseExecuteResults() { return isBooleanOptionSet("vv"); }
+    public boolean getShouldOutputVerboseExecuteResults() { return argsLine.hasOption("vv"); }
 }

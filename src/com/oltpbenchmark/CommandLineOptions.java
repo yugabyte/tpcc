@@ -59,6 +59,7 @@ public class CommandLineOptions {
         COMMAND_LINE_OPTS.addOption(null, "num-connections", true, "Number of connections used");
         COMMAND_LINE_OPTS.addOption(null, "merge-results", true, "Merge results from various output files");
         COMMAND_LINE_OPTS.addOption(null, "dir", true, "Directory containing the csv files");
+        COMMAND_LINE_OPTS.addOption(null, "vv", false, "Output verbose execute results");
     }
 
     public CommandLineOptions() {}
@@ -170,4 +171,6 @@ public class CommandLineOptions {
     public boolean getIsOutputMetricHistogramsSet() {
         return isBooleanOptionSet("histograms");
     }
+
+    public boolean getShouldOutputVerboseExecuteResults() { return isBooleanOptionSet("vv"); }
 }

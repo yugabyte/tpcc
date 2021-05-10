@@ -372,7 +372,7 @@ public class DBWorkload {
       // Bombs away!
       Results r = null;
       try {
-        r = runWorkload(benchList, intervalMonitor);
+        r = runWorkload(benchList, intervalMonitor, options.getShouldOutputVerboseExecuteResults());
       } catch (Throwable ex) {
         LOG.error("Unexpected error when running benchmarks.", ex);
         System.exit(1);
@@ -449,7 +449,7 @@ public class DBWorkload {
     bench.loadDatabase();
   }
 
-  private static Results runWorkload(List<BenchmarkModule> benchList, int intervalMonitor) {
+  private static Results runWorkload(List<BenchmarkModule> benchList, int intervalMonitor, boolean outputVerboseRes) {
     List<Worker> workers = new ArrayList<>();
     List<WorkloadConfiguration> workConfs = new ArrayList<>();
 
@@ -472,7 +472,9 @@ public class DBWorkload {
 
     PrintToplineResults(workers, r);
     PrintLatencies(workers);
-    PrintQueryAttempts(workers, workConfs.get(0));
+    if (outputVerboseRes) {
+      PrintQueryAttempts(workers, workConfs.get(0));
+    }
 
     // TODO -- pretty print these items.
     if (InstrumentedPreparedStatement.isTrackingLatencyMetrics()) {
@@ -566,7 +568,7 @@ public class DBWorkload {
     for (int i = 1; i < numTriesPerProc; ++i) {
       resultOut.append(String.format(" Retry Number %1d |", i));
     }
-    resultOut.append("     Failures  \n");
+    resultOut.append("    Conflicts  \n");
 
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);

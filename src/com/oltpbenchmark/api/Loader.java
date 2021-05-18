@@ -53,10 +53,7 @@ public class Loader {
         public final void run() {
             try {
                 Connection conn = Loader.this.benchmark.makeConnection();
-                conn.setAutoCommit(false);
-
                 this.load(conn);
-                conn.commit();
                 conn.close();
             } catch (SQLException ex) {
                 SQLException next_ex = ex.getNextException();
@@ -171,7 +168,7 @@ public class Loader {
       }
     }
 
-    private void performInsertsWithRetries(Connection conn, PreparedStatement... stmts) throws Exception {
+    private void performInsertsWithRetries(PreparedStatement... stmts) throws Exception {
       int attempts = workConf.getMaxLoaderRetries() + 1;
       SQLException failure = null;
       for (int i = 0; i < attempts; ++i) {
@@ -180,12 +177,11 @@ public class Loader {
               stmt.executeBatch();
               stmt.clearBatch();
            }
-            conn.commit();
             return;
         } catch (SQLException ex) {
-          LOG.warn("Fail to load batch with error: " + ex.getMessage());
+          LOG.error("Fail to load batch with error: " + ex.getMessage());
           failure = ex;
-          transRollback(conn);
+          break;
         }
       }
       if (failure != null) {
@@ -239,12 +235,12 @@ public class Loader {
           batchSize++;
 
           if (batchSize == workConf.getBatchSize()) {
-            performInsertsWithRetries(conn, itemPrepStmt);
+            performInsertsWithRetries(itemPrepStmt);
             batchSize = 0;
           }
         }
         if (batchSize > 0)
-            performInsertsWithRetries(conn, itemPrepStmt);
+            performInsertsWithRetries(itemPrepStmt);
 
       } catch (Exception ex) {
         LOG.error("Failed to load data for TPC-C", ex);
@@ -282,7 +278,7 @@ public class Loader {
         whsePrepStmt.setString(++idx, warehouse.w_zip);
         whsePrepStmt.execute();
 
-        performInsertsWithRetries(conn, whsePrepStmt);
+        performInsertsWithRetries(whsePrepStmt);
       } catch (Exception ex) {
         LOG.error("Failed to load data for TPC-C", ex);
         transRollback(conn);
@@ -340,10 +336,10 @@ public class Loader {
           stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
           stckPrepStmt.addBatch();
           if ((k % workConf.getBatchSize()) == 0) {
-            performInsertsWithRetries(conn, stckPrepStmt);
+            performInsertsWithRetries(stckPrepStmt);
           }
         } // end for [i]
-        performInsertsWithRetries(conn, stckPrepStmt);
+        performInsertsWithRetries(stckPrepStmt);
       } catch (Exception ex) {
         LOG.error("Failed to load data for TPC-C", ex);
         transRollback(conn);
@@ -385,7 +381,7 @@ public class Loader {
           distPrepStmt.setString(++idx, district.d_zip);
           distPrepStmt.addBatch();
         } // end for [d]
-        performInsertsWithRetries(conn, distPrepStmt);
+        performInsertsWithRetries(distPrepStmt);
       } catch (Exception e) {
         LOG.error("Failed to load data for TPC-C", e);
         transRollback(conn);
@@ -488,11 +484,11 @@ public class Loader {
             histPrepStmt.addBatch();
 
             if ((k % workConf.getBatchSize()) == 0) {
-              performInsertsWithRetries(conn, custPrepStmt, histPrepStmt);
+              performInsertsWithRetries(custPrepStmt, histPrepStmt);
             }
           } // end for [c]
         } // end for [d]
-        performInsertsWithRetries(conn, custPrepStmt, histPrepStmt);
+        performInsertsWithRetries(custPrepStmt, histPrepStmt);
 
       } catch (Exception e) {
         LOG.error("Failed to load data for TPC-C", e);
@@ -619,10 +615,10 @@ public class Loader {
 
               if ((k % workConf.getBatchSize()) == 0) {
                 if (newOrderBatch > 0) {
-                  performInsertsWithRetries(conn, ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
+                  performInsertsWithRetries(ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
                   newOrderBatch = 0;
                 } else {
-                  performInsertsWithRetries(conn, ordrPrepStmt, orlnPrepStmt);
+                  performInsertsWithRetries(ordrPrepStmt, orlnPrepStmt);
                 }
               }
             } // end for [l]
@@ -631,7 +627,7 @@ public class Loader {
 
         if (LOG.isDebugEnabled())
           LOG.debug("  Writing final records " + k + " of " + t);
-        performInsertsWithRetries(conn, ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
+        performInsertsWithRetries(ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
       } catch (Exception e) {
         LOG.error("Failed to load data for TPC-C", e);
         transRollback(conn);

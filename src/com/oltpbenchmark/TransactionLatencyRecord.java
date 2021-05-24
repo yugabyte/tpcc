@@ -1,8 +1,5 @@
 package com.oltpbenchmark;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-
 /** Efficiently stores a record of (start time, latency) pairs. */
 public class TransactionLatencyRecord extends LatencyRecord {
 

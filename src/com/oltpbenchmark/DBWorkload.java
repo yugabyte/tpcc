@@ -32,6 +32,7 @@ import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import com.oltpbenchmark.util.FileUtil;
+import com.oltpbenchmark.util.GeoPartitionPolicy;
 import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;
 
@@ -132,7 +133,11 @@ public class DBWorkload {
       // BEGIN LOADING WORKLOAD CONFIGURATION
       // ----------------------------------------------------------------
 
-      WorkloadConfiguration wrkld = new WorkloadConfiguration();
+      String geopartitionedConfigFile = options.getGeoPartitionedConfigFile().orElse("config/geopartitioned_workload.xml");
+      GeoPartitionedConfigFileOptions geopartitionedConfigOptions = new GeoPartitionedConfigFileOptions(geopartitionedConfigFile);
+      GeoPartitionPolicy geoPartitionPolicy = geopartitionedConfigOptions.getGeoPartitionPlacement(totalWarehousesAcrossShards, numWarehouses, startWarehouseIdForShard);
+      
+      WorkloadConfiguration wrkld = new WorkloadConfiguration(geoPartitionPolicy);
       wrkld.setBenchmarkName(plugin);
 
       // Pull in database configuration

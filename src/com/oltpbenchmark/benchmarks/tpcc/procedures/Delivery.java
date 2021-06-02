@@ -155,7 +155,7 @@ public class Delivery extends Procedure {
         // Careful auditing would be required.
         String msg = String.format("NewOrder delete failed. Not running with SERIALIZABLE isolation? " +
                                    "[w_id=%d, d_id=%d, no_o_id=%d]", w_id, d_id, no_o_id);
-        throw new UserAbortException(msg);
+        throw new RuntimeException(msg);
       }
 
       delivGetCustId.setInt(1, no_o_id);

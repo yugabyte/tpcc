@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.NewOrder;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -524,10 +525,16 @@ public class Worker implements Runnable {
                 // User Abort Handling
                 // These are not errors
                 } catch (UserAbortException ex) {
+                    // UserAbortException should represent an expected NewOrder failure and will be recorded as a
+                    // success. No other procedure class should hit this branch.
+                    assert(next.getProcedureClass() == NewOrder.class);
                     if (!conn.getAutoCommit()) {
                         conn.rollback();
                     }
                     status = TransactionStatus.USER_ABORTED;
+                    // Operation is considered ended once we've successfully rolled back the expected failure in
+                    // NewOrder
+                    endOperation = System.nanoTime();
                     break;
                 // Database System Specific Exception Handling
                 } catch (SQLException ex) {
@@ -595,8 +602,7 @@ public class Worker implements Runnable {
     /**
      * Executes a single TPCC transaction of type transactionType.
      */
-    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction)
-                                            throws UserAbortException, SQLException {
+    protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction) throws SQLException {
       try {
         Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());
 

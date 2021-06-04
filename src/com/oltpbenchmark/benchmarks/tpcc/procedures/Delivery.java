@@ -239,8 +239,6 @@ public class Delivery extends Procedure {
       conn.commit();
     }
 
-    //conn.commit();
-
     if (trace) {
       StringBuilder terminalMessage = new StringBuilder();
       terminalMessage

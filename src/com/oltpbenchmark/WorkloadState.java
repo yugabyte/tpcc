@@ -242,6 +242,10 @@ public class WorkloadState {
     }
   }
 
+  public void blockPostWarmup() {
+    benchmarkState.blockPostWarmup();
+  }
+
   /**
    * Delegates a global state query to the benchmark state handler
    *

@@ -453,7 +453,15 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           }
           interruptWorkers();
         }
-        start = now;
+        if (testState.getState() == State.MEASURE && phase.warmupTime > 0) {
+            LOG.info(StringUtil.bold("POST WARMUP") + " :: Warmup time over, blocking for other threads.");
+            // Block for all threads to finish the warmup phase
+            testState.blockPostWarmup();
+            // Start the timer for measure phase after all threads complete the warmup phase
+            start = System.nanoTime();
+        } else{
+            start = now;
+        }
         LOG.info(StringUtil.bold("MEASURE") + " :: Warmup complete, starting measurements.");
         // measureEnd = measureStart + measureSeconds * 1000000000L;
 

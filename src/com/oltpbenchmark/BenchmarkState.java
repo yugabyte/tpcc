@@ -38,8 +38,8 @@ public final class BenchmarkState {
   }
 
   private final CountDownLatch startBarrier;
+  private final CountDownLatch postWarmupBarrier;
   private final AtomicInteger notDoneCount;
-
   // Protected by this
 
   /**
@@ -47,6 +47,7 @@ public final class BenchmarkState {
    */
   public BenchmarkState(int numThreads) {
     startBarrier = new CountDownLatch(numThreads);
+    postWarmupBarrier = new CountDownLatch(numThreads);
     notDoneCount = new AtomicInteger(numThreads);
 
     assert numThreads > 0;
@@ -56,6 +57,20 @@ public final class BenchmarkState {
   public State getState() {
     synchronized (this) {
       return state;
+    }
+  }
+  /**
+   * Wait for all threads to call this. Returns once all the threads have
+   * entered.
+   */
+  public void blockPostWarmup() {
+    assert state == State.MEASURE;
+    assert postWarmupBarrier.getCount() > 0;
+    postWarmupBarrier.countDown();
+    try {
+      postWarmupBarrier.await();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
   }
 

@@ -298,9 +298,8 @@ public class Worker implements Runnable {
         wrkldState.blockForStart();
         State preState, postState;
         Phase phase;
-
+        State startState = null, prevStartState = null;
         work: while (true) {
-
             // PART 1: Init and check if done
 
             preState = Worker.wrkldState.getGlobalState();
@@ -323,11 +322,20 @@ public class Worker implements Runnable {
             if (phase == null)
                 continue;
 
-
+            // Block for warmup, if needed
+            prevStartState = startState;
+            startState = preState;
+            if (prevStartState != null && phase.warmupTime > 0 &&
+                    prevStartState == State.WARMUP && startState == State.MEASURE) {
+                // Block until all worker threads complete the warmup phase.
+                // Master thread is also blocked
+                wrkldState.blockPostWarmup();
+            }
+            
             // Grab some work and update the state, in case it changed while we
             // waited.
-
             pieceOfWork = wrkldState.fetchWork(this.id);
+
             preState = wrkldState.getGlobalState();
 
             long start = System.nanoTime();

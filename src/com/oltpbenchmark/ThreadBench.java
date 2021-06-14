@@ -29,7 +29,7 @@ import java.util.Set;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.LatencyRecord.Sample;
+import com.oltpbenchmark.TransactionLatencyRecord.Sample;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
@@ -45,7 +45,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   // private File profileFile;
   private final List<WorkloadConfiguration> workConfs;
   private final List<WorkloadState> workStates;
-  final ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
+  final ArrayList<TransactionLatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
   public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
@@ -90,7 +90,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
        * Constructs an iterator of DistributionStatistics for the given sample for each windowSizeSeconds of samples,
        * restricting to the specified txType.
        */
-      public TimeBucketIterator(Iterator<LatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
+      public TimeBucketIterator(Iterator<TransactionLatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
           this.samples = samples;
           this.windowSizeSeconds = windowSizeSeconds;
           this.txType = txType;
@@ -119,7 +119,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
               // INVALID TXType means all should be reported, if a filter is
               // set, only this specific transaction
               if (txType == TransactionType.INVALID || txType.getId() == sample.tranType)
-                  latencies.add(sample.latencyUs);
+                  latencies.add(sample.connLatencyUs + sample.operationLatencyUs);
 
               if (samples.hasNext()) {
                   sample = samples.next();
@@ -487,7 +487,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       // Combine all the latencies together in the most disgusting way
       // possible: sorting!
       for (Worker w : workers) {
-        for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
+        for (TransactionLatencyRecord.Sample sample : w.getLatencyRecords()) {
           samples.add(sample);
         }
       }

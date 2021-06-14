@@ -37,10 +37,4 @@ public enum TransactionStatus {
      * benchmark state. It should be retried
      */
     RETRY,
-    /**
-     * The transaction did not executed due to internal 
-     * benchmark state. The Worker should retry but select
-     * a new random transaction to execute.
-     */
-    RETRY_DIFFERENT
 }

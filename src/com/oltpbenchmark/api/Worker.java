@@ -24,18 +24,15 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
+import com.oltpbenchmark.*;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
+import com.oltpbenchmark.util.Pair;
 import com.zaxxer.hikari.HikariDataSource;
 
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.LatencyRecord;
-import com.oltpbenchmark.Phase;
-import com.oltpbenchmark.SubmittedProcedure;
-import com.oltpbenchmark.WorkloadConfiguration;
-import com.oltpbenchmark.WorkloadState;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.types.TransactionStatus;
@@ -50,9 +47,9 @@ public class Worker implements Runnable {
     private final int terminalDistrictID;
     // private boolean debugMessages;
     protected final Random gen = new Random();
-    private LatencyRecord latencies;
-    private LatencyRecord wholeOperationLatencies;
-    private LatencyRecord acqConnectionLatencies;
+    private TransactionLatencyRecord latencies;
+    private TransactionLatencyRecord failureLatencies;
+    private AggregateLatencyRecord aggregateLatencyRecord;
     private final Statement currStatement;
 
     // Interval requests used by the monitor
@@ -66,7 +63,8 @@ public class Worker implements Runnable {
     protected final Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<>();
 
     private boolean seenDone = false;
-
+    // totalTries are totalFailures are deprecated variables. The following lines needs to be removed after the
+    // latency stats are accepted
     int[][] totalTries;
     int[] totalFailures;
     int totalAttemptsPerTransaction;
@@ -145,16 +143,16 @@ public class Worker implements Runnable {
         return intervalRequests.getAndSet(0);
     }
 
-    public final Iterable<LatencyRecord.Sample> getLatencyRecords() {
+    public final Iterable<TransactionLatencyRecord.Sample> getLatencyRecords() {
         return latencies;
     }
 
-    public final Iterable<LatencyRecord.Sample> getWholeOperationLatencyRecords() {
-        return wholeOperationLatencies;
+    public final Iterable<TransactionLatencyRecord.Sample> getFailureLatencyRecords() {
+        return failureLatencies;
     }
 
-    public final Iterable<LatencyRecord.Sample> getAcqConnectionLatencyRecords() {
-        return acqConnectionLatencies;
+    public final Iterable<AggregateLatencyRecord.Sample> getAggregateLatencyRecords() {
+        return aggregateLatencyRecord;
     }
 
     @SuppressWarnings("unchecked")
@@ -285,15 +283,15 @@ public class Worker implements Runnable {
 
     @Override
     public final void run() {
+        long beginNs, executeTimeNs, fetchedWorkNs, thinkTimeNs, keyingTimeNs;
         Thread t = Thread.currentThread();
         SubmittedProcedure pieceOfWork;
         t.setName(this.toString());
 
         // In case of reuse reset the measurements
-        latencies = new LatencyRecord(wrkldState.getTestStartNs());
-        wholeOperationLatencies = new LatencyRecord(wrkldState.getTestStartNs());
-        acqConnectionLatencies = new LatencyRecord(wrkldState.getTestStartNs());
-
+        latencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
+        failureLatencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
+        aggregateLatencyRecord = new AggregateLatencyRecord(wrkldState.getTestStartNs());
         // wait for start
         wrkldState.blockForStart();
         State preState, postState;
@@ -301,7 +299,6 @@ public class Worker implements Runnable {
         State startState = null, prevStartState = null;
         work: while (true) {
             // PART 1: Init and check if done
-
             preState = Worker.wrkldState.getGlobalState();
 
             // Do nothing
@@ -331,13 +328,14 @@ public class Worker implements Runnable {
                 // Master thread is also blocked
                 wrkldState.blockPostWarmup();
             }
-            
+
+            beginNs = System.nanoTime();
             // Grab some work and update the state, in case it changed while we
             // waited.
             pieceOfWork = wrkldState.fetchWork(this.id);
 
             preState = wrkldState.getGlobalState();
-
+            fetchedWorkNs = System.nanoTime();
             long start = System.nanoTime();
 
             long keying_time_msecs = 0;
@@ -349,7 +347,6 @@ public class Worker implements Runnable {
             if (Worker.wrkld.getUseThinkTime()) {
                 think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
             }
-
             phase = Worker.wrkldState.getCurrentPhase();
             if (phase == null)
                 continue;
@@ -381,10 +378,11 @@ public class Worker implements Runnable {
                     LOG.error("Thread sleep interrupted");
                 }
             }
+            keyingTimeNs = System.nanoTime();
 
-            TransactionExecutionState executionState = new TransactionExecutionState();
+            ArrayList<Pair<TransactionExecutionState, TransactionStatus>> executionStates = null;
             try {
-                executionState = doWork(pieceOfWork);
+                executionStates = doWork(pieceOfWork);
             } catch (IndexOutOfBoundsException e) {
                 if (phase.isThroughputRun()) {
                     LOG.error("Thread tried executing disabled phase!");
@@ -407,7 +405,9 @@ public class Worker implements Runnable {
                     }
                 }
             }
-           if (think_time_msecs > 0) {
+            executeTimeNs = System.nanoTime();
+
+            if (think_time_msecs > 0) {
                 // Sleep for the think time duration.
                 try {
                     Thread.sleep(think_time_msecs);
@@ -415,18 +415,27 @@ public class Worker implements Runnable {
                     LOG.error("Thread sleep interrupted");
                 }
             }
+            thinkTimeNs = System.nanoTime();
 
-            // In case of transaction failures, the end times will not be populated.
-            if (executionState.getEndOperation() == 0 || executionState.getEndConnection() == 0) {
-              if (wrkldState.getGlobalState() != State.DONE) {
-                ++totalFailures[pieceOfWork.getType() - 1];
-              }
-              continue;
+            // totalFailures is a deprecated variable. The following block needs to be removed after the
+            // latency stats are accepted
+            for (Pair<TransactionExecutionState, TransactionStatus> executionState : executionStates) {
+                // In case of transaction failures, the end times will not be populated.
+                switch (executionState.second) {
+                    case SUCCESS:
+                    case USER_ABORTED:
+                        break;
+                    case RETRY:
+                    case UNKNOWN:
+                        if (wrkldState.getGlobalState() != State.DONE) {
+                            ++totalFailures[pieceOfWork.getType() - 1];
+                        }
+                        break;
+                }
             }
 
             // PART 4: Record results
 
-            long end = System.nanoTime();
             postState = wrkldState.getGlobalState();
 
             switch (postState) {
@@ -436,28 +445,35 @@ public class Worker implements Runnable {
                     // changed, otherwise we're recording results for a query
                     // that either started during the warmup phase or ended
                     // after the timer went off.
-                    if (preState == State.MEASURE && executionState.getTransactionType() != null &&
+                    if (preState == State.MEASURE &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
-                        latencies.addLatency(
-                          executionState.getTransactionType().getId(),
-                          start, end,
-                          executionState.getStartOperation(), executionState.getEndOperation()
-                        );
-                        acqConnectionLatencies.addLatency(
-                          executionState.getTransactionType().getId(),
-                          start, end,
-                          executionState.getStartConnection(), executionState.getEndConnection()
-                        );
-
-                        // The latency of the whole operation can be obtained by evaluating the
-                        // time from the acquisition of the connection to the completion of the
-                        // operation.
-                        wholeOperationLatencies.addLatency(
-                          executionState.getTransactionType().getId(),
-                          start, end,
-                          executionState.getStartConnection(), executionState.getEndOperation()
-                        );
-
+                        for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
+                            if (executionState.first.getTransactionType() != null) {
+                                switch (executionState.second) {
+                                    case SUCCESS:
+                                    case USER_ABORTED:
+                                        latencies.addLatency(
+                                                executionState.first.getTransactionType().getId(),
+                                                executionState.first.getStartConnection(),
+                                                executionState.first.getEndConnection(),
+                                                executionState.first.getStartOperation(),
+                                                executionState.first.getEndOperation()
+                                        );
+                                        break;
+                                    case RETRY:
+                                    case UNKNOWN:
+                                        failureLatencies.addLatency(executionState.first.getTransactionType().getId(),
+                                                executionState.first.getStartConnection(),
+                                                executionState.first.getEndConnection(),
+                                                executionState.first.getStartOperation(),
+                                                executionState.first.getEndOperation());
+                                        break;
+                                }
+                                aggregateLatencyRecord.addLatency(
+                                        pieceOfWork.getType(),
+                                        beginNs, fetchedWorkNs, keyingTimeNs, executeTimeNs, thinkTimeNs);
+                            }
+                        }
                         intervalRequests.incrementAndGet();
                     }
                     if (phase.isLatencyRun())
@@ -472,8 +488,6 @@ public class Worker implements Runnable {
                 default:
                     // Do nothing
             }
-
-
             wrkldState.finishedWork();
         }
     }
@@ -483,12 +497,13 @@ public class Worker implements Runnable {
      * implementing worker should return the TransactionType handle that was
      * executed.
      */
-    protected final TransactionExecutionState doWork(SubmittedProcedure pieceOfWork) {
+    protected final ArrayList<Pair<TransactionExecutionState, TransactionStatus>> doWork(SubmittedProcedure pieceOfWork) {
         TransactionType next = null;
         long startOperation = 0;
         long endOperation = 0;
         long startConnection;
         long endConnection;
+        ArrayList<Pair<TransactionExecutionState, TransactionStatus>> listExecutionStates = new ArrayList<>();
 
         TransactionStatus status = TransactionStatus.RETRY;
 
@@ -519,16 +534,14 @@ public class Worker implements Runnable {
             while (status == TransactionStatus.RETRY &&
                    wrkldState.getGlobalState() != State.DONE &&
                    ++attempt <= totalAttemptsPerTransaction) {
-
+                // totalTries is a deprecated variable. The following line needs to be removed after the
+                // latency stats are accepted
                 ++totalTries[pieceOfWork.getType() - 1][attempt - 1];
 
                 try {
                     status = TransactionStatus.UNKNOWN;
-
                     startOperation = System.nanoTime();
                     status = this.executeWork(conn, next);
-                    endOperation = System.nanoTime();
-
                 // User Abort Handling
                 // These are not errors
                 } catch (UserAbortException ex) {
@@ -577,12 +590,16 @@ public class Worker implements Runnable {
 
                 } finally {
                     LOG.debug(String.format("%s %s Result: %s", this, next, status));
-
+                    endOperation = System.nanoTime();
+                    // add the current attempts stats to a list
+                    listExecutionStates.add(Pair.of(new TransactionExecutionState(startOperation, endOperation,
+                            startConnection, endConnection,
+                            next), status));
                     switch (status) {
                         case SUCCESS:
-                        case RETRY_DIFFERENT:
                         case USER_ABORTED:
                             break;
+                        case RETRY:
                         case UNKNOWN:
                             assert (false) : String.format("Unexpected status '%s' for %s", status, next);
                     } // SWITCH
@@ -594,10 +611,7 @@ public class Worker implements Runnable {
                                        this, next);
             throw new RuntimeException(msg, ex);
         }
-
-        return new TransactionExecutionState(startOperation, endOperation,
-                startConnection, endConnection,
-                next);
+        return listExecutionStates;
     }
 
     /**

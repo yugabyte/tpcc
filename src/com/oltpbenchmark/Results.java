@@ -20,7 +20,6 @@ package com.oltpbenchmark;
 import java.io.PrintStream;
 import java.util.*;
 
-import com.oltpbenchmark.TransactionLatencyRecord.Sample;
 import com.oltpbenchmark.ThreadBench.TimeBucketIterable;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.util.Histogram;
@@ -37,9 +36,9 @@ public final class Results {
   final Map<TransactionType, Histogram<String>> txnAbortMessages =
           new HashMap<>();
 
-  public final List<TransactionLatencyRecord.Sample> latencySamples;
+  public final List<LatencyRecord.Sample> latencySamples;
 
-  public Results(long nanoSeconds, int measuredRequests, final List<TransactionLatencyRecord.Sample> latencySamples) {
+  public Results(long nanoSeconds, int measuredRequests, final List<LatencyRecord.Sample> latencySamples) {
     this.nanoSeconds = nanoSeconds;
     this.measuredRequests = measuredRequests;
 
@@ -156,7 +155,7 @@ public final class Results {
         "OperationLatency (microseconds)"
     };
     out.println(String.join(",", header));
-    for (Sample s : latencySamples) {
+    for (LatencyRecord.Sample s : latencySamples) {
       String[] row = {
           activeTXTypes.get(s.tranType-1).getName(),
           Long.toString(s.startNs),

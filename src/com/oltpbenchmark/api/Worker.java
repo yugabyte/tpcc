@@ -47,9 +47,10 @@ public class Worker implements Runnable {
     private final int terminalDistrictID;
     // private boolean debugMessages;
     protected final Random gen = new Random();
-    private TransactionLatencyRecord latencies;
-    private TransactionLatencyRecord failureLatencies;
+    private LatencyRecord latencies;
+    private LatencyRecord failureLatencies;
     private AggregateLatencyRecord aggregateLatencyRecord;
+
     private final Statement currStatement;
 
     // Interval requests used by the monitor
@@ -143,11 +144,11 @@ public class Worker implements Runnable {
         return intervalRequests.getAndSet(0);
     }
 
-    public final Iterable<TransactionLatencyRecord.Sample> getLatencyRecords() {
+    public final Iterable<LatencyRecord.Sample> getLatencyRecords() {
         return latencies;
     }
 
-    public final Iterable<TransactionLatencyRecord.Sample> getFailureLatencyRecords() {
+    public final Iterable<LatencyRecord.Sample> getFailureLatencyRecords() {
         return failureLatencies;
     }
 
@@ -289,14 +290,13 @@ public class Worker implements Runnable {
         t.setName(this.toString());
 
         // In case of reuse reset the measurements
-        latencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
-        failureLatencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
+        latencies = new LatencyRecord(wrkldState.getTestStartNs());
+        failureLatencies = new LatencyRecord(wrkldState.getTestStartNs());
         aggregateLatencyRecord = new AggregateLatencyRecord(wrkldState.getTestStartNs());
         // wait for start
         wrkldState.blockForStart();
         State preState, postState;
         Phase phase;
-        State startState = null, prevStartState = null;
         work: while (true) {
             // PART 1: Init and check if done
             preState = Worker.wrkldState.getGlobalState();
@@ -318,16 +318,6 @@ public class Worker implements Runnable {
             phase = Worker.wrkldState.getCurrentPhase();
             if (phase == null)
                 continue;
-
-            // Block for warmup, if needed
-            prevStartState = startState;
-            startState = preState;
-            if (prevStartState != null && phase.warmupTime > 0 &&
-                    prevStartState == State.WARMUP && startState == State.MEASURE) {
-                // Block until all worker threads complete the warmup phase.
-                // Master thread is also blocked
-                wrkldState.blockPostWarmup();
-            }
 
             beginNs = System.nanoTime();
             // Grab some work and update the state, in case it changed while we
@@ -440,12 +430,12 @@ public class Worker implements Runnable {
 
             switch (postState) {
                 case MEASURE:
-                    // Non-serial measurement. Only measure if the state both
-                    // before and after was MEASURE, and the phase hasn't
-                    // changed, otherwise we're recording results for a query
-                    // that either started during the warmup phase or ended
-                    // after the timer went off.
-                    if (preState == State.MEASURE &&
+                    // Non-serial measurement. Only measure if the state
+                    // before was either MEASURE and WARMUP and after was
+                    // MEASURE, and the phase hasn't changed. We're recording
+                    // results for operations that completed in the MEASURE
+                    // phase
+                    if ((preState == State.MEASURE || preState == State.WARMUP) &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
                             if (executionState.first.getTransactionType() != null) {
@@ -469,11 +459,11 @@ public class Worker implements Runnable {
                                                 executionState.first.getEndOperation());
                                         break;
                                 }
-                                aggregateLatencyRecord.addLatency(
-                                        pieceOfWork.getType(),
-                                        beginNs, fetchedWorkNs, keyingTimeNs, executeTimeNs, thinkTimeNs);
                             }
                         }
+                        aggregateLatencyRecord.addLatency(
+                                pieceOfWork.getType(),
+                                beginNs, fetchedWorkNs, keyingTimeNs, executeTimeNs, thinkTimeNs);
                         intervalRequests.incrementAndGet();
                     }
                     if (phase.isLatencyRun())

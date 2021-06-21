@@ -29,7 +29,6 @@ import java.util.Set;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.TransactionLatencyRecord.Sample;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
@@ -45,7 +44,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   // private File profileFile;
   private final List<WorkloadConfiguration> workConfs;
   private final List<WorkloadState> workStates;
-  final ArrayList<TransactionLatencyRecord.Sample> samples = new ArrayList<>();
+  final ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
   public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
@@ -56,7 +55,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   public static final class TimeBucketIterable implements Iterable<DistributionStatistics> {
-      private final Iterable<Sample> samples;
+      private final Iterable<LatencyRecord.Sample> samples;
       private final int windowSizeSeconds;
       private final TransactionType txType;
 
@@ -64,7 +63,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
        * Instantiate an Iterable of DistributionStatistics for the given samples for each windowSizeSeconds of samples,
        * restricting to the specified txType.
        */
-      public TimeBucketIterable(Iterable<Sample> samples, int windowSizeSeconds, TransactionType txType) {
+      public TimeBucketIterable(Iterable<LatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
           this.samples = samples;
           this.windowSizeSeconds = windowSizeSeconds;
           this.txType = txType;
@@ -77,11 +76,11 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   public static final class TimeBucketIterator implements Iterator<DistributionStatistics> {
-      private final Iterator<Sample> samples;
+      private final Iterator<LatencyRecord.Sample> samples;
       private final int windowSizeSeconds;
       private final TransactionType txType;
 
-      private Sample sample;
+      private LatencyRecord.Sample sample;
       private long nextStartNs;
 
       private DistributionStatistics next;
@@ -90,7 +89,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
        * Constructs an iterator of DistributionStatistics for the given sample for each windowSizeSeconds of samples,
        * restricting to the specified txType.
        */
-      public TimeBucketIterator(Iterator<TransactionLatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
+      public TimeBucketIterator(Iterator<LatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
           this.samples = samples;
           this.windowSizeSeconds = windowSizeSeconds;
           this.txType = txType;
@@ -453,15 +452,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           }
           interruptWorkers();
         }
-        if (testState.getState() == State.MEASURE && phase.warmupTime > 0) {
-            LOG.info(StringUtil.bold("POST WARMUP") + " :: Warmup time over, blocking for other threads.");
-            // Block for all threads to finish the warmup phase
-            testState.blockPostWarmup();
-            // Start the timer for measure phase after all threads complete the warmup phase
-            start = System.nanoTime();
-        } else{
-            start = now;
-        }
         LOG.info(StringUtil.bold("MEASURE") + " :: Warmup complete, starting measurements.");
         // measureEnd = measureStart + measureSeconds * 1000000000L;
 
@@ -487,7 +477,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       // Combine all the latencies together in the most disgusting way
       // possible: sorting!
       for (Worker w : workers) {
-        for (TransactionLatencyRecord.Sample sample : w.getLatencyRecords()) {
+        for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
           samples.add(sample);
         }
       }

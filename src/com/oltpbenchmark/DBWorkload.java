@@ -471,8 +471,9 @@ public class DBWorkload {
     r.endTime = end;
 
     PrintToplineResults(workers, r);
-    PrintLatencies(workers);
+    PrintLatencies(workers, outputVerboseRes);
     PrintAggregateLatencies(workers);
+
     if (outputVerboseRes) {
       PrintQueryAttempts(workers, workConfs.get(0));
     }
@@ -492,7 +493,7 @@ public class DBWorkload {
   private static void PrintToplineResults(List<Worker> workers, Results r) {
     long numNewOrderTransactions = 0;
     for (Worker w : workers) {
-      for (TransactionLatencyRecord.Sample sample : w.getLatencyRecords()) {
+      for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         if (sample.tranType == newOrderTxnId) {
           ++numNewOrderTransactions;
         }
@@ -536,7 +537,9 @@ public class DBWorkload {
       latenciesAcrossAll.add(new ArrayList<>());
     }
     for (Worker w : workers) {
-      for (AggregateLatencyRecord.Sample sample : w.getAggregateLatencyRecords()) {
+      Iterable<AggregateLatencyRecord.Sample> latencyRecord;
+      latencyRecord = w.getAggregateLatencyRecords();
+      for (AggregateLatencyRecord.Sample sample : latencyRecord) {
         fetchWorkLatencies.get(sample.tranType - 1).add(sample.fetchWorkUs);
         keyingTimeLatencies.get(sample.tranType - 1).add(sample.keyingLatencyUs);
         workLatencies.get(sample.tranType - 1).add(sample.aggregateExecuteUs);
@@ -594,7 +597,7 @@ public class DBWorkload {
     LOG.info(resultOut.toString());
   }
 
-  private static void PrintLatencies(List<Worker> workers) {
+  private static void PrintLatencies(List<Worker> workers, boolean outputVerboseRes) {
     List<List<Integer>> list_latencies = new ArrayList<>();
     List<List<Integer>> list_conn_latencies = new ArrayList<>();
     List<List<Integer>> list_failure_latencies = new ArrayList<>();
@@ -607,13 +610,13 @@ public class DBWorkload {
     }
 
     for (Worker w : workers) {
-      for (TransactionLatencyRecord.Sample sample : w.getLatencyRecords()) {
+      for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
         list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
         list_conn_latencies.get(sample.tranType - 1).add(sample.connLatencyUs);
       }
     }
     for (Worker w : workers) {
-      for (TransactionLatencyRecord.Sample sample : w.getFailureLatencyRecords()) {
+      for (LatencyRecord.Sample sample : w.getFailureLatencyRecords()) {
         list_failure_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
         list_failure_conn_latencies.get(sample.tranType - 1).add(sample.connLatencyUs);
       }
@@ -641,30 +644,31 @@ public class DBWorkload {
             "All ", latenciesAll.size(), getAverageLatency(latenciesAll), getP99Latency(latenciesAll),
             getAverageLatency(connLatenciesAll)));
     LOG.info(resultOut.toString());
+    if (outputVerboseRes) {
+      resultOut = new StringBuilder();
+      resultOut.append("\n");
+      resultOut.append("=====================================FAILURE LATENCIES====================================\n");
+      resultOut.append(" Transaction |  Count   | Percentage | Avg. Latency | P99 Latency | Connection Acq Latency\n");
+      for (int i = 0; i < list_failure_latencies.size(); ++i) {
+        String op = transactionTypes.get(i + 1);
+        List<Integer> latencies = list_failure_latencies.get(i);
+        List<Integer> conn_latencies = list_failure_conn_latencies.get(i);
+        double percentage = 100.0 * latencies.size() / (latencies.size() + list_latencies.get(i).size());
+        resultOut.append(String.format(
+                "%12s |%9s |%10.2f%% |%13.2f |%12.2f |%23.2f\n",
+                op, latencies.size(), percentage, getAverageLatency(latencies), getP99Latency(latencies),
+                getAverageLatency(conn_latencies)));
+      }
+      List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
+      List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
+      double totalPercentage = 100.0 * failureLatenciesAll.size() / (failureLatenciesAll.size() + latenciesAll.size());
 
-    resultOut = new StringBuilder();
-    resultOut.append("\n");
-    resultOut.append("=====================================FAILURE LATENCIES====================================\n");
-    resultOut.append(" Transaction |  Count   | Percentage | Avg. Latency | P99 Latency | Connection Acq Latency\n");
-    for (int i = 0; i < list_failure_latencies.size(); ++i) {
-      String op = transactionTypes.get(i + 1);
-      List<Integer> latencies = list_failure_latencies.get(i);
-      List<Integer> conn_latencies = list_failure_conn_latencies.get(i);
-      double percentage = 100.0 * latencies.size()/(latencies.size() + list_latencies.get(i).size());
       resultOut.append(String.format(
               "%12s |%9s |%10.2f%% |%13.2f |%12.2f |%23.2f\n",
-              op, latencies.size(),percentage, getAverageLatency(latencies), getP99Latency(latencies),
-              getAverageLatency(conn_latencies)));
+              "All ", failureLatenciesAll.size(), totalPercentage, getAverageLatency(failureLatenciesAll), getP99Latency(failureLatenciesAll),
+              getAverageLatency(failureConnLatenciesAll)));
+      LOG.info(resultOut.toString());
     }
-    List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
-    List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
-    double totalPercentage = 100.0 * failureLatenciesAll.size()/(failureLatenciesAll.size() + latenciesAll.size());
-
-    resultOut.append(String.format(
-            "%12s |%9s |%10.2f%% |%13.2f |%12.2f |%23.2f\n",
-            "All ", failureLatenciesAll.size(), totalPercentage, getAverageLatency(failureLatenciesAll), getP99Latency(failureLatenciesAll),
-            getAverageLatency(failureConnLatenciesAll)));
-    LOG.info(resultOut.toString());
   }
 
   private static void PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {

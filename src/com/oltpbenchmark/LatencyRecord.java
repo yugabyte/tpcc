@@ -37,19 +37,20 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
     allocateChunk();
   }
 
-  public void addLatency(int transType, long startNs, long endNs, long operationStartNs, long operationEndNs) {
-    assert endNs >= startNs;
+  public void addLatency(int transType, long startNs, long endConnectionNs,
+                         long operationStartNs, long operationEndNs) {
+    assert endConnectionNs >= startNs;
     if (nextIndex == ALLOC_SIZE) {
       allocateChunk();
     }
     Sample[] chunk = values.get(values.size() - 1);
-    int latencyUs = (int) ((endNs - startNs + 500) / 1000);
-    assert latencyUs >= 0;
+    int connlatencyUs = (int) ((endConnectionNs - startNs + 500) / 1000);
+    assert connlatencyUs >= 0;
 
     int operationLatencyUs = (int)((operationEndNs - operationStartNs + 500) / 1000);
     assert operationLatencyUs >= 0;
 
-    chunk[nextIndex] = new Sample(transType, startNs, latencyUs, operationLatencyUs);
+    chunk[nextIndex] = new Sample(transType, startNs, connlatencyUs, operationLatencyUs);
     ++nextIndex;
   }
 
@@ -74,14 +75,14 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
   public static final class Sample implements Comparable<Sample> {
     public final int tranType;
     public final long startNs;
-    public final int latencyUs;
+    public final int connLatencyUs;
     public final int operationLatencyUs;
 
     public Sample(int tranType, long startNs, int latencyUs,
                   int operationLatencyUs) {
       this.tranType = tranType;
       this.startNs = startNs;
-      this.latencyUs = latencyUs;
+      this.connLatencyUs = latencyUs;
       this.operationLatencyUs = operationLatencyUs;
     }
 

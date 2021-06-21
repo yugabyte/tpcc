@@ -29,36 +29,16 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
    * Contains (start time, latency, transactionType, workerid, phaseid) pentiplets
    * in microsecond form.
    */
-  private final ArrayList<Sample[]> values = new ArrayList<>();
-  private int nextIndex;
+  protected final ArrayList<Sample[]> values = new ArrayList<>();
+  protected int nextIndex;
 
   public LatencyRecord(long startNs) {
     assert startNs > 0;
     allocateChunk();
   }
 
-  public void addLatency(int transType, long startNs, long endConnectionNs,
-                         long operationStartNs, long operationEndNs) {
-    assert endConnectionNs >= startNs;
-    if (nextIndex == ALLOC_SIZE) {
-      allocateChunk();
-    }
-    Sample[] chunk = values.get(values.size() - 1);
-    int connlatencyUs = (int) ((endConnectionNs - startNs + 500) / 1000);
-    assert connlatencyUs >= 0;
-
-    int operationLatencyUs = (int)((operationEndNs - operationStartNs + 500) / 1000);
-    assert operationLatencyUs >= 0;
-
-    chunk[nextIndex] = new Sample(transType, startNs, connlatencyUs, operationLatencyUs);
-    ++nextIndex;
-  }
-
-  private void allocateChunk() {
-    assert (values.isEmpty() && nextIndex == 0)
-      || nextIndex == ALLOC_SIZE;
-    values.add(new Sample[ALLOC_SIZE]);
-    nextIndex = 0;
+  protected void allocateChunk() {
+    throw new UnsupportedOperationException();
   }
 
   /** Returns the number of recorded samples. */
@@ -72,18 +52,13 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
   }
 
   /** Stores the start time and latency for a single sample. Immutable. */
-  public static final class Sample implements Comparable<Sample> {
+  public static class Sample implements Comparable<Sample> {
     public final int tranType;
     public final long startNs;
-    public final int connLatencyUs;
-    public final int operationLatencyUs;
 
-    public Sample(int tranType, long startNs, int latencyUs,
-                  int operationLatencyUs) {
+    public Sample(int tranType, long startNs) {
       this.tranType = tranType;
       this.startNs = startNs;
-      this.connLatencyUs = latencyUs;
-      this.operationLatencyUs = operationLatencyUs;
     }
 
     @Override

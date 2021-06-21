@@ -44,7 +44,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   // private File profileFile;
   private final List<WorkloadConfiguration> workConfs;
   private final List<WorkloadState> workStates;
-  final ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
+  final ArrayList<TransactionLatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
   public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
@@ -80,7 +80,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       private final int windowSizeSeconds;
       private final TransactionType txType;
 
-      private LatencyRecord.Sample sample;
+      private TransactionLatencyRecord.Sample sample;
       private long nextStartNs;
 
       private DistributionStatistics next;
@@ -95,7 +95,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           this.txType = txType;
 
           if (samples.hasNext()) {
-              sample = samples.next();
+              sample = (TransactionLatencyRecord.Sample)samples.next();
               // TODO: To be totally correct, we would want this to be the
               // timestamp of the start
               // of the measurement interval. In most cases this won't matter.
@@ -121,7 +121,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                   latencies.add(sample.connLatencyUs + sample.operationLatencyUs);
 
               if (samples.hasNext()) {
-                  sample = samples.next();
+                  sample = (TransactionLatencyRecord.Sample) samples.next();
               } else {
                   sample = null;
               }
@@ -452,6 +452,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           }
           interruptWorkers();
         }
+        start = now;
         LOG.info(StringUtil.bold("MEASURE") + " :: Warmup complete, starting measurements.");
         // measureEnd = measureStart + measureSeconds * 1000000000L;
 
@@ -478,7 +479,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       // possible: sorting!
       for (Worker w : workers) {
         for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
-          samples.add(sample);
+          samples.add((TransactionLatencyRecord.Sample)sample);
         }
       }
       Collections.sort(samples);

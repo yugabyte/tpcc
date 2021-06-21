@@ -47,8 +47,8 @@ public class Worker implements Runnable {
     private final int terminalDistrictID;
     // private boolean debugMessages;
     protected final Random gen = new Random();
-    private LatencyRecord latencies;
-    private LatencyRecord failureLatencies;
+    private TransactionLatencyRecord latencies;
+    private TransactionLatencyRecord failureLatencies;
     private AggregateLatencyRecord aggregateLatencyRecord;
 
     private final Statement currStatement;
@@ -152,7 +152,7 @@ public class Worker implements Runnable {
         return failureLatencies;
     }
 
-    public final Iterable<AggregateLatencyRecord.Sample> getAggregateLatencyRecords() {
+    public final Iterable<LatencyRecord.Sample> getAggregateLatencyRecords() {
         return aggregateLatencyRecord;
     }
 
@@ -290,8 +290,8 @@ public class Worker implements Runnable {
         t.setName(this.toString());
 
         // In case of reuse reset the measurements
-        latencies = new LatencyRecord(wrkldState.getTestStartNs());
-        failureLatencies = new LatencyRecord(wrkldState.getTestStartNs());
+        latencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
+        failureLatencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
         aggregateLatencyRecord = new AggregateLatencyRecord(wrkldState.getTestStartNs());
         // wait for start
         wrkldState.blockForStart();
@@ -435,6 +435,9 @@ public class Worker implements Runnable {
                     // MEASURE, and the phase hasn't changed. We're recording
                     // results for operations that completed in the MEASURE
                     // phase
+                    if (preState == State.WARMUP) {
+
+                    }
                     if ((preState == State.MEASURE || preState == State.WARMUP) &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {

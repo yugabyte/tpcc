@@ -191,7 +191,6 @@ public class DBWorkload {
       if (Arrays.asList(CommandLineOptions.Mode.CLEAR, CommandLineOptions.Mode.EXECUTE).contains(options.getMode())) {
         wrkld.setNeedsExecution(true);
       }
-
       configOptions.getUseStoredProcedures().ifPresent(wrkld::setUseStoredProcedures);
 
       LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
@@ -537,15 +536,16 @@ public class DBWorkload {
       latenciesAcrossAll.add(new ArrayList<>());
     }
     for (Worker w : workers) {
-      Iterable<AggregateLatencyRecord.Sample> latencyRecord;
+      Iterable<LatencyRecord.Sample> latencyRecord;
       latencyRecord = w.getAggregateLatencyRecords();
-      for (AggregateLatencyRecord.Sample sample : latencyRecord) {
-        fetchWorkLatencies.get(sample.tranType - 1).add(sample.fetchWorkUs);
-        keyingTimeLatencies.get(sample.tranType - 1).add(sample.keyingLatencyUs);
-        workLatencies.get(sample.tranType - 1).add(sample.aggregateExecuteUs);
-        thinkLatencies.get(sample.tranType - 1).add(sample.thinkTimeUs);
-        latenciesAcrossAll.get(sample.tranType - 1).add(sample.fetchWorkUs +
-                sample.keyingLatencyUs + sample.aggregateExecuteUs + sample.thinkTimeUs);
+      for (LatencyRecord.Sample sample : latencyRecord) {
+        AggregateLatencyRecord.Sample asample = (AggregateLatencyRecord.Sample) sample;
+        fetchWorkLatencies.get(sample.tranType - 1).add(asample.fetchWorkUs);
+        keyingTimeLatencies.get(sample.tranType - 1).add(asample.keyingLatencyUs);
+        workLatencies.get(sample.tranType - 1).add(asample.aggregateExecuteUs);
+        thinkLatencies.get(sample.tranType - 1).add(asample.thinkTimeUs);
+        latenciesAcrossAll.get(sample.tranType - 1).add(asample.fetchWorkUs +
+                asample.keyingLatencyUs + asample.aggregateExecuteUs + asample.thinkTimeUs);
       }
     }
     StringBuilder resultOut = new StringBuilder();
@@ -611,14 +611,16 @@ public class DBWorkload {
 
     for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
-        list_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
-        list_conn_latencies.get(sample.tranType - 1).add(sample.connLatencyUs);
+        TransactionLatencyRecord.Sample tsample = (TransactionLatencyRecord.Sample) sample;
+        list_latencies.get(sample.tranType - 1).add(tsample.operationLatencyUs);
+        list_conn_latencies.get(sample.tranType - 1).add(tsample.connLatencyUs);
       }
     }
     for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getFailureLatencyRecords()) {
-        list_failure_latencies.get(sample.tranType - 1).add(sample.operationLatencyUs);
-        list_failure_conn_latencies.get(sample.tranType - 1).add(sample.connLatencyUs);
+        TransactionLatencyRecord.Sample tsample = (TransactionLatencyRecord.Sample) sample;
+        list_failure_latencies.get(sample.tranType - 1).add(tsample.operationLatencyUs);
+        list_failure_conn_latencies.get(sample.tranType - 1).add(tsample.connLatencyUs);
       }
     }
 

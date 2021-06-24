@@ -64,8 +64,7 @@ public class Worker implements Runnable {
     protected final Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<>();
 
     private boolean seenDone = false;
-    int[][] totalTries;
-    int[] totalFailures;
+    int[][] totalFailedTries;
     int totalAttemptsPerTransaction;
 
     public Worker(
@@ -86,8 +85,7 @@ public class Worker implements Runnable {
             throw new RuntimeException("Failed to connect to database", ex);
         }
         totalAttemptsPerTransaction = wrkld.getMaxRetriesPerTransaction() + 1;
-        totalTries = new int[wrkld.getNumTxnTypes()][totalAttemptsPerTransaction];
-        totalFailures = new int[wrkld.getNumTxnTypes()];
+        totalFailedTries = new int[wrkld.getNumTxnTypes()][totalAttemptsPerTransaction];
         this.terminalWarehouseID = terminalWarehouseID;
 
         assert terminalDistrictLowerID >= 1;
@@ -120,12 +118,8 @@ public class Worker implements Runnable {
         return this.id;
     }
 
-    public final int[][] getTotalTries() {
-      return totalTries;
-    }
-
-    public final int[] getTotalFailures() {
-      return totalFailures;
+    public final int[][] getTotalFailedTries() {
+      return totalFailedTries;
     }
 
     @Override
@@ -421,7 +415,6 @@ public class Worker implements Runnable {
                                 switch (executionState.second) {
                                     case SUCCESS:
                                     case USER_ABORTED:
-                                        ++totalTries[pieceOfWork.getType() - 1][attempt];
                                         latencies.addLatency(
                                                 executionState.first.getTransactionType().getId(),
                                                 executionState.first.getStartConnection(),
@@ -432,8 +425,7 @@ public class Worker implements Runnable {
                                         break;
                                     case RETRY:
                                     case UNKNOWN:
-                                        ++totalTries[pieceOfWork.getType() - 1][attempt];
-                                        ++totalFailures[pieceOfWork.getType() - 1];
+                                        ++totalFailedTries[pieceOfWork.getType() - 1][attempt];
                                         failureLatencies.addLatency(executionState.first.getTransactionType().getId(),
                                                 executionState.first.getStartConnection(),
                                                 executionState.first.getEndConnection(),

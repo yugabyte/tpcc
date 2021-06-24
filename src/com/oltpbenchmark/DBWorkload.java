@@ -690,7 +690,7 @@ public class DBWorkload {
     StringBuilder resultOut = new StringBuilder();
 
     resultOut.append("\n");
-    resultOut.append("========RETRIES (DEPRECATED STATS)===========\n");
+    resultOut.append("================= RETRIES ====================\n");
     resultOut.append("   Operation   | Total Created |");
     for (int i = 1; i < numTriesPerProc; ++i) {
       resultOut.append(String.format(" Retry Number %1d |", i));

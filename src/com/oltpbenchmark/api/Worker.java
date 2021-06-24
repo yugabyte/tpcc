@@ -64,8 +64,6 @@ public class Worker implements Runnable {
     protected final Map<Class<? extends Procedure>, Procedure> class_procedures = new HashMap<>();
 
     private boolean seenDone = false;
-    // totalTries are totalFailures are deprecated variables. The following lines needs to be removed after the
-    // latency stats are accepted
     int[][] totalTries;
     int[] totalFailures;
     int totalAttemptsPerTransaction;
@@ -407,25 +405,7 @@ public class Worker implements Runnable {
             }
             endThinkTimeNs = System.nanoTime();
 
-            // totalFailures is a deprecated variable. The following block needs to be removed after the
-            // latency stats are accepted
-            for (Pair<TransactionExecutionState, TransactionStatus> executionState : executionStates) {
-                // In case of transaction failures, the end times will not be populated.
-                switch (executionState.second) {
-                    case SUCCESS:
-                    case USER_ABORTED:
-                        break;
-                    case RETRY:
-                    case UNKNOWN:
-                        if (wrkldState.getGlobalState() != State.DONE) {
-                            ++totalFailures[pieceOfWork.getType() - 1];
-                        }
-                        break;
-                }
-            }
-
             // PART 4: Record results
-
             postState = wrkldState.getGlobalState();
 
             switch (postState) {
@@ -435,11 +415,13 @@ public class Worker implements Runnable {
                     // that completed in the MEASURE phase
                     if ((preState == State.MEASURE || preState == State.WARMUP) &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
+                        int attempt = 0;
                         for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
                             if (executionState.first.getTransactionType() != null) {
                                 switch (executionState.second) {
                                     case SUCCESS:
                                     case USER_ABORTED:
+                                        ++totalTries[pieceOfWork.getType() - 1][attempt];
                                         latencies.addLatency(
                                                 executionState.first.getTransactionType().getId(),
                                                 executionState.first.getStartConnection(),
@@ -450,6 +432,8 @@ public class Worker implements Runnable {
                                         break;
                                     case RETRY:
                                     case UNKNOWN:
+                                        ++totalTries[pieceOfWork.getType() - 1][attempt];
+                                        ++totalFailures[pieceOfWork.getType() - 1];
                                         failureLatencies.addLatency(executionState.first.getTransactionType().getId(),
                                                 executionState.first.getStartConnection(),
                                                 executionState.first.getEndConnection(),
@@ -458,6 +442,7 @@ public class Worker implements Runnable {
                                         break;
                                 }
                             }
+                            attempt++;
                         }
                         workerTaskLatencyRecord.addLatency(
                                 pieceOfWork.getType(),
@@ -522,10 +507,6 @@ public class Worker implements Runnable {
             while (status == TransactionStatus.RETRY &&
                    wrkldState.getGlobalState() != State.DONE &&
                    ++attempt <= totalAttemptsPerTransaction) {
-                // totalTries is a deprecated variable. The following line needs to be removed after the
-                // latency stats are accepted
-                ++totalTries[pieceOfWork.getType() - 1][attempt - 1];
-
                 try {
                     status = TransactionStatus.UNKNOWN;
                     startOperation = System.nanoTime();

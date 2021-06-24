@@ -27,14 +27,12 @@ public class TransactionLatencyRecord extends LatencyRecord {
         ++nextIndex;
     }
 
-    protected void allocateChunk() {
-        assert (values.isEmpty() && nextIndex == 0)
-                || nextIndex == ALLOC_SIZE;
-        values.add(new TransactionLatencyRecord.Sample[ALLOC_SIZE]);
-        nextIndex = 0;
+    protected LatencyRecord.Sample[] getNewLatencyRecord() {
+        return new TransactionLatencyRecord.Sample[ALLOC_SIZE];
     }
 
-    /** Stores the start time and latency for a single sample. Immutable. */
+    /** Stores the start time and connection and operation latency for a
+     * single sample. Immutable. */
     public static final class Sample extends LatencyRecord.Sample {
         public final int connLatencyUs;
         public final int operationLatencyUs;

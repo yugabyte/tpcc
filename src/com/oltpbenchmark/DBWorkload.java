@@ -471,7 +471,7 @@ public class DBWorkload {
 
     PrintToplineResults(workers, r);
     PrintLatencies(workers, outputVerboseRes);
-    PrintAggregateLatencies(workers);
+    PrintWorkerTaskLatencies(workers);
 
     if (outputVerboseRes) {
       PrintQueryAttempts(workers, workConfs.get(0));
@@ -522,7 +522,7 @@ public class DBWorkload {
     return newList;
   }
 
-  private static void PrintAggregateLatencies(List<Worker> workers) {
+  private static void PrintWorkerTaskLatencies(List<Worker> workers) {
     List<List<Integer>> fetchWorkLatencies = new ArrayList<>();
     List<List<Integer>> keyingTimeLatencies = new ArrayList<>();
     List<List<Integer>> workLatencies = new ArrayList<>();
@@ -537,9 +537,9 @@ public class DBWorkload {
     }
     for (Worker w : workers) {
       Iterable<LatencyRecord.Sample> latencyRecord;
-      latencyRecord = w.getAggregateLatencyRecords();
+      latencyRecord = w.getWorkerTaskLatencyRecords();
       for (LatencyRecord.Sample sample : latencyRecord) {
-        AggregateLatencyRecord.Sample asample = (AggregateLatencyRecord.Sample) sample;
+        WorkerTaskLatencyRecord.Sample asample = (WorkerTaskLatencyRecord.Sample) sample;
         fetchWorkLatencies.get(sample.tranType - 1).add(asample.fetchWorkUs);
         keyingTimeLatencies.get(sample.tranType - 1).add(asample.keyingLatencyUs);
         workLatencies.get(sample.tranType - 1).add(asample.aggregateExecuteUs);
@@ -550,8 +550,8 @@ public class DBWorkload {
     }
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
-    resultOut.append("========================AGGREGATE LATENCIES========================\n");
-    resultOut.append(" Transaction |  Operation   |  Count   | Avg. Latency | P99 Latency\n");
+    resultOut.append("=======================WORKER TASK LATENCIES=======================\n");
+    resultOut.append(" Transaction |     Task     |  Count   | Avg. Latency | P99 Latency\n");
     for (int i = 0; i < fetchWorkLatencies.size(); ++i) {
       String op = transactionTypes.get(i + 1);
       List<Integer> fetchWork = fetchWorkLatencies.get(i);

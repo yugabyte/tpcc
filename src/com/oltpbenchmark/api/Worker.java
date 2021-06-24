@@ -49,7 +49,7 @@ public class Worker implements Runnable {
     protected final Random gen = new Random();
     private TransactionLatencyRecord latencies;
     private TransactionLatencyRecord failureLatencies;
-    private AggregateLatencyRecord aggregateLatencyRecord;
+    private WorkerTaskLatencyRecord workerTaskLatencyRecord;
 
     private final Statement currStatement;
 
@@ -152,8 +152,8 @@ public class Worker implements Runnable {
         return failureLatencies;
     }
 
-    public final Iterable<LatencyRecord.Sample> getAggregateLatencyRecords() {
-        return aggregateLatencyRecord;
+    public final Iterable<LatencyRecord.Sample> getWorkerTaskLatencyRecords() {
+        return workerTaskLatencyRecord;
     }
 
     @SuppressWarnings("unchecked")
@@ -284,7 +284,7 @@ public class Worker implements Runnable {
 
     @Override
     public final void run() {
-        long beginNs, executeTimeNs, fetchedWorkNs, thinkTimeNs, keyingTimeNs;
+        long beginNs, endExecuteTimeNs, endFetchedWorkNs, endThinkTimeNs, endKeyingTimeNs;
         Thread t = Thread.currentThread();
         SubmittedProcedure pieceOfWork;
         t.setName(this.toString());
@@ -292,7 +292,7 @@ public class Worker implements Runnable {
         // In case of reuse reset the measurements
         latencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
         failureLatencies = new TransactionLatencyRecord(wrkldState.getTestStartNs());
-        aggregateLatencyRecord = new AggregateLatencyRecord(wrkldState.getTestStartNs());
+        workerTaskLatencyRecord = new WorkerTaskLatencyRecord(wrkldState.getTestStartNs());
         // wait for start
         wrkldState.blockForStart();
         State preState, postState;
@@ -325,7 +325,7 @@ public class Worker implements Runnable {
             pieceOfWork = wrkldState.fetchWork(this.id);
 
             preState = wrkldState.getGlobalState();
-            fetchedWorkNs = System.nanoTime();
+            endFetchedWorkNs = System.nanoTime();
             long start = System.nanoTime();
 
             long keying_time_msecs = 0;
@@ -368,7 +368,7 @@ public class Worker implements Runnable {
                     LOG.error("Thread sleep interrupted");
                 }
             }
-            keyingTimeNs = System.nanoTime();
+            endKeyingTimeNs = System.nanoTime();
 
             ArrayList<Pair<TransactionExecutionState, TransactionStatus>> executionStates = null;
             try {
@@ -395,7 +395,7 @@ public class Worker implements Runnable {
                     }
                 }
             }
-            executeTimeNs = System.nanoTime();
+            endExecuteTimeNs = System.nanoTime();
 
             if (think_time_msecs > 0) {
                 // Sleep for the think time duration.
@@ -405,7 +405,7 @@ public class Worker implements Runnable {
                     LOG.error("Thread sleep interrupted");
                 }
             }
-            thinkTimeNs = System.nanoTime();
+            endThinkTimeNs = System.nanoTime();
 
             // totalFailures is a deprecated variable. The following block needs to be removed after the
             // latency stats are accepted
@@ -430,14 +430,9 @@ public class Worker implements Runnable {
 
             switch (postState) {
                 case MEASURE:
-                    // Non-serial measurement. Only measure if the state
-                    // before was either MEASURE and WARMUP and after was
-                    // MEASURE, and the phase hasn't changed. We're recording
-                    // results for operations that completed in the MEASURE
-                    // phase
-                    if (preState == State.WARMUP) {
-
-                    }
+                    // Non-serial measurement. Only measure if the state after doWork
+                    // completion was MEASURE. We're recording results for operations
+                    // that completed in the MEASURE phase
                     if ((preState == State.MEASURE || preState == State.WARMUP) &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
@@ -464,9 +459,9 @@ public class Worker implements Runnable {
                                 }
                             }
                         }
-                        aggregateLatencyRecord.addLatency(
+                        workerTaskLatencyRecord.addLatency(
                                 pieceOfWork.getType(),
-                                beginNs, fetchedWorkNs, keyingTimeNs, executeTimeNs, thinkTimeNs);
+                                beginNs, endFetchedWorkNs, endKeyingTimeNs, endExecuteTimeNs, endThinkTimeNs);
                         intervalRequests.incrementAndGet();
                     }
                     if (phase.isLatencyRun())

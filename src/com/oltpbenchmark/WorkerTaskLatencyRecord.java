@@ -1,9 +1,9 @@
 package com.oltpbenchmark;
 
 /** Efficiently stores a record of (start time, latency) pairs. */
-public class AggregateLatencyRecord extends LatencyRecord {
+public class WorkerTaskLatencyRecord extends LatencyRecord {
 
-    public AggregateLatencyRecord(long startNs) {
+    public WorkerTaskLatencyRecord(long startNs) {
         super(startNs);
     }
 
@@ -31,14 +31,11 @@ public class AggregateLatencyRecord extends LatencyRecord {
         ++nextIndex;
     }
 
-    protected void allocateChunk() {
-        assert (values.isEmpty() && nextIndex == 0)
-                || nextIndex == ALLOC_SIZE;
-        values.add(new AggregateLatencyRecord.Sample[ALLOC_SIZE]);
-        nextIndex = 0;
+    protected LatencyRecord.Sample[] getNewLatencyRecord() {
+        return new WorkerTaskLatencyRecord.Sample[ALLOC_SIZE];
     }
 
-    /** Stores the start time and latency for a single sample. Immutable. */
+    /** Stores the start time and latencies (for a single worker task) for a single sample. Immutable. */
     public static final class Sample extends LatencyRecord.Sample {
         public final int fetchWorkUs;
         public final int keyingLatencyUs;

@@ -38,6 +38,13 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
   }
 
   protected void allocateChunk() {
+    assert (values.isEmpty() && nextIndex == 0)
+            || nextIndex == ALLOC_SIZE;
+    values.add(getNewLatencyRecord());
+    nextIndex = 0;
+  }
+
+  protected LatencyRecord.Sample[] getNewLatencyRecord() {
     throw new UnsupportedOperationException();
   }
 

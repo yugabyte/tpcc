@@ -565,6 +565,10 @@ public class Worker implements Runnable {
                             assert (false) : String.format("Unexpected status '%s' for %s", status, next);
                     } // SWITCH
                 }
+                // Don't retry if it is not a NewOrder Transaction.
+                if (!next.getName().equals("NewOrder")) {
+                    break;
+                }
             } // WHILE
             conn.close();
         } catch (SQLException ex) {

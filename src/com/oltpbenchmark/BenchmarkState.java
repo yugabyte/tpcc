@@ -39,7 +39,6 @@ public final class BenchmarkState {
 
   private final CountDownLatch startBarrier;
   private final AtomicInteger notDoneCount;
-
   // Protected by this
 
   /**

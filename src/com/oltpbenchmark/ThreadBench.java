@@ -29,7 +29,6 @@ import java.util.Set;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.LatencyRecord.Sample;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
@@ -45,7 +44,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   // private File profileFile;
   private final List<WorkloadConfiguration> workConfs;
   private final List<WorkloadState> workStates;
-  final ArrayList<LatencyRecord.Sample> samples = new ArrayList<>();
+  final ArrayList<TransactionLatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
 
   public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
@@ -56,7 +55,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   public static final class TimeBucketIterable implements Iterable<DistributionStatistics> {
-      private final Iterable<Sample> samples;
+      private final Iterable<LatencyRecord.Sample> samples;
       private final int windowSizeSeconds;
       private final TransactionType txType;
 
@@ -64,7 +63,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
        * Instantiate an Iterable of DistributionStatistics for the given samples for each windowSizeSeconds of samples,
        * restricting to the specified txType.
        */
-      public TimeBucketIterable(Iterable<Sample> samples, int windowSizeSeconds, TransactionType txType) {
+      public TimeBucketIterable(Iterable<LatencyRecord.Sample> samples, int windowSizeSeconds, TransactionType txType) {
           this.samples = samples;
           this.windowSizeSeconds = windowSizeSeconds;
           this.txType = txType;
@@ -77,11 +76,11 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   public static final class TimeBucketIterator implements Iterator<DistributionStatistics> {
-      private final Iterator<Sample> samples;
+      private final Iterator<LatencyRecord.Sample> samples;
       private final int windowSizeSeconds;
       private final TransactionType txType;
 
-      private Sample sample;
+      private TransactionLatencyRecord.Sample sample;
       private long nextStartNs;
 
       private DistributionStatistics next;
@@ -96,7 +95,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
           this.txType = txType;
 
           if (samples.hasNext()) {
-              sample = samples.next();
+              sample = (TransactionLatencyRecord.Sample)samples.next();
               // TODO: To be totally correct, we would want this to be the
               // timestamp of the start
               // of the measurement interval. In most cases this won't matter.
@@ -119,10 +118,10 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
               // INVALID TXType means all should be reported, if a filter is
               // set, only this specific transaction
               if (txType == TransactionType.INVALID || txType.getId() == sample.tranType)
-                  latencies.add(sample.latencyUs);
+                  latencies.add(sample.connLatencyUs + sample.operationLatencyUs);
 
               if (samples.hasNext()) {
-                  sample = samples.next();
+                  sample = (TransactionLatencyRecord.Sample) samples.next();
               } else {
                   sample = null;
               }
@@ -480,7 +479,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       // possible: sorting!
       for (Worker w : workers) {
         for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
-          samples.add(sample);
+          samples.add((TransactionLatencyRecord.Sample)sample);
         }
       }
       Collections.sort(samples);

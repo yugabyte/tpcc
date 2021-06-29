@@ -20,7 +20,6 @@ package com.oltpbenchmark;
 import java.io.PrintStream;
 import java.util.*;
 
-import com.oltpbenchmark.LatencyRecord.Sample;
 import com.oltpbenchmark.ThreadBench.TimeBucketIterable;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.util.Histogram;
@@ -39,7 +38,7 @@ public final class Results {
 
   public final List<LatencyRecord.Sample> latencySamples;
 
-  public Results(long nanoSeconds, int measuredRequests, final List<LatencyRecord.Sample> latencySamples) {
+  public Results(long nanoSeconds, int measuredRequests, final List<TransactionLatencyRecord.Sample> latencySamples) {
     this.nanoSeconds = nanoSeconds;
     this.measuredRequests = measuredRequests;
 
@@ -152,16 +151,16 @@ public final class Results {
     String[] header = {
         "Transaction Name",
         "Start Time (nanoseconds)",
-        "Latency (microseconds)",
+        "Connection Latency (microseconds)",
         "OperationLatency (microseconds)"
     };
     out.println(String.join(",", header));
-    for (Sample s : latencySamples) {
+    for (LatencyRecord.Sample s : latencySamples) {
       String[] row = {
           activeTXTypes.get(s.tranType-1).getName(),
           Long.toString(s.startNs),
-          Integer.toString(s.latencyUs),
-          Integer.toString(s.operationLatencyUs),
+          Integer.toString(((TransactionLatencyRecord.Sample)s).connLatencyUs),
+          Integer.toString(((TransactionLatencyRecord.Sample)s).operationLatencyUs),
       };
       out.println(String.join(",", row));
     }

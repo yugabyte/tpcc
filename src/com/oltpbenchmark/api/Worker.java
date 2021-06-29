@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.oltpbenchmark.*;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.NewOrder;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.oltpbenchmark.util.Pair;
 import com.zaxxer.hikari.HikariDataSource;
@@ -566,7 +567,7 @@ public class Worker implements Runnable {
                     } // SWITCH
                 }
                 // Don't retry if it is not a NewOrder Transaction.
-                if (!next.getName().equals("NewOrder")) {
+                if (next.getProcedureClass() != NewOrder.class) {
                     break;
                 }
             } // WHILE

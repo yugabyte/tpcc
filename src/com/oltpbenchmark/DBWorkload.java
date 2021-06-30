@@ -649,25 +649,22 @@ public class DBWorkload {
     if (outputVerboseRes) {
       resultOut = new StringBuilder();
       resultOut.append("\n");
-      resultOut.append("=====================================FAILURE LATENCIES====================================\n");
-      resultOut.append(" Transaction |  Count   | Percentage | Avg. Latency | P99 Latency | Connection Acq Latency\n");
+      resultOut.append("==============================FAILURE LATENCIES==============================\n");
+      resultOut.append(" Transaction |  Count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
       for (int i = 0; i < list_failure_latencies.size(); ++i) {
         String op = transactionTypes.get(i + 1);
         List<Integer> latencies = list_failure_latencies.get(i);
         List<Integer> conn_latencies = list_failure_conn_latencies.get(i);
-        double percentage = 100.0 * latencies.size() / (latencies.size() + list_latencies.get(i).size());
         resultOut.append(String.format(
-                "%12s |%9s |%10.2f%% |%13.2f |%12.2f |%23.2f\n",
-                op, latencies.size(), percentage, getAverageLatency(latencies), getP99Latency(latencies),
+                "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
+                op, latencies.size(), getAverageLatency(latencies), getP99Latency(latencies),
                 getAverageLatency(conn_latencies)));
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
       List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
-      double totalPercentage = 100.0 * failureLatenciesAll.size() / (failureLatenciesAll.size() + latenciesAll.size());
-
       resultOut.append(String.format(
-              "%12s |%9s |%10.2f%% |%13.2f |%12.2f |%23.2f\n",
-              "All ", failureLatenciesAll.size(), totalPercentage, getAverageLatency(failureLatenciesAll), getP99Latency(failureLatenciesAll),
+              "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
+              "All ", failureLatenciesAll.size(), getAverageLatency(failureLatenciesAll), getP99Latency(failureLatenciesAll),
               getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
     }
@@ -676,13 +673,11 @@ public class DBWorkload {
   private static void PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {
     int numTxnTypes = workConf.getNumTxnTypes();
     int numTriesPerProc = workConf.getMaxRetriesPerTransaction() + 1;
-    int[][] totalRetries = new int[numTxnTypes][numTriesPerProc];
-    int[] totalFailures = new int[numTxnTypes];
+    int[][] totalFailedTries = new int[numTxnTypes][numTriesPerProc];
     for (Worker w : workers) {
       for (int i = 0; i < numTxnTypes; ++i) {
-        totalFailures[i] += w.getTotalFailures()[i];
         for (int tryIdx = 0; tryIdx < numTriesPerProc; ++tryIdx) {
-          totalRetries[i][tryIdx] += w.getTotalTries()[i][tryIdx];
+          totalFailedTries[i][tryIdx] += w.getTotalFailedTries()[i][tryIdx];
         }
       }
     }
@@ -690,30 +685,32 @@ public class DBWorkload {
     StringBuilder resultOut = new StringBuilder();
 
     resultOut.append("\n");
-    resultOut.append("========RETRIES (DEPRECATED STATS)===========\n");
-    resultOut.append("   Operation   | Total Created |");
-    for (int i = 1; i < numTriesPerProc; ++i) {
-      resultOut.append(String.format(" Retry Number %1d |", i));
+    resultOut.append("=================== RETRY ATTEMPTS ====================\n");
+    resultOut.append("  Transaction  |    Count  |");
+    for (int i = 0; i < numTriesPerProc; ++i) {
+      resultOut.append(String.format(" Retry #%1d - Failure Count |", i));
     }
-    resultOut.append("    Conflicts  \n");
-
+    resultOut.append("\n");
+    int[] workerTotalTasks = new int[5];
+    for (Worker w : workers) {
+      Iterable<LatencyRecord.Sample> latencyRecord;
+      latencyRecord = w.getWorkerTaskLatencyRecords();
+      for (LatencyRecord.Sample sample : latencyRecord) {
+        workerTotalTasks[sample.tranType - 1]++;
+      }
+    }
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);
-      int totalCreated = totalRetries[i][0];
-      resultOut.append(String.format("%14s |%14d |", op, totalCreated));
-      for (int retry = 1; retry < numTriesPerProc; ++retry) {
-        int numRetries = totalRetries[i][retry];
+      int totalTasks = workerTotalTasks[i];
+      resultOut.append(String.format("%14s |%10d |", op, totalTasks));
+      for (int retry = 0; retry < numTriesPerProc; ++retry) {
+        int numRetries = totalFailedTries[i][retry];
         double pctRetried = numRetries;
-        pctRetried /= totalCreated;
+        pctRetried /= totalTasks;
         pctRetried *= 100.0;
-        resultOut.append(String.format("%6d (%5.2f%%) |", numRetries, pctRetried));
+        resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
       }
-
-      int numFailed = totalFailures[i];
-      double pctFailed = numFailed;
-      pctFailed *= 100.0;
-      pctFailed /= totalCreated;
-      resultOut.append(String.format("%6d (%5.2f%%)\n", numFailed, pctFailed));
+      resultOut.append("\n");
     }
 
     LOG.info(resultOut.toString());

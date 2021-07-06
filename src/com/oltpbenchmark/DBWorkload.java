@@ -21,6 +21,9 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.util.*;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.oltpbenchmark.benchmarks.tpcc.WriteMetricsToJSON;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -34,6 +37,7 @@ import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
 import com.oltpbenchmark.util.FileUtil;
 import com.oltpbenchmark.util.StringBoxUtil;
 import com.oltpbenchmark.util.StringUtil;
+
 
 import static java.lang.Integer.min;
 
@@ -469,9 +473,14 @@ public class DBWorkload {
     r.startTime = start;
     r.endTime = end;
 
-    PrintToplineResults(workers, r);
-    PrintLatencies(workers, outputVerboseRes);
-    PrintWorkerTaskLatencies(workers);
+    JsonObject jsonObj = new JsonObject();
+
+    JsonObject jsonResult = PrintToplineResults(workers, r);
+    JsonObject jsonLatencies = PrintLatencies(workers, outputVerboseRes);
+    JsonObject jsonAggLatencies = PrintAggregateLatencies(workers);
+    jsonObj.add("Results",jsonResult);
+    jsonObj.add("Latencies",jsonLatencies);
+    jsonObj.add("AggLatencies", jsonAggLatencies);
 
     if (outputVerboseRes) {
       PrintQueryAttempts(workers, workConfs.get(0));
@@ -486,10 +495,12 @@ public class DBWorkload {
       StockLevel.printLatencyStats();
     }
 
+    WriteMetricsToJSON.writeMetricsToJSONFile(jsonObj);
+
     return r;
   }
 
-  private static void PrintToplineResults(List<Worker> workers, Results r) {
+  private static JsonObject PrintToplineResults(List<Worker> workers, Results r) {
     long numNewOrderTransactions = 0;
     for (Worker w : workers) {
       for (LatencyRecord.Sample sample : w.getLatencyRecords()) {
@@ -510,6 +521,11 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
+    JsonObject jsonObj = new JsonObject();
+    jsonObj.addProperty("tpmc", tpmc);
+    jsonObj.addProperty("Efficiency",efficiency );
+    jsonObj.addProperty("throughput", r.getRequestsPerSecond());
+    return jsonObj;
   }
 
   private static List<Integer> combineListsAcrossTransactions(List<List<Integer>> listofLists) {
@@ -522,7 +538,7 @@ public class DBWorkload {
     return newList;
   }
 
-  private static void PrintWorkerTaskLatencies(List<Worker> workers) {
+  private static JsonObject PrintAggregateLatencies(List<Worker> workers) {
     List<List<Integer>> fetchWorkLatencies = new ArrayList<>();
     List<List<Integer>> keyingTimeLatencies = new ArrayList<>();
     List<List<Integer>> workLatencies = new ArrayList<>();
@@ -595,13 +611,18 @@ public class DBWorkload {
             "All ","All",  totalLatencyAcrossTransactions.size(), getAverageLatency(totalLatencyAcrossTransactions),
             getP99Latency(totalLatencyAcrossTransactions)));
     LOG.info(resultOut.toString());
+    return new JsonObject();
   }
 
-  private static void PrintLatencies(List<Worker> workers, boolean outputVerboseRes) {
+  private static JsonObject PrintLatencies(List<Worker> workers, boolean outputVerboseRes) {
     List<List<Integer>> list_latencies = new ArrayList<>();
     List<List<Integer>> list_conn_latencies = new ArrayList<>();
     List<List<Integer>> list_failure_latencies = new ArrayList<>();
     List<List<Integer>> list_failure_conn_latencies = new ArrayList<>();
+    JsonArray jsonArrLatencies = new JsonArray();
+    JsonArray jsonArrFailureLatencies = new JsonArray();
+//    JsonArray jsonArrFaiureConnLatencies = new JsonArray();
+//    JsonArray jsonArrConnLatencies = new JsonArray();
     for (int i = 0; i < 5; ++i) {
       list_latencies.add(new ArrayList<>());
       list_conn_latencies.add(new ArrayList<>());
@@ -637,6 +658,13 @@ public class DBWorkload {
           "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
           op, latencies.size(), getAverageLatency(latencies), getP99Latency(latencies),
           getAverageLatency(conn_latencies)));
+      JsonObject jsonObj = new JsonObject();
+      jsonObj.addProperty("Transaction",op);
+      jsonObj.addProperty("Count", latencies.size());
+      jsonObj.addProperty("AvgLatency",getAverageLatency(latencies));
+      jsonObj.addProperty("P99Latency", getP99Latency(latencies));
+      jsonObj.addProperty("ConnectionAcqLatency",getAverageLatency(conn_latencies));
+      jsonArrLatencies.add(jsonObj);
     }
     List<Integer> latenciesAll = combineListsAcrossTransactions(list_latencies);
     List<Integer> connLatenciesAll = combineListsAcrossTransactions(list_conn_latencies);
@@ -659,15 +687,28 @@ public class DBWorkload {
                 "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
                 op, latencies.size(), getAverageLatency(latencies), getP99Latency(latencies),
                 getAverageLatency(conn_latencies)));
+        JsonObject jsonObj = new JsonObject();
+        jsonObj.addProperty("Transaction",op);
+        jsonObj.addProperty("Count", latencies.size());
+        jsonObj.addProperty("AvgLatency",getAverageLatency(latencies));
+        jsonObj.addProperty("P99Latency", getP99Latency(latencies));
+        jsonObj.addProperty("ConnectionAcqLatency",getAverageLatency(conn_latencies));
+        jsonArrFailureLatencies.add(jsonObj);
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
       List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
+      double totalPercentage = 100.0 * failureLatenciesAll.size() / (failureLatenciesAll.size() + latenciesAll.size());
+
       resultOut.append(String.format(
               "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
               "All ", failureLatenciesAll.size(), getAverageLatency(failureLatenciesAll), getP99Latency(failureLatenciesAll),
               getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
     }
+    JsonObject jsonObj = new JsonObject();
+    jsonObj.add("Latencies", jsonArrLatencies);
+    jsonObj.add("FailureLatencies", jsonArrFailureLatencies);
+    return jsonObj;
   }
 
   private static void PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {

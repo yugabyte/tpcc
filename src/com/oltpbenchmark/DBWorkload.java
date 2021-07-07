@@ -479,11 +479,12 @@ public class DBWorkload {
     JsonObject jsonLatencies = PrintLatencies(workers, outputVerboseRes);
     JsonObject jsonAggLatencies = PrintAggregateLatencies(workers);
     jsonObj.add("Results",jsonResult);
-    jsonObj.add("Latencies",jsonLatencies);
-    jsonObj.add("AggLatencies", jsonAggLatencies);
+    jsonObj.add("Total and Failure Latencies",jsonLatencies);
+    jsonObj.add("Work Task Latencies", jsonAggLatencies);
 
     if (outputVerboseRes) {
-      PrintQueryAttempts(workers, workConfs.get(0));
+      JsonObject retryJson = PrintQueryAttempts(workers,workConfs.get(0));
+      jsonObj.add("Retry Attempts", retryJson);
     }
 
     // TODO -- pretty print these items.
@@ -539,6 +540,8 @@ public class DBWorkload {
   }
 
   private static JsonObject PrintAggregateLatencies(List<Worker> workers) {
+    JsonObject jsonElements = new JsonObject();
+    JsonArray jsonOpArray = new JsonArray();
     List<List<Integer>> fetchWorkLatencies = new ArrayList<>();
     List<List<Integer>> keyingTimeLatencies = new ArrayList<>();
     List<List<Integer>> workLatencies = new ArrayList<>();
@@ -587,6 +590,50 @@ public class DBWorkload {
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
               op, "Thinking", thinkLatencyList.size(), getAverageLatency(thinkLatencyList), getP99Latency(thinkLatencyList)));
+
+      List<String> keyList = new ArrayList<String>() { {add("Task"); add("Count"); add("AvgLatency"); add("P99Latency");}};
+      List<String> valueList = new ArrayList<String>() {
+        {
+          add("FetchWork");
+          add(fetchWork.size()+"");
+          add(getAverageLatency(fetchWork)+"");
+          add(getP99Latency(fetchWork)+"");
+        }
+      };
+
+
+      WriteMetricsToJSON.addJson(keyList,valueList);
+      /*JsonObject jsonObj = new JsonObject();
+      jsonObj.addProperty("Task", "FetchWork");
+      jsonObj.addProperty("Count", fetchWork.size());
+      jsonObj.addProperty("AvgLatency",getAverageLatency(fetchWork));
+      jsonObj.addProperty("P99Latency", getP99Latency(fetchWork));
+      jsonOpArray.add(jsonObj);*/
+
+
+      JsonObject jsonObj = new JsonObject();
+      jsonObj.addProperty("Task", "Keying");
+      jsonObj.addProperty("Count", keyingLatencyList.size());
+      jsonObj.addProperty("AvgLatency",getAverageLatency(keyingLatencyList));
+      jsonObj.addProperty("P99Latency", getP99Latency(keyingLatencyList));
+      jsonOpArray.add(jsonObj);
+
+
+      jsonObj = new JsonObject();
+      jsonObj.addProperty("Task", "Op With Retry");
+      jsonObj.addProperty("Count", workLatencyList.size());
+      jsonObj.addProperty("AvgLatency",getAverageLatency(workLatencyList));
+      jsonObj.addProperty("P99Latency", getP99Latency(workLatencyList));
+      jsonOpArray.add(jsonObj);
+
+      jsonObj = new JsonObject();
+      jsonObj.addProperty("Task", "Thinking");
+      jsonObj.addProperty("Count", thinkLatencyList.size());
+      jsonObj.addProperty("AvgLatency",getAverageLatency(thinkLatencyList));
+      jsonObj.addProperty("P99Latency", getP99Latency(thinkLatencyList));
+      jsonOpArray.add(jsonObj);
+
+      jsonElements.add(op,jsonOpArray);
     }
     List<Integer> fetchWorkAll = combineListsAcrossTransactions(fetchWorkLatencies);
     List<Integer> keyingAll = combineListsAcrossTransactions(keyingTimeLatencies);
@@ -610,8 +657,49 @@ public class DBWorkload {
             "%12s |%13s |%9s |%13.2f |%12.2f\n",
             "All ","All",  totalLatencyAcrossTransactions.size(), getAverageLatency(totalLatencyAcrossTransactions),
             getP99Latency(totalLatencyAcrossTransactions)));
+
+    JsonObject jsonObj = new JsonObject();
+    jsonObj.addProperty("Task", "FetchWork");
+    jsonObj.addProperty("Count", fetchWorkAll.size());
+    jsonObj.addProperty("AvgLatency",getAverageLatency(fetchWorkAll));
+    jsonObj.addProperty("P99Latency", getP99Latency(fetchWorkAll));
+    jsonOpArray.add(jsonObj);
+
+
+    jsonObj = new JsonObject();
+    jsonObj.addProperty("Task", "Keying");
+    jsonObj.addProperty("Count", keyingAll.size());
+    jsonObj.addProperty("AvgLatency",getAverageLatency(keyingAll));
+    jsonObj.addProperty("P99Latency", getP99Latency(keyingAll));
+    jsonOpArray.add(jsonObj);
+
+
+    jsonObj = new JsonObject();
+    jsonObj.addProperty("Task", "Op With Retry");
+    jsonObj.addProperty("Count", workAll.size());
+    jsonObj.addProperty("AvgLatency",getAverageLatency(workAll));
+    jsonObj.addProperty("P99Latency", getP99Latency(workAll));
+    jsonOpArray.add(jsonObj);
+
+    jsonObj = new JsonObject();
+
+    jsonObj.addProperty("Task", "Thinking");
+    jsonObj.addProperty("Count", thinkAll.size());
+    jsonObj.addProperty("AvgLatency",getAverageLatency(thinkAll));
+    jsonObj.addProperty("P99Latency", getP99Latency(thinkAll));
+    jsonOpArray.add(jsonObj);
+
+    jsonObj.addProperty("Task", "All");
+    jsonObj.addProperty("Count", totalLatencyAcrossTransactions.size());
+    jsonObj.addProperty("AvgLatency",getAverageLatency(totalLatencyAcrossTransactions));
+    jsonObj.addProperty("P99Latency", getP99Latency(totalLatencyAcrossTransactions));
+    jsonOpArray.add(jsonObj);
+
+    jsonElements.add("All",jsonOpArray);
+
     LOG.info(resultOut.toString());
-    return new JsonObject();
+
+    return jsonElements;
   }
 
   private static JsonObject PrintLatencies(List<Worker> workers, boolean outputVerboseRes) {
@@ -621,7 +709,7 @@ public class DBWorkload {
     List<List<Integer>> list_failure_conn_latencies = new ArrayList<>();
     JsonArray jsonArrLatencies = new JsonArray();
     JsonArray jsonArrFailureLatencies = new JsonArray();
-//    JsonArray jsonArrFaiureConnLatencies = new JsonArray();
+//    JsonArray jsonArrFailureConnLatencies = new JsonArray();
 //    JsonArray jsonArrConnLatencies = new JsonArray();
     for (int i = 0; i < 5; ++i) {
       list_latencies.add(new ArrayList<>());
@@ -711,7 +799,7 @@ public class DBWorkload {
     return jsonObj;
   }
 
-  private static void PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {
+  private static JsonObject PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {
     int numTxnTypes = workConf.getNumTxnTypes();
     int numTriesPerProc = workConf.getMaxRetriesPerTransaction() + 1;
     int[][] totalFailedTries = new int[numTxnTypes][numTriesPerProc];
@@ -740,21 +828,27 @@ public class DBWorkload {
         workerTotalTasks[sample.tranType - 1]++;
       }
     }
+    JsonObject jsonElements = new JsonObject();
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);
       int totalTasks = workerTotalTasks[i];
       resultOut.append(String.format("%14s |%10d |", op, totalTasks));
+      JsonObject jsonObj = new JsonObject();
+      //jsonObj.addProperty("Transaction",op);
+      jsonObj.addProperty("Count", totalTasks);
       for (int retry = 0; retry < numTriesPerProc; ++retry) {
         int numRetries = totalFailedTries[i][retry];
         double pctRetried = numRetries;
         pctRetried /= totalTasks;
         pctRetried *= 100.0;
         resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
+        jsonObj.addProperty("Retry #" + i + " - Failure Count",numRetries + "(" + pctRetried + ")");
       }
+      jsonElements.add(op,jsonObj);
       resultOut.append("\n");
     }
-
     LOG.info(resultOut.toString());
+    return jsonElements;
   }
 
   private static String getOperationLatencyString(String operation, List<Integer> latencies) {

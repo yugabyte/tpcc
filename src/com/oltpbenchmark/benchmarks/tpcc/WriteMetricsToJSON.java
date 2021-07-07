@@ -1,6 +1,6 @@
 package com.oltpbenchmark.benchmarks.tpcc;
 
-import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
 import java.io.File;
@@ -28,7 +28,7 @@ public class WriteMetricsToJSON {
             System.out.println("Exception occurred while creating log file" +
                     "\nError Message:" + e.getMessage());
         }
-        String jsonString = new Gson().toJson(jsonObject);
+        String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(jsonObject);
         try {
             FileWriter file = new FileWriter(dest);
             file.write(jsonString);

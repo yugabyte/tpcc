@@ -12,9 +12,9 @@ import java.util.List;
 public class WriteMetricsToJSON {
 
 
-    public static JsonObject addJson(List<String> keyList, List<String> valueList){
+    public static JsonObject getJson(List<String> keyList, List<String> valueList){
         JsonObject jsonObject = new JsonObject();
-        for(int i =0; i< keyList.size(); i++){
+        for(int i = 0; i< keyList.size(); i++){
             jsonObject.addProperty(keyList.get(i), valueList.get(i));
         }
         return jsonObject;

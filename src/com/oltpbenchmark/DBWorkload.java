@@ -45,6 +45,7 @@ public class DBWorkload {
 
   private static final String SINGLE_LINE = StringUtils.repeat("=", 70);
 
+  private static List<String> nodes;
   private static int numDBConnections = 0;
   private static int newOrderTxnId = -1;
   private static int numWarehouses = 10;
@@ -104,7 +105,7 @@ public class DBWorkload {
     // Seconds
     int intervalMonitor = options.getIntervalMonitor().orElse(0);
 
-    List<String> nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
+    nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
 
     numWarehouses = options.getWarehouses().orElse(numWarehouses);
 
@@ -478,6 +479,15 @@ public class DBWorkload {
     JsonObject resultsJson = PrintToplineResults(workers, r);
     JsonObject latenciesJson = PrintLatencies(workers, outputVerboseRes);
     JsonObject workerTaskLatenciesJson = PrintAggregateLatencies(workers);
+
+    JsonObject testConfigJson = new JsonObject();
+    testConfigJson.addProperty("#Nodes", nodes.size());
+    testConfigJson.addProperty("#Warehouses", numWarehouses);
+    testConfigJson.addProperty("#DBConnections", numDBConnections);
+    testConfigJson.addProperty("WarmupTime (secs)", warmupTime);
+    testConfigJson.addProperty("Runtime(secs)" , time);
+
+    jsonObj.add("Test Configuration :" , testConfigJson);
     jsonObj.add("Results",resultsJson);
     jsonObj.add("Total and Failure Latencies",latenciesJson);
     jsonObj.add("Work Task Latencies", workerTaskLatenciesJson);
@@ -688,7 +698,6 @@ public class DBWorkload {
             "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
             "All ", latenciesAll.size(), getAverageLatency(latenciesAll), getP99Latency(latenciesAll),
             getAverageLatency(connLatenciesAll)));
-
     LOG.info(resultOut.toString());
     if (outputVerboseRes) {
       resultOut = new StringBuilder();

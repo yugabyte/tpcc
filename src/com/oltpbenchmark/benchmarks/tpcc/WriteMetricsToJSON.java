@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 
@@ -20,10 +22,13 @@ public class WriteMetricsToJSON {
         return jsonObject;
     }
 
-    public static void writeMetricsToJSONFile(JsonObject jsonObject) {
+    public static void writeMetricsToJSONFile(int numWareHouses, int warmupTime, int numDBConnections, JsonObject jsonObject) {
         String dest = "";
         try {
-            dest = new File(".").getCanonicalPath() + File.separator + "jsonOutput_" + System.currentTimeMillis() + ".JSON";
+            dest = new File(".").getCanonicalPath() + File.separator
+                    + "jsonOutput_" + numWareHouses + "WH_" + numDBConnections + "Conn_" + warmupTime + "_"
+                    + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date())
+                    + ".JSON";
         } catch (IOException e) {
             System.out.println("Exception occurred while creating log file" +
                     "\nError Message:" + e.getMessage());
@@ -37,7 +42,6 @@ public class WriteMetricsToJSON {
             System.out.println("Got exception while writing JSON metrics to file.");
             e.printStackTrace();
         }
-        //System.out.println("JSON file created: " + jsonString);
     }
 
 

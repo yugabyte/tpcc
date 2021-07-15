@@ -481,7 +481,7 @@ public class DBWorkload {
     PrintAggregateLatencies(workers);
 
     if (outputVerboseRes) {
-      PrintQueryAttempts(workers,workConfs.get(0));
+      PrintQueryAttempts(workers, workConfs.get(0));
     }
 
     // TODO -- pretty print these items.
@@ -556,7 +556,6 @@ public class DBWorkload {
                 asample.keyingLatencyUs + asample.aggregateExecuteUs + asample.thinkTimeUs);
       }
     }
-
     Map<String,List<List<String>>> workLatenciesList = new LinkedHashMap<>();
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
@@ -629,7 +628,6 @@ public class DBWorkload {
     List<List<Integer>> list_conn_latencies = new ArrayList<>();
     List<List<Integer>> list_failure_latencies = new ArrayList<>();
     List<List<Integer>> list_failure_conn_latencies = new ArrayList<>();
-
     for (int i = 0; i < 5; ++i) {
       list_latencies.add(new ArrayList<>());
       list_conn_latencies.add(new ArrayList<>());
@@ -671,6 +669,7 @@ public class DBWorkload {
     }
     List<Integer> latenciesAll = combineListsAcrossTransactions(list_latencies);
     List<Integer> connLatenciesAll = combineListsAcrossTransactions(list_conn_latencies);
+
     resultOut.append(String.format(
             "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
             "All ", latenciesAll.size(), getAverageLatency(latenciesAll), getP99Latency(latenciesAll),
@@ -678,10 +677,8 @@ public class DBWorkload {
     latenciesList.add(getValueList("All", latenciesAll, connLatenciesAll));
     jsonMetricsBuilder.buildLatencyJsonObject(latenciesList);
     LOG.info(resultOut.toString());
-
-
-
     if (outputVerboseRes) {
+      resultOut = new StringBuilder();
       latenciesList = new ArrayList<>();
       resultOut.append("\n");
       resultOut.append("==============================FAILURE LATENCIES==============================\n");
@@ -703,6 +700,7 @@ public class DBWorkload {
               "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
               "All ", failureLatenciesAll.size(), getAverageLatency(failureLatenciesAll), getP99Latency(failureLatenciesAll),
               getAverageLatency(failureConnLatenciesAll)));
+      LOG.info(resultOut.toString());
       latenciesList.add(getValueList("All", failureLatenciesAll, connLatenciesAll));
       jsonMetricsBuilder.buildFailureLatencyJsonObject(latenciesList);
     }
@@ -720,10 +718,6 @@ public class DBWorkload {
         }
       }
     }
-
-    String[] operation = new String[6];
-    int[] count = new int[6];
-    String[][] numRetry = new String[6][numTriesPerProc];
 
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
@@ -872,6 +866,7 @@ public class DBWorkload {
                                          list_latencies.get(i)));
     }
   }
+
 
   private static List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
     List<String> valueList = new ArrayList<String>();

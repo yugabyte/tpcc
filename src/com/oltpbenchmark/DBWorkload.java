@@ -478,7 +478,7 @@ public class DBWorkload {
 
     PrintToplineResults(workers, r);
     PrintLatencies(workers, outputVerboseRes);
-    PrintAggregateLatencies(workers);
+    PrintWorkerTaskLatencies(workers);
 
     if (outputVerboseRes) {
       PrintQueryAttempts(workers, workConfs.get(0));
@@ -530,7 +530,7 @@ public class DBWorkload {
     return newList;
   }
 
-  private static void PrintAggregateLatencies(List<Worker> workers) {
+  private static void PrintWorkerTaskLatencies(List<Worker> workers) {
     List<List<Integer>> fetchWorkLatencies = new ArrayList<>();
     List<List<Integer>> keyingTimeLatencies = new ArrayList<>();
     List<List<Integer>> workLatencies = new ArrayList<>();

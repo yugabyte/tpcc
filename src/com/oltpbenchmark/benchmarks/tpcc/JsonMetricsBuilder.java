@@ -27,6 +27,14 @@ public class JsonMetricsBuilder {
             jsonObject = new JsonObject();
     }
 
+    public static JsonObject getJson(List<String> keyList, List<String> valueList) {
+        JsonObject jsonObject = new JsonObject();
+        for (int i = 0; i < keyList.size(); i++) {
+            jsonObject.addProperty(keyList.get(i), valueList.get(i));
+        }
+        return jsonObject;
+    }
+
     public void buildTestConfigJson(int nodes, int warehouses, int dbConn, int warmuptime, int runtime) {
         this.numWarehouses = warehouses;
         this.numDBConnections = dbConn;
@@ -43,7 +51,7 @@ public class JsonMetricsBuilder {
 
     public void buildResultJson(double tpmc, double efficiency, double throughput) {
         JsonObject resultJson = new JsonObject();
-        resultJson.addProperty("TPMC", tpmc);
+        resultJson.addProperty("TPM-C", tpmc);
         resultJson.addProperty("Efficiency", efficiency);
         resultJson.addProperty("Throughput", throughput);
         jsonObject.add("Results", resultJson);
@@ -62,10 +70,7 @@ public class JsonMetricsBuilder {
 
         for (int i = 0; i < latencyList.size(); i++) {
             List<String> valueList = latencyList.get(i);
-            JsonObject latJson = new JsonObject();
-            for (int j = 0; j < keyList.size(); j++)
-                latJson.addProperty(keyList.get(j), valueList.get(j));
-            latJsonArr.add(latJson);
+            latJsonArr.add(getJson(keyList, valueList));
         }
         jsonObject.add("Latencies", latJsonArr);
     }
@@ -93,11 +98,9 @@ public class JsonMetricsBuilder {
             JsonArray aggLatOpArr = new JsonArray();
             for (int j = 0; j < opWorkList.size(); j++) {
                 List<String> valueList = opWorkList.get(j);
-                JsonObject aggLatJson = new JsonObject();
-                for (int i = 0; i < keyList.size(); i++)
-                    aggLatJson.addProperty(keyList.get(i), valueList.get(i));
+                JsonObject aggLatJson = getJson(keyList,valueList);
                 if (valueList.get(0).equalsIgnoreCase("All"))
-                    aggLatJson.addProperty("All", valueList.get(keyList.size() + 1));
+                    aggLatJson.addProperty("All", valueList.get(keyList.size()));
                 aggLatOpArr.add(aggLatJson);
             }
             aggLatJsonArr.add(entry.getKey(), aggLatOpArr);
@@ -112,16 +115,13 @@ public class JsonMetricsBuilder {
                 add("Count");
             }
         };
-        for (int j = 0; j < numTriesPerProc; ++j) {
+        for (int j = 0; j < numTriesPerProc; ++j)
             keyList.add(String.format(" Retry #%1d - Failure Count ", j));
-        }
+
         JsonArray retryJsonArr = new JsonArray();
         for (int i = 0; i < retryOpList.size(); i++) {
-            JsonObject retryJson = new JsonObject();
             List<String> valueList = retryOpList.get(i);
-            for (int j = 0; j < keyList.size(); j++)
-                retryJson.addProperty(keyList.get(j), valueList.get(j));
-            retryJsonArr.add(retryJson);
+            retryJsonArr.add(getJson(keyList,valueList));
         }
         jsonObject.add("Retry Attempts", retryJsonArr);
     }

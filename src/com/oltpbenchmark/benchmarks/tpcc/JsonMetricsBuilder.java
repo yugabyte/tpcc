@@ -69,10 +69,9 @@ public class JsonMetricsBuilder {
         JsonArray latJsonArr = new JsonArray();
 
         for (int i = 0; i < latencyList.size(); i++) {
-            List<String> valueList = latencyList.get(i);
-            latJsonArr.add(getJson(keyList, valueList));
+            latJsonArr.add(getJson(keyList, latencyList.get(i)));
         }
-        jsonObject.add("Latencies", latJsonArr);
+        jsonObject.add(latType, latJsonArr);
     }
 
     public void buildLatencyJsonObject(List<List<String>> latencyList) {
@@ -97,11 +96,7 @@ public class JsonMetricsBuilder {
             List<List<String>> opWorkList = entry.getValue();
             JsonArray aggLatOpArr = new JsonArray();
             for (int j = 0; j < opWorkList.size(); j++) {
-                List<String> valueList = opWorkList.get(j);
-                JsonObject aggLatJson = getJson(keyList,valueList);
-                if (valueList.get(0).equalsIgnoreCase("All"))
-                    aggLatJson.addProperty("All", valueList.get(keyList.size()));
-                aggLatOpArr.add(aggLatJson);
+                aggLatOpArr.add(getJson(keyList,opWorkList.get(j)));
             }
             aggLatJsonArr.add(entry.getKey(), aggLatOpArr);
         }
@@ -120,8 +115,7 @@ public class JsonMetricsBuilder {
 
         JsonArray retryJsonArr = new JsonArray();
         for (int i = 0; i < retryOpList.size(); i++) {
-            List<String> valueList = retryOpList.get(i);
-            retryJsonArr.add(getJson(keyList,valueList));
+            retryJsonArr.add(getJson(keyList,retryOpList.get(i)));
         }
         jsonObject.add("Retry Attempts", retryJsonArr);
     }

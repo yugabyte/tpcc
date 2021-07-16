@@ -704,7 +704,6 @@ public class DBWorkload {
       latenciesList.add(getValueList("All", failureLatenciesAll, connLatenciesAll));
       jsonMetricsBuilder.buildFailureLatencyJsonObject(latenciesList);
     }
-
   }
 
   private static void PrintQueryAttempts(List<Worker> workers, WorkloadConfiguration workConf) {

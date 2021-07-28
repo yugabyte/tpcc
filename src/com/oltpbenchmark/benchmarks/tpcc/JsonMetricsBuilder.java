@@ -119,9 +119,8 @@ public class JsonMetricsBuilder {
 
     /* Writes the Json object to a JSON file */
     public void writeMetricsToJSONFile() {
-        String outputDirectory = "results" + File.separator + "json";
-
-        FileUtil.makeDirIfNotExists(outputDirectory.split(File.separator));
+        String outputDirectory = "results/json";
+        FileUtil.makeDirIfNotExists(outputDirectory.split("/"));
         String currentDir = "";
         try {
             currentDir = new File(".").getCanonicalPath();
@@ -133,7 +132,7 @@ public class JsonMetricsBuilder {
                 + "jsonOutput_" + numWarehouses + "WH_" + numDBConnections + "Conn_" + warmupTime + "_"
                 + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date())
                 + ".json";
-        
+
         String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(jsonObject);
         try {
             FileWriter file = new FileWriter(dest);
@@ -161,8 +160,6 @@ public class JsonMetricsBuilder {
             }
 
         }
-
     }
-
 
 }

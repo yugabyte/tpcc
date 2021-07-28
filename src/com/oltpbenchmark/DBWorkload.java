@@ -43,7 +43,7 @@ public class DBWorkload {
 
   private static final String SINGLE_LINE = StringUtils.repeat("=", 70);
 
-  private static List<String> nodes;
+  private static int nodeSize = 0;
   private static int numDBConnections = 0;
   private static int newOrderTxnId = -1;
   private static int numWarehouses = 10;
@@ -105,7 +105,8 @@ public class DBWorkload {
     // Seconds
     int intervalMonitor = options.getIntervalMonitor().orElse(0);
 
-    nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
+    List<String> nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
+    nodeSize = nodes.size();
 
     numWarehouses = options.getWarehouses().orElse(numWarehouses);
 
@@ -474,7 +475,7 @@ public class DBWorkload {
     r.startTime = start;
     r.endTime = end;
 
-    jsonMetricsBuilder.buildTestConfigJson(nodes.size(), numWarehouses, numDBConnections, warmupTime, time);
+    jsonMetricsBuilder.buildTestConfigJson(nodeSize, numWarehouses, numDBConnections, warmupTime, time);
 
     PrintToplineResults(workers, r);
     PrintLatencies(workers, outputVerboseRes);

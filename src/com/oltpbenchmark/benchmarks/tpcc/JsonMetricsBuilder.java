@@ -1,8 +1,6 @@
 package com.oltpbenchmark.benchmarks.tpcc;
 
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import com.oltpbenchmark.util.FileUtil;
 import org.apache.log4j.Logger;
 
@@ -12,10 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class JsonMetricsBuilder {
 
@@ -49,10 +44,11 @@ public class JsonMetricsBuilder {
         testConfigJson.addProperty("#DBConnections", dbConn);
         testConfigJson.addProperty("WarmupTime (secs)", warmuptime);
         testConfigJson.addProperty("RunTime (secs)", runtime);
+        testConfigJson.addProperty("Test start time : ", new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()));
         jsonObject.add("Test Configuration", testConfigJson);
     }
 
-    public void buildResultJson(double tpmc, String efficiency, double throughput) {
+    public void buildResultJson(double tpmc, String efficiency, String throughput) {
         JsonObject resultJson = new JsonObject();
         resultJson.addProperty("TPM-C", tpmc);
         resultJson.addProperty("Efficiency", efficiency);
@@ -128,10 +124,10 @@ public class JsonMetricsBuilder {
             LOG.error("Exception occurred fetching current dir" +
                     "\nError Message:" + e.getMessage());
         }
-        String dest = currentDir + File.separator + outputDirectory + File.separator
-                + "jsonOutput_" + numWarehouses + "WH_" + numDBConnections + "Conn_" + warmupTime + "_"
-                + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date())
-                + ".json";
+        String dest = currentDir + File.separator + outputDirectory + File.separator + "output.json";
+               // + "json_" + numWarehouses + "WH_" + numDBConnections + "Conn_"
+               // + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()) + "_"
+               // + UUID.randomUUID() + ".json";
 
         String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(jsonObject);
         try {
@@ -147,11 +143,12 @@ public class JsonMetricsBuilder {
     }
 
     public static void mergeJsonResults(String dirPath, String[] fileNames) {
+        List<String> jsonStrings = new ArrayList<>();
         for (String file : fileNames) {
             if (!file.endsWith("JSON")) {
                 continue;
             }
-            List<String> jsonStrings = new ArrayList<>();
+
             try {
                 jsonStrings.add(new String(Files.readAllBytes(Paths.get(file))));
                 LOG.info("\nJSON file retrieved : " + jsonStrings.get(jsonStrings.size() - 1));
@@ -160,6 +157,10 @@ public class JsonMetricsBuilder {
             }
 
         }
+        LOG.info("Printing JSON info.. ");
+        JsonObject json =(JsonObject) new JsonParser().parse(jsonStrings.get(0));
+        LOG.info("Efficiency : " + json.get("Efficiency"));
+
     }
 
 }

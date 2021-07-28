@@ -518,7 +518,8 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
-    jsonMetricsBuilder.buildResultJson(tpmc, df.format(efficiency), r.getRequestsPerSecond());
+    jsonMetricsBuilder.buildResultJson(tpmc, df.format(efficiency), df.format(r.getRequestsPerSecond()));
+
   }
 
   private static List<Integer> combineListsAcrossTransactions(List<List<Integer>> listofLists) {
@@ -737,6 +738,8 @@ public class DBWorkload {
     }
 
     List<List<String>> retryOpList = new ArrayList<>();
+    DecimalFormat df = new DecimalFormat();
+    df.setMaximumFractionDigits(2);
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);
       int totalTasks = workerTotalTasks[i];
@@ -751,7 +754,7 @@ public class DBWorkload {
         pctRetried /= totalTasks;
         pctRetried *= 100.0;
         resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
-        valueList.add(numRetries + " (" + pctRetried + ")");
+        valueList.add(numRetries + " (" + df.format(pctRetried) + ")");
       }
       retryOpList.add(valueList);
       resultOut.append("\n");

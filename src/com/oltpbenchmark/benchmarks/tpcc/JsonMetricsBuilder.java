@@ -3,6 +3,7 @@ package com.oltpbenchmark.benchmarks.tpcc;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.oltpbenchmark.util.FileUtil;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -116,9 +117,11 @@ public class JsonMetricsBuilder {
 
     /* Writes the Json object to a JSON file */
     public void writeMetricsToJSONFile() {
+        String outputDirectory = "results";
+        FileUtil.makeDirIfNotExists(outputDirectory.split("/"));
         String dest = "";
         try {
-            dest = new File(".").getCanonicalPath() + File.separator
+            dest = new File(".").getCanonicalPath() + File.separator + outputDirectory + File.separator
                     + "jsonOutput_" + numWarehouses + "WH_" + numDBConnections + "Conn_" + warmupTime + "_"
                     + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date())
                     + ".JSON";

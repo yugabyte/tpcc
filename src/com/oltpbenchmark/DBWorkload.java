@@ -518,7 +518,7 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
-    jsonMetricsBuilder.buildResultJson(tpmc, efficiency, r.getRequestsPerSecond());
+    jsonMetricsBuilder.buildResultJson(tpmc, df.format(efficiency), r.getRequestsPerSecond());
   }
 
   private static List<Integer> combineListsAcrossTransactions(List<List<Integer>> listofLists) {
@@ -853,6 +853,8 @@ public class DBWorkload {
       }
     }
 
+    JsonMetricsBuilder.mergeJsonResults(dirPath, fileNames);
+
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
     double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
     DecimalFormat df = new DecimalFormat();
@@ -869,13 +871,16 @@ public class DBWorkload {
 
 
   private static List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+    DecimalFormat df = new DecimalFormat();
+    df.setMaximumFractionDigits(2);
+
     List<String> valueList = new ArrayList<String>();
     valueList.add(op);
     valueList.add(String.valueOf(latencyList.size()));
-    valueList.add(String.valueOf(getAverageLatency(latencyList)));
-    valueList.add(String.valueOf(getP99Latency(latencyList)));
+    valueList.add(df.format(getAverageLatency(latencyList)));
+    valueList.add(df.format(getP99Latency(latencyList)));
     if(connAcqLatencyList!=null)
-          valueList.add(String.valueOf(getAverageLatency(connAcqLatencyList)));
+          valueList.add(df.format(getAverageLatency(connAcqLatencyList)));
     return valueList;
   }
 

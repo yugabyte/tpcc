@@ -120,7 +120,7 @@ public class JsonMetricsBuilder {
     /* Writes the Json object to a JSON file */
     public void writeMetricsToJSONFile() {
         String outputDirectory = "results/json";
-        FileUtil.makeDirIfNotExists(outputDirectory.split("/"));
+        FileUtil.makeDirIfNotExists(outputDirectory);
         String currentDir = "";
         try {
             currentDir = new File(".").getCanonicalPath();

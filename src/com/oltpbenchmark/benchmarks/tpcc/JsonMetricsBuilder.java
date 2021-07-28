@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.oltpbenchmark.util.FileUtil;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 public class JsonMetricsBuilder {
 
+    private static final Logger LOG = Logger.getLogger(JsonMetricsBuilder.class);
     JsonObject jsonObject;
 
     int numWarehouses;
@@ -117,27 +119,32 @@ public class JsonMetricsBuilder {
 
     /* Writes the Json object to a JSON file */
     public void writeMetricsToJSONFile() {
-        String outputDirectory = "results";
-        FileUtil.makeDirIfNotExists(outputDirectory.split("/"));
-        String dest = "";
+        String outputDirectory = "results" + File.separator + "json";
+
+        FileUtil.makeDirIfNotExists(outputDirectory.split(File.separator));
+        String currentDir = "";
         try {
-            dest = new File(".").getCanonicalPath() + File.separator + outputDirectory + File.separator
-                    + "jsonOutput_" + numWarehouses + "WH_" + numDBConnections + "Conn_" + warmupTime + "_"
-                    + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date())
-                    + ".JSON";
+            currentDir = new File(".").getCanonicalPath();
         } catch (IOException e) {
-            System.out.println("Exception occurred while creating log file" +
+            LOG.error("Exception occurred fetching current dir" +
                     "\nError Message:" + e.getMessage());
         }
+        String dest = currentDir + File.separator + outputDirectory + File.separator
+                + "jsonOutput_" + numWarehouses + "WH_" + numDBConnections + "Conn_" + warmupTime + "_"
+                + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date())
+                + ".json";
+        
         String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(jsonObject);
         try {
             FileWriter file = new FileWriter(dest);
             file.write(jsonString);
             file.close();
         } catch (IOException e) {
-            System.out.println("Got exception while writing JSON metrics to file.");
+           LOG.error("Got exception while writing JSON metrics to file.");
             e.printStackTrace();
+            return;
         }
+        LOG.info("Output Raw data into file: " + dest);
     }
 
     public static void mergeJsonResults(String dirPath, String[] fileNames) {
@@ -148,7 +155,7 @@ public class JsonMetricsBuilder {
             List<String> jsonStrings = new ArrayList<>();
             try {
                 jsonStrings.add(new String(Files.readAllBytes(Paths.get(file))));
-                System.out.println("\nJSON file retrieved : " + jsonStrings.get(jsonStrings.size() - 1));
+                LOG.info("\nJSON file retrieved : " + jsonStrings.get(jsonStrings.size() - 1));
             } catch (IOException ie) {
 
             }

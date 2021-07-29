@@ -43,8 +43,6 @@ public class DBWorkload {
 
   private static final String SINGLE_LINE = StringUtils.repeat("=", 70);
 
-  private static int nodeSize = 0;
-  private static int numDBConnections = 0;
   private static int newOrderTxnId = -1;
   private static int numWarehouses = 10;
   private static int time = 0;
@@ -106,7 +104,6 @@ public class DBWorkload {
     int intervalMonitor = options.getIntervalMonitor().orElse(0);
 
     List<String> nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
-    nodeSize = nodes.size();
 
     numWarehouses = options.getWarehouses().orElse(numWarehouses);
 
@@ -181,7 +178,7 @@ public class DBWorkload {
 
       configOptions.getPort().ifPresent(wrkld::setPort);
 
-      numDBConnections = options.getNumDbConnections().orElse(min(numWarehouses, wrkld.getNodes().size() * 200));
+      int numDBConnections = options.getNumDbConnections().orElse(min(numWarehouses, wrkld.getNodes().size() * 200));
       wrkld.setNumDBConnections(numDBConnections);
 
       configOptions.getHikariConnectionTimeoutMs().ifPresent(wrkld::setHikariConnectionTimeout);
@@ -295,6 +292,8 @@ public class DBWorkload {
                     timed,
                     terminals,
                     Phase.Arrival.REGULAR);
+
+      jsonMetricsBuilder.buildTestConfigJson(nodes.size(),numWarehouses, numDBConnections, warmupTime, time);
 
       // CHECKING INPUT PHASES
       int j = 0;
@@ -475,8 +474,6 @@ public class DBWorkload {
     r.startTime = start;
     r.endTime = end;
 
-    jsonMetricsBuilder.buildTestConfigJson(nodeSize, numWarehouses, numDBConnections, warmupTime, time);
-
     PrintToplineResults(workers, r);
     PrintLatencies(workers, outputVerboseRes);
     PrintWorkerTaskLatencies(workers);
@@ -621,7 +618,7 @@ public class DBWorkload {
     opWorkList.add(getValueList("All", totalLatencyAcrossTransactions, null));
     workLatenciesList.put("All", opWorkList);
     LOG.info(resultOut.toString());
-    jsonMetricsBuilder.buildAggLatJsonObject(workLatenciesList);
+    jsonMetricsBuilder.buildWorkerTaskLatencyJson(workLatenciesList);
   }
 
   private static void PrintLatencies(List<Worker> workers, boolean outputVerboseRes) {
@@ -676,7 +673,7 @@ public class DBWorkload {
             "All ", latenciesAll.size(), getAverageLatency(latenciesAll), getP99Latency(latenciesAll),
             getAverageLatency(connLatenciesAll)));
     latenciesList.add(getValueList("All", latenciesAll, connLatenciesAll));
-    jsonMetricsBuilder.buildLatencyJsonObject(latenciesList);
+    jsonMetricsBuilder.buildLatencyJson(latenciesList);
     LOG.info(resultOut.toString());
     if (outputVerboseRes) {
       resultOut = new StringBuilder();
@@ -703,7 +700,7 @@ public class DBWorkload {
               getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
       latenciesList.add(getValueList("All", failureLatenciesAll, connLatenciesAll));
-      jsonMetricsBuilder.buildFailureLatencyJsonObject(latenciesList);
+      jsonMetricsBuilder.buildFailureLatencyJson(latenciesList);
     }
   }
 
@@ -756,7 +753,7 @@ public class DBWorkload {
       retryOpList.add(valueList);
       resultOut.append("\n");
     }
-    jsonMetricsBuilder.buildRetryJsonObject(numTriesPerProc, retryOpList);
+    jsonMetricsBuilder.buildQueryAttemptsJson(numTriesPerProc, retryOpList);
     LOG.info(resultOut.toString());
   }
 

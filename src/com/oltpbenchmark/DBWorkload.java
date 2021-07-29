@@ -717,6 +717,7 @@ public class DBWorkload {
     }
 
     StringBuilder resultOut = new StringBuilder();
+
     resultOut.append("\n");
     resultOut.append("=================== RETRY ATTEMPTS ====================\n");
     resultOut.append("  Transaction  |    Count  |");
@@ -863,7 +864,6 @@ public class DBWorkload {
                                          list_latencies.get(i)));
     }
   }
-
 
   private static List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
     List<String> valueList = new ArrayList<String>();

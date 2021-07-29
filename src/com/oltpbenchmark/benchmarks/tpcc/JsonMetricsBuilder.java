@@ -8,10 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class JsonMetricsBuilder {
@@ -19,11 +16,8 @@ public class JsonMetricsBuilder {
     JsonObject jsonObject;
 
     int numWarehouses;
-
-
     int numDBConnections;
     int warmupTime;
-
     int numNodes;
 
 
@@ -37,7 +31,9 @@ public class JsonMetricsBuilder {
 
     public void buildTestConfigJson(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime) {
         this.numWarehouses = warehouses;
-        this.warmupTime = warehouses;
+        this.numDBConnections = numDBConn;
+        this.warmupTime = warmuptime;
+        this.numNodes = numNodes;
 
         JsonObject testConfigJson = new JsonObject();
         testConfigJson.addProperty("#Nodes", numNodes);

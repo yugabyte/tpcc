@@ -20,11 +20,8 @@ public class JsonMetricsBuilder {
     int numWarehouses;
     int numDBConnections;
     int warmupTime;
+    int numNodes;
 
-    public JsonMetricsBuilder() {
-        if (jsonObject == null)
-            jsonObject = new JsonObject();
-    }
 
     public static JsonObject getJson(List<String> keyList, List<String> valueList) {
         JsonObject jsonObject = new JsonObject();
@@ -33,15 +30,16 @@ public class JsonMetricsBuilder {
         return jsonObject;
     }
 
-    public void buildTestConfigJson(int nodes, int warehouses, int dbConn, int warmuptime, int runtime) {
+    public void buildTestConfigJson(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime) {
         this.numWarehouses = warehouses;
-        this.numDBConnections = dbConn;
-        this.warmupTime = warehouses;
+        this.numDBConnections = numDBConn;
+        this.warmupTime = warmuptime;
+        this.numNodes = numNodes;
 
         JsonObject testConfigJson = new JsonObject();
-        testConfigJson.addProperty("#Nodes", nodes);
+        testConfigJson.addProperty("#Nodes", numNodes);
         testConfigJson.addProperty("Warehouses", warehouses);
-        testConfigJson.addProperty("#DBConnections", dbConn);
+        testConfigJson.addProperty("#DBConnections", numDBConn);
         testConfigJson.addProperty("WarmupTime (secs)", warmuptime);
         testConfigJson.addProperty("RunTime (secs)", runtime);
         testConfigJson.addProperty("Test start time : ", new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()));
@@ -56,7 +54,7 @@ public class JsonMetricsBuilder {
         jsonObject.add("Results", resultJson);
     }
 
-    public void buildLatJsonObject(String latType, List<List<String>> latencyList) {
+    public void buildLatencyJson(String latType, List<List<String>> latencyList) {
         List<String> keyList = new ArrayList<String>() {{
             add("Transaction");
             add("Count");
@@ -70,18 +68,18 @@ public class JsonMetricsBuilder {
         jsonObject.add(latType, latJsonArr);
     }
 
-
-    public void buildLatencyJsonObject(List<List<String>> latencyList) {
-        buildLatJsonObject("Latencies", latencyList);
+    public void buildLatencyJson(List<List<String>> latencyList) {
+        buildLatencyJson("Latencies", latencyList);
     }
 
-    public void buildFailureLatencyJsonObject(List<List<String>> failureLatencyList) {
-        buildLatJsonObject("Failure Latencies", failureLatencyList);
+    public void buildFailureLatencyJson(List<List<String>> failureLatencyList) {
+        buildLatencyJson("Failure Latencies", failureLatencyList);
     }
 
     /* builds a JsonObject for the worker tasks latencies and adds it the JsonObject*/
-    public void buildAggLatJsonObject(Map<String, List<List<String>>> workLatenciesMap) {
-        List<String> keyList = new ArrayList<String>() {{
+    public void buildWorkerTaskLatencyJson(Map<String, List<List<String>>> workLatenciesMap) {
+        List<String> keyList = new ArrayList<String>() {
+            {
                 add("Task");
                 add("Count");
                 add("Avg. Latency");
@@ -97,10 +95,11 @@ public class JsonMetricsBuilder {
         }
         jsonObject.add("Work Task Latencies", aggLatJsonArr);
     }
-
+    
     /* builds a JSON object for Retry metrics and adds it to the JsonObject*/
-    public void buildRetryJsonObject(int numTriesPerProc, List<List<String>> retryOpList) {
-        List<String> keyList = new ArrayList<String>() {{
+    public void buildQueryAttemptsJson(int numTriesPerProc, List<List<String>> retryOpList) {
+        List<String> keyList = new ArrayList<String>() {
+            {
                 add("Transaction");
                 add("Count");
         }};

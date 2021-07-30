@@ -20,6 +20,9 @@ public class JsonMetricsBuilder {
     int warmupTime;
     int numNodes;
 
+    public JsonMetricsBuilder () {
+        jsonObject = new JsonObject();
+    }
 
     public static JsonObject getJson(List<String> keyList, List<String> valueList) {
         JsonObject jsonObject = new JsonObject();

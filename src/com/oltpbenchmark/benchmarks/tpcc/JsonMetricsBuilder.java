@@ -20,7 +20,6 @@ import java.util.*;
 
 public class JsonMetricsBuilder {
 
-
     private static final Logger LOG = Logger.getLogger(JsonMetricsBuilder.class);
     public JsonObject jsonObject;
     private JsonArray latJsonArr;
@@ -79,7 +78,7 @@ public class JsonMetricsBuilder {
         jsonObject.add("Test Configuration", testConfigJson);
     }
 
-    public void buildResultJson(double tpmc, String efficiency, String throughput) {
+    public void buildResultJson(String tpmc, String efficiency, String throughput) {
         JsonObject resultJson = new JsonObject();
         resultJson.addProperty("TPM-C", tpmc);
         resultJson.addProperty("Efficiency", efficiency);
@@ -178,9 +177,25 @@ public class JsonMetricsBuilder {
     }
 
     public static void mergeJsonResults(String dirPath, String[] fileNames) {
+        double tpmc, efficiency, throughput;
+        double sumEfficiency = 0, sum_tpmc = 0, sumThroughput = 0;
+
+        double[] newOrderLat = {0, 0, 0}, newOrderFailLat, newOrderRetry;
+        double[] paymentLat, paymentFailLat, paymentRetry;
+        double[] orderStatusLat, orderStatusFailLat, orderStatusRetry;
+        double[] deliveryLat, deliveryFailLat, deliveryRetry;
+        double[] stockLevelLat, stockLevelFailLat, stockLevelRetry;
+
+        double[] sum_newOrderLat = {0, 0, 0, 0}, sum_newOrderFailLat = {0, 0, 0, 0};
+        double[] sum_paymentLat = {0, 0, 0, 0}, sum_paymentFailLat = {0, 0, 0, 0};
+        double[] sum_orderStatusLat = {0, 0, 0, 0}, sum_orderStatusFailLat = {0, 0, 0, 0};
+        double[] sum_deliveryLat = {0, 0, 0, 0}, sum_deliveryFailLat = {0, 0, 0, 0};
+        double[] sum_stockLevelLat = {0, 0, 0, 0}, sum_stockLevelFailLat = {0, 0, 0, 0};
+        double[] sum_AllLat = {0, 0, 0, 0}, sum_AllFailLat = {0, 0, 0, 0};
+
         List<String> jsonStrings = new ArrayList<>();
         for (String file : fileNames) {
-            if (!file.endsWith("JSON")) {
+            if (!file.endsWith("json")) {
                 continue;
             }
 
@@ -188,14 +203,140 @@ public class JsonMetricsBuilder {
                 jsonStrings.add(new String(Files.readAllBytes(Paths.get(file))));
                 LOG.info("\nJSON file retrieved : " + jsonStrings.get(jsonStrings.size() - 1));
             } catch (IOException ie) {
-
+                LOG.error("Got exception while reading file", ie);
+                return;
             }
 
         }
         LOG.info("Printing JSON info.. ");
-        JsonObject json =(JsonObject) new JsonParser().parse(jsonStrings.get(0));
+        JsonObject json = (JsonObject) new JsonParser().parse(jsonStrings.get(0));
         LOG.info("Efficiency : " + json.get("Efficiency"));
+
+        for (String jsonStr : jsonStrings) {
+            JsonObject jsonObj = (JsonObject) new JsonParser().parse(jsonStr);
+            JsonObject resultJson = (JsonObject) jsonObj.get("Results");
+            sum_tpmc += Double.parseDouble(resultJson.get("TPM-C").getAsString());
+            sumEfficiency += Double.parseDouble(resultJson.get("Efficiency").getAsString());
+            sumThroughput += Double.parseDouble(resultJson.get("Throughput").getAsString());
+
+            JsonArray latJsonArr = (JsonArray) jsonObj.get("Latencies");
+            JsonArray failLatJsonArr = (JsonArray) jsonObj.get("Failure Latencies");
+            JsonArray retryLatJsonArr = (JsonArray) jsonObj.get("Retry Attempts");
+            JsonObject workerTaskAggJson = (JsonObject) jsonObj.get("Work Task Latencies");
+
+            for (int i = 0; i < latJsonArr.size(); i++) {
+                JsonObject jObj = (JsonObject) latJsonArr.get(i);
+                switch (jObj.get("Transaction").getAsString()) {
+                    case "NewOrder":
+                        sum_newOrderLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_newOrderLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_newOrderLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_newOrderLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "Payment":
+                        sum_paymentLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_paymentLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_paymentLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_paymentLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "OrderStatus":
+                        sum_orderStatusLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_orderStatusLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_orderStatusLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_orderStatusLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "Delivery":
+                        sum_deliveryLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_deliveryLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_deliveryLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_deliveryLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "StockLevel":
+                        sum_stockLevelLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_stockLevelLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_stockLevelLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_stockLevelLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "All":
+                        sum_AllLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_AllLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_AllLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_AllLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                }
+            }
+
+            for (int i = 0; i < failLatJsonArr.size(); i++) {
+                JsonObject jObj = (JsonObject) failLatJsonArr.get(i);
+                switch (jObj.get("Transaction").getAsString()) {
+                    case "NewOrder":
+                        sum_newOrderFailLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_newOrderFailLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_newOrderFailLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_newOrderFailLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "Payment":
+                        sum_paymentFailLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_paymentFailLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_paymentFailLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_paymentFailLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "OrderStatus":
+                        sum_orderStatusFailLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_orderStatusFailLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_orderStatusFailLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_orderStatusFailLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "Delivery":
+                        sum_deliveryFailLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_deliveryFailLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_deliveryFailLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_deliveryFailLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "StockLevel":
+                        sum_stockLevelFailLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_stockLevelFailLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_stockLevelFailLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_stockLevelFailLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                    case "All":
+                        sum_AllFailLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
+                        sum_AllFailLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_AllFailLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
+                        sum_AllFailLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        break;
+                }
+            }
+
+         /*
+          LOG.info("Results : " + resultJson);
+          LOG.info("Latencies : " + latJsonArr);
+          LOG.info("Failure Latencies" + failLatJsonArr);
+          LOG.info("Retry Attempts : " + retryLatJsonArr);
+          LOG.info("Work Task Latencies" + workerTaskAggJson);
+          */
+        }
+
+        LOG.info("Aggregate Results : ");
+        efficiency = sumEfficiency / jsonStrings.size();
+        tpmc = sum_tpmc / jsonStrings.size();
+        throughput = sumThroughput / jsonStrings.size();
+        LOG.info("Agg Efficiency : " + efficiency);
+        LOG.info("Agg TPM-C : " + tpmc);
+        LOG.info("Agg Throughput : " + throughput);
+
+        LOG.info("Aggregate Latencies : ");
+
+                      /*
+      jsonObject = new JsonObject();
+      buildResultJson(String.valueOf(tpmc),String.valueOf(efficiency),String.valueOf(throughput));
+      buildLatencyJson(latencyList);
+      buildFailureLatencyJson(failureLatencyList);
+      buildWorkerTaskLatencyJson(workerLatencyMap);
+      buildQueryAttemptsJson(numRetries,retryOpList);
+      writeMetricsToJSONFile();
+      */
 
     }
 
-}
+    }

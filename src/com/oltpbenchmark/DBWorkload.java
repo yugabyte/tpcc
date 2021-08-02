@@ -516,7 +516,7 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
-    jsonMetricsBuilder.buildResultJson(tpmc, df.format(efficiency), df.format(r.getRequestsPerSecond()));
+    jsonMetricsBuilder.buildResultJson(df.format(tpmc), df.format(efficiency), df.format(r.getRequestsPerSecond()));
 
   }
 
@@ -830,7 +830,7 @@ public class DBWorkload {
       }
     }
 
-    JsonMetricsBuilder.mergeJsonResults(dirPath, fileNames);
+    jsonMetricsBuilder.mergeJsonResults(dirPath, fileNames);
 
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
     double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;

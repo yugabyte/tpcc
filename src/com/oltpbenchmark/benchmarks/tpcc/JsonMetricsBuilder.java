@@ -1,8 +1,14 @@
 package com.oltpbenchmark.benchmarks.tpcc;
 
-import com.google.gson.*;
+import com.google.gson.JsonParser;
 import com.oltpbenchmark.util.FileUtil;
 import org.apache.log4j.Logger;
+
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.oltpbenchmark.util.ComputeUtil;
+
 
 import java.io.File;
 import java.io.FileWriter;
@@ -14,16 +20,43 @@ import java.util.*;
 
 public class JsonMetricsBuilder {
 
+
     private static final Logger LOG = Logger.getLogger(JsonMetricsBuilder.class);
-    JsonObject jsonObject;
+    public JsonObject jsonObject;
+    private JsonArray latJsonArr;
+    private JsonObject aggLatJsonObject;
+    private JsonArray aggLatJsonArr;
+    private JsonArray retryJsonArr;
 
-    int numWarehouses;
-    int numDBConnections;
-    int warmupTime;
-    int numNodes;
+    private int numWarehouses;
+    private int numDBConnections;
+    private int warmupTime;
+    private int numNodes;
 
+    private final List<String> latencyKeyList = new ArrayList<String>() {{
+        add("Transaction");
+        add("Count");
+        add("Avg. Latency");
+        add("P99Latency");
+        add("Connection Acq Latency");
+    }};
 
-    public static JsonObject getJson(List<String> keyList, List<String> valueList) {
+    private final List<String> workerTaskKeyList = new ArrayList<String>() {
+        {
+            add("Task");
+            add("Count");
+            add("Avg. Latency");
+            add("P99Latency");
+        }
+    };
+
+    List<String> retryKeyList;
+
+    public JsonMetricsBuilder () {
+        jsonObject = new JsonObject();
+    }
+
+    private JsonObject getJson(List<String> keyList, List<String> valueList) {
         JsonObject jsonObject = new JsonObject();
         for (int i = 0; i < keyList.size(); i++)
             jsonObject.addProperty(keyList.get(i), valueList.get(i));
@@ -54,62 +87,65 @@ public class JsonMetricsBuilder {
         jsonObject.add("Results", resultJson);
     }
 
-    public void buildLatencyJson(String latType, List<List<String>> latencyList) {
-        List<String> keyList = new ArrayList<String>() {{
-            add("Transaction");
-            add("Count");
-            add("Avg. Latency");
-            add("P99Latency");
-            add("Connection Acq Latency");
-        }};
-        JsonArray latJsonArr = new JsonArray();
-        for (int i = 0; i < latencyList.size(); i++)
-            latJsonArr.add(getJson(keyList, latencyList.get(i)));
+    public void buildLatencyJson(String latType) {
         jsonObject.add(latType, latJsonArr);
+        latJsonArr = null;
     }
 
-    public void buildLatencyJson(List<List<String>> latencyList) {
-        buildLatencyJson("Latencies", latencyList);
+    public void addLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
+        if(latJsonArr == null)
+            latJsonArr = new JsonArray();
+        latJsonArr.add(getJson(latencyKeyList, getValueList(op,latencyList,connLatencyList)));
     }
 
-    public void buildFailureLatencyJson(List<List<String>> failureLatencyList) {
-        buildLatencyJson("Failure Latencies", failureLatencyList);
-    }
-
-    /* builds a JsonObject for the worker tasks latencies and adds it the JsonObject*/
-    public void buildWorkerTaskLatencyJson(Map<String, List<List<String>>> workLatenciesMap) {
-        List<String> keyList = new ArrayList<String>() {
-            {
-                add("Task");
-                add("Count");
-                add("Avg. Latency");
-                add("P99Latency");
-        }};
-        JsonObject aggLatJsonArr = new JsonObject();
-        for (Map.Entry<String, List<List<String>>> entry : workLatenciesMap.entrySet()) {
-            List<List<String>> opWorkList = entry.getValue();
-            JsonArray aggLatOpArr = new JsonArray();
-            for (int j = 0; j < opWorkList.size(); j++)
-                aggLatOpArr.add(getJson(keyList,opWorkList.get(j)));
-            aggLatJsonArr.add(entry.getKey(), aggLatOpArr);
+    public void buildWorkerTaskLatJson(String op) {
+        if(op.equalsIgnoreCase("Worker Task Latency")) {
+            jsonObject.add(op, aggLatJsonObject);
+            aggLatJsonObject = null;
         }
-        jsonObject.add("Work Task Latencies", aggLatJsonArr);
-    }
-    
-    /* builds a JSON object for Retry metrics and adds it to the JsonObject*/
-    public void buildQueryAttemptsJson(int numTriesPerProc, List<List<String>> retryOpList) {
-        List<String> keyList = new ArrayList<String>() {
-            {
-                add("Transaction");
-                add("Count");
-        }};
-        for (int j = 0; j < numTriesPerProc; ++j)
-            keyList.add(String.format(" Retry #%1d - Failure Count ", j));
+        else {
+            aggLatJsonObject.add(op, aggLatJsonArr);
+            aggLatJsonArr = null;
+        }
 
-        JsonArray retryJsonArr = new JsonArray();
-        for (int i = 0; i < retryOpList.size(); i++)
-            retryJsonArr.add(getJson(keyList,retryOpList.get(i)));
+    }
+
+    public void addWorkerTaskLatencyJson(String task, List<Integer> latencyList){
+        if(aggLatJsonObject == null)
+            aggLatJsonObject = new JsonObject();
+        if(aggLatJsonArr == null)
+            aggLatJsonArr = new JsonArray();
+        aggLatJsonArr.add(getJson(workerTaskKeyList,getValueList(task,latencyList,null)));
+    }
+
+    public void buildQueryAttemptsJson() {
         jsonObject.add("Retry Attempts", retryJsonArr);
+    }
+
+    public void addRetryJson(String op, int numTriesPerProc, List<String> retryOpList) {
+        if(retryJsonArr == null) {
+           retryKeyList = new ArrayList<String>() {
+                {
+                    add("Transaction");
+                    add("Count");
+                }
+            };
+            for (int j = 0; j < numTriesPerProc; ++j)
+                retryKeyList.add(String.format(" Retry #%1d - Failure Count ", j));
+            retryJsonArr = new JsonArray();
+        }
+        retryJsonArr.add(getJson(retryKeyList,retryOpList));
+    }
+
+    private List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+        List<String> valueList = new ArrayList<String>();
+        valueList.add(op);
+        valueList.add(String.valueOf(latencyList.size()));
+        valueList.add(String.valueOf(ComputeUtil.getAverageLatency(latencyList)));
+        valueList.add(String.valueOf(ComputeUtil.getP99Latency(latencyList)));
+        if(connAcqLatencyList!=null)
+            valueList.add(String.valueOf(ComputeUtil.getAverageLatency(connAcqLatencyList)));
+        return valueList;
     }
 
     /* Writes the Json object to a JSON file */

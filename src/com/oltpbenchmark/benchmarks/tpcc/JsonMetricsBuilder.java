@@ -14,18 +14,18 @@ import java.util.*;
 
 public class JsonMetricsBuilder {
 
-    JsonObject jsonObject;
-    JsonArray latJsonArr;
-    JsonArray failLatJsonArr;
-    JsonObject aggLatJsonObject;
-    JsonArray aggLatJsonArr;
+    public JsonObject jsonObject;
+    private JsonArray latJsonArr;
+    private JsonObject aggLatJsonObject;
+    private JsonArray aggLatJsonArr;
+    private JsonArray retryJsonArr;
 
-    int numWarehouses;
-    int numDBConnections;
-    int warmupTime;
-    int numNodes;
+    private int numWarehouses;
+    private int numDBConnections;
+    private int warmupTime;
+    private int numNodes;
 
-    List<String> latencyKeyList = new ArrayList<String>() {{
+    private final List<String> latencyKeyList = new ArrayList<String>() {{
         add("Transaction");
         add("Count");
         add("Avg. Latency");
@@ -33,7 +33,7 @@ public class JsonMetricsBuilder {
         add("Connection Acq Latency");
     }};
 
-    List<String> workerTaskKeyList = new ArrayList<String>() {
+    private final List<String> workerTaskKeyList = new ArrayList<String>() {
         {
             add("Task");
             add("Count");
@@ -41,11 +41,14 @@ public class JsonMetricsBuilder {
             add("P99Latency");
         }
     };
+
+    List<String> retryKeyList;
+
     public JsonMetricsBuilder () {
         jsonObject = new JsonObject();
     }
 
-    public static JsonObject getJson(List<String> keyList, List<String> valueList) {
+    private JsonObject getJson(List<String> keyList, List<String> valueList) {
         JsonObject jsonObject = new JsonObject();
         for (int i = 0; i < keyList.size(); i++) {
             jsonObject.addProperty(keyList.get(i), valueList.get(i));
@@ -76,31 +79,22 @@ public class JsonMetricsBuilder {
         jsonObject.add("Results", resultJson);
     }
 
-
     public void buildLatencyJson(String latType) {
-        if(latType.equalsIgnoreCase("latencies"))
-            jsonObject.add(latType, latJsonArr);
-        else if(latType.equalsIgnoreCase("Failure Latencies"))
-            jsonObject.add(latType, failLatJsonArr);
+        jsonObject.add(latType, latJsonArr);
+        latJsonArr = null;
     }
 
     public void addLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        //buildLatencyJson("Latencies", latencyList);
         if(latJsonArr == null)
             latJsonArr = new JsonArray();
         latJsonArr.add(getJson(latencyKeyList, getValueList(op,latencyList,connLatencyList)));
     }
 
-    public void addFailureLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        //buildLatencyJson("Failure Latencies", failureLatencyList);
-        if(failLatJsonArr == null)
-            failLatJsonArr = new JsonArray();
-        failLatJsonArr.add(getJson(latencyKeyList, getValueList(op,latencyList,connLatencyList)));
-    }
-
     public void buildWorkerTaskLatJson(String op) {
-        if(op.equalsIgnoreCase("Worker Task Latency"))
+        if(op.equalsIgnoreCase("Worker Task Latency")) {
             jsonObject.add(op, aggLatJsonObject);
+            aggLatJsonObject = null;
+        }
         else {
             aggLatJsonObject.add(op, aggLatJsonArr);
             aggLatJsonArr = null;
@@ -115,24 +109,26 @@ public class JsonMetricsBuilder {
         aggLatJsonArr.add(getJson(workerTaskKeyList,getValueList(task,latencyList,null)));
     }
 
-    public void buildQueryAttemptsJson(int numTriesPerProc, List<List<String>> retryOpList) {
-        List<String> keyList = new ArrayList<String>() {
-            {
-                add("Transaction");
-                add("Count");
-            }
-        };
-        for (int j = 0; j < numTriesPerProc; ++j)
-            keyList.add(String.format(" Retry #%1d - Failure Count ", j));
-
-        JsonArray retryJsonArr = new JsonArray();
-        for (int i = 0; i < retryOpList.size(); i++) {
-            retryJsonArr.add(getJson(keyList,retryOpList.get(i)));
-        }
+    public void buildQueryAttemptsJson() {
         jsonObject.add("Retry Attempts", retryJsonArr);
     }
 
-    private static List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+    public void addRetryJson(String op, int numTriesPerProc, List<String> retryOpList) {
+        if(retryJsonArr == null) {
+           retryKeyList = new ArrayList<String>() {
+                {
+                    add("Transaction");
+                    add("Count");
+                }
+            };
+            for (int j = 0; j < numTriesPerProc; ++j)
+                retryKeyList.add(String.format(" Retry #%1d - Failure Count ", j));
+            retryJsonArr = new JsonArray();
+        }
+        retryJsonArr.add(getJson(retryKeyList,retryOpList));
+    }
+
+    private List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
         List<String> valueList = new ArrayList<String>();
         valueList.add(op);
         valueList.add(String.valueOf(latencyList.size()));

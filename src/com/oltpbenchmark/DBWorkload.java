@@ -685,7 +685,7 @@ public class DBWorkload {
                 "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
                 op, latencies.size(), ComputeUtil.getAverageLatency(latencies), ComputeUtil.getP99Latency(latencies),
                 ComputeUtil.getAverageLatency(conn_latencies)));
-        jsonMetricsBuilder.addFailureLatencyJson(op, latencies, conn_latencies);
+        jsonMetricsBuilder.addLatencyJson(op, latencies, conn_latencies);
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
       List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
@@ -695,7 +695,7 @@ public class DBWorkload {
               "All ", failureLatenciesAll.size(), ComputeUtil.getAverageLatency(failureLatenciesAll), ComputeUtil.getP99Latency(failureLatenciesAll),
               ComputeUtil.getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
-      jsonMetricsBuilder.addFailureLatencyJson("All", failureLatenciesAll, connLatenciesAll);
+      jsonMetricsBuilder.addLatencyJson("All", failureLatenciesAll, connLatenciesAll);
       jsonMetricsBuilder.buildLatencyJson("Failure Latencies");
     }
   }
@@ -730,7 +730,6 @@ public class DBWorkload {
       }
     }
 
-    List<List<String>> retryOpList = new ArrayList<>();
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);
       int totalTasks = workerTotalTasks[i];
@@ -747,10 +746,10 @@ public class DBWorkload {
         resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
         valueList.add(numRetries + " (" + pctRetried + ")");
       }
-      retryOpList.add(valueList);
+      jsonMetricsBuilder.addRetryJson(op, numTriesPerProc, valueList);
       resultOut.append("\n");
     }
-    jsonMetricsBuilder.buildQueryAttemptsJson(numTriesPerProc, retryOpList);
+    jsonMetricsBuilder.buildQueryAttemptsJson();
     LOG.info(resultOut.toString());
   }
 

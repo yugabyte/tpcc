@@ -139,7 +139,7 @@ public class JsonMetricsBuilder {
     private List<String> getValueList(String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
         DecimalFormat df = new DecimalFormat();
         df.setMaximumFractionDigits(2);
-
+        df.setGroupingUsed(false);
         List<String> valueList = new ArrayList<String>();
         valueList.add(op);
         valueList.add(df.format(latencyList.size()));

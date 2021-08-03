@@ -459,10 +459,8 @@ public class Worker implements Runnable {
                     break;
                 case DONE:
                     if (preState == State.MEASURE || preState == State.WARMUP) {
-                        if (executionStates.size() > 0) {
-                            if (executionStates.get(0).first.getTransactionType().getName().equals("NewOrder")) {
+                        if (transactionTypes.getType(pieceOfWork.getType()).getName().equals("NewOrder")) {
                                 measureEventsInDone++;
-                            }
                         }
                     }
                 default:

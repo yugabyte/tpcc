@@ -15,6 +15,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -51,7 +52,7 @@ public class JsonMetricsBuilder {
 
     List<String> retryKeyList;
 
-    public JsonMetricsBuilder () {
+    public JsonMetricsBuilder() {
         jsonObject = new JsonObject();
     }
 
@@ -70,11 +71,11 @@ public class JsonMetricsBuilder {
 
         JsonObject testConfigJson = new JsonObject();
         testConfigJson.addProperty("#Nodes", numNodes);
-        testConfigJson.addProperty("Warehouses", warehouses);
+        testConfigJson.addProperty("#Warehouses", warehouses);
         testConfigJson.addProperty("#DBConnections", numDBConn);
         testConfigJson.addProperty("WarmupTime (secs)", warmuptime);
         testConfigJson.addProperty("RunTime (secs)", runtime);
-        testConfigJson.addProperty("Test start time : ", new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()));
+        testConfigJson.addProperty("Test start time", new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()));
         jsonObject.add("Test Configuration", testConfigJson);
     }
 
@@ -92,29 +93,28 @@ public class JsonMetricsBuilder {
     }
 
     public void addLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        if(latJsonArr == null)
+        if (latJsonArr == null)
             latJsonArr = new JsonArray();
-        latJsonArr.add(getJson(latencyKeyList, getValueList(op,latencyList,connLatencyList)));
+        latJsonArr.add(getJson(latencyKeyList, getValueList(op, latencyList, connLatencyList)));
     }
 
     public void buildWorkerTaskLatJson(String op) {
-        if(op.equalsIgnoreCase("Worker Task Latency")) {
+        if (op.equalsIgnoreCase("Worker Task Latency")) {
             jsonObject.add(op, aggLatJsonObject);
             aggLatJsonObject = null;
-        }
-        else {
+        } else {
             aggLatJsonObject.add(op, aggLatJsonArr);
             aggLatJsonArr = null;
         }
 
     }
 
-    public void addWorkerTaskLatencyJson(String task, List<Integer> latencyList){
-        if(aggLatJsonObject == null)
+    public void addWorkerTaskLatencyJson(String task, List<Integer> latencyList) {
+        if (aggLatJsonObject == null)
             aggLatJsonObject = new JsonObject();
-        if(aggLatJsonArr == null)
+        if (aggLatJsonArr == null)
             aggLatJsonArr = new JsonArray();
-        aggLatJsonArr.add(getJson(workerTaskKeyList,getValueList(task,latencyList,null)));
+        aggLatJsonArr.add(getJson(workerTaskKeyList, getValueList(task, latencyList, null)));
     }
 
     public void buildQueryAttemptsJson() {
@@ -122,28 +122,31 @@ public class JsonMetricsBuilder {
     }
 
     public void addRetryJson(String op, int numTriesPerProc, List<String> retryOpList) {
-        if(retryJsonArr == null) {
-           retryKeyList = new ArrayList<String>() {
+        if (retryJsonArr == null) {
+            retryKeyList = new ArrayList<String>() {
                 {
                     add("Transaction");
                     add("Count");
                 }
             };
             for (int j = 0; j < numTriesPerProc; ++j)
-                retryKeyList.add(String.format(" Retry #%1d - Failure Count ", j));
+                retryKeyList.add(String.format("Retry #%1d - Failure Count", j));
             retryJsonArr = new JsonArray();
         }
-        retryJsonArr.add(getJson(retryKeyList,retryOpList));
+        retryJsonArr.add(getJson(retryKeyList, retryOpList));
     }
 
-    private List<String> getValueList (String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+    private List<String> getValueList(String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+        DecimalFormat df = new DecimalFormat();
+        df.setMaximumFractionDigits(2);
+
         List<String> valueList = new ArrayList<String>();
         valueList.add(op);
-        valueList.add(String.valueOf(latencyList.size()));
-        valueList.add(String.valueOf(ComputeUtil.getAverageLatency(latencyList)));
-        valueList.add(String.valueOf(ComputeUtil.getP99Latency(latencyList)));
-        if(connAcqLatencyList!=null)
-            valueList.add(String.valueOf(ComputeUtil.getAverageLatency(connAcqLatencyList)));
+        valueList.add(df.format(latencyList.size()));
+        valueList.add(df.format(ComputeUtil.getAverageLatency(latencyList)));
+        valueList.add(df.format(ComputeUtil.getP99Latency(latencyList)));
+        if (connAcqLatencyList != null)
+            valueList.add(df.format(ComputeUtil.getAverageLatency(connAcqLatencyList)));
         return valueList;
     }
 
@@ -159,9 +162,9 @@ public class JsonMetricsBuilder {
                     "\nError Message:" + e.getMessage());
         }
         String dest = currentDir + File.separator + outputDirectory + File.separator + "output.json";
-               // + "json_" + numWarehouses + "WH_" + numDBConnections + "Conn_"
-               // + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()) + "_"
-               // + UUID.randomUUID() + ".json";
+        // + "json_" + numWarehouses + "WH_" + numDBConnections + "Conn_"
+        // + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()) + "_"
+        // + UUID.randomUUID() + ".json";
 
         String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(jsonObject);
         try {
@@ -169,7 +172,7 @@ public class JsonMetricsBuilder {
             file.write(jsonString);
             file.close();
         } catch (IOException e) {
-           LOG.error("Got exception while writing JSON metrics to file.");
+            LOG.error("Got exception while writing JSON metrics to file.");
             e.printStackTrace();
             return;
         }
@@ -198,7 +201,6 @@ public class JsonMetricsBuilder {
             if (!file.endsWith("json")) {
                 continue;
             }
-
             try {
                 jsonStrings.add(new String(Files.readAllBytes(Paths.get(file))));
                 LOG.info("\nJSON file retrieved : " + jsonStrings.get(jsonStrings.size() - 1));
@@ -206,11 +208,8 @@ public class JsonMetricsBuilder {
                 LOG.error("Got exception while reading file", ie);
                 return;
             }
-
         }
         LOG.info("Printing JSON info.. ");
-        JsonObject json = (JsonObject) new JsonParser().parse(jsonStrings.get(0));
-        LOG.info("Efficiency : " + json.get("Efficiency"));
 
         for (String jsonStr : jsonStrings) {
             JsonObject jsonObj = (JsonObject) new JsonParser().parse(jsonStr);
@@ -229,7 +228,7 @@ public class JsonMetricsBuilder {
                 switch (jObj.get("Transaction").getAsString()) {
                     case "NewOrder":
                         sum_newOrderLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
-                        sum_newOrderLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
+                        sum_newOrderLat[1] += Double.parseDouble(jObj.get("Avg. Latency").toString());
                         sum_newOrderLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
                         sum_newOrderLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
                         break;
@@ -327,7 +326,7 @@ public class JsonMetricsBuilder {
 
         LOG.info("Aggregate Latencies : ");
 
-                      /*
+      /*
       jsonObject = new JsonObject();
       buildResultJson(String.valueOf(tpmc),String.valueOf(efficiency),String.valueOf(throughput));
       buildLatencyJson(latencyList);
@@ -336,7 +335,6 @@ public class JsonMetricsBuilder {
       buildQueryAttemptsJson(numRetries,retryOpList);
       writeMetricsToJSONFile();
       */
-
     }
 
-    }
+}

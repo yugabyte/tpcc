@@ -67,7 +67,8 @@ public class Worker implements Runnable {
     private boolean seenDone = false;
     int[][] totalFailedTries;
     int totalAttemptsPerTransaction;
-
+    public int warmupEventsInMeasure =0 ;
+    public int measureEventsInDone =0 ;
     public Worker(
             BenchmarkModule benchmarkModule, int id, int terminalWarehouseID, int terminalDistrictLowerID,
             int terminalDistrictUpperID) {
@@ -411,6 +412,9 @@ public class Worker implements Runnable {
                     if ((preState == State.MEASURE || preState == State.WARMUP) &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         int attempt = 0;
+                        if (executionStates.get(0).first.getTransactionType().getName().equals("NewOrder")) {
+                            warmupEventsInMeasure ++;
+                        }
                         for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
                             if (executionState.first.getTransactionType() != null) {
                                 switch (executionState.second) {
@@ -451,6 +455,14 @@ public class Worker implements Runnable {
                     if (preState == State.COLD_QUERY)
                         Worker.wrkldState.startHotQuery();
                     break;
+                case DONE:
+                    if (preState == State.MEASURE || preState == State.WARMUP) {
+                        if (executionStates.size() > 0) {
+                            if (executionStates.get(0).first.getTransactionType().getName().equals("NewOrder")) {
+                                measureEventsInDone++;
+                            }
+                        }
+                    }
                 default:
                     // Do nothing
             }

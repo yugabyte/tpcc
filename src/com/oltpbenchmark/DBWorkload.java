@@ -498,6 +498,15 @@ public class DBWorkload {
         }
       }
     }
+    int totalWarmupInmeasure =0;
+    int totalMeasureInDone =0;
+
+    for (Worker w : workers) {
+      totalWarmupInmeasure += w.warmupEventsInMeasure;
+      totalMeasureInDone += w.measureEventsInDone;
+    }
+    LOG.info("WarmUp Events in measure " + totalWarmupInmeasure);
+    LOG.info("Measure Events in Done " + totalMeasureInDone);
     LOG.info(SINGLE_LINE);
 
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;

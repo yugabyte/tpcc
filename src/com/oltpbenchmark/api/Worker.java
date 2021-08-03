@@ -412,8 +412,10 @@ public class Worker implements Runnable {
                     if ((preState == State.MEASURE || preState == State.WARMUP) &&
                         Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         int attempt = 0;
-                        if (executionStates.get(0).first.getTransactionType().getName().equals("NewOrder")) {
-                            warmupEventsInMeasure ++;
+                        if (preState == State.WARMUP) {
+                            if (executionStates.get(0).first.getTransactionType().getName().equals("NewOrder")) {
+                                warmupEventsInMeasure++;
+                            }
                         }
                         for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
                             if (executionState.first.getTransactionType() != null) {

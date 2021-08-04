@@ -119,7 +119,7 @@ public class JsonMetricsBuilder {
         // + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()) + "_"
         // + UUID.randomUUID() + ".json";
 
-        String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(jsonObject);
+        String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(tpccJsonMetrics);
         try {
             FileWriter file = new FileWriter(dest);
             file.write(jsonString);

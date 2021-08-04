@@ -1,10 +1,11 @@
 package com.oltpbenchmark.benchmarks.tpcc;
 
 import com.google.gson.JsonParser;
+import com.oltpbenchmark.benchmarks.tpcc.pojo.TPCCJsonMetrics;
 import com.oltpbenchmark.util.FileUtil;
 import org.apache.log4j.Logger;
 
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.oltpbenchmark.util.ComputeUtil;
@@ -23,130 +24,82 @@ public class JsonMetricsBuilder {
 
     private static final Logger LOG = Logger.getLogger(JsonMetricsBuilder.class);
     public JsonObject jsonObject;
-    private JsonArray latJsonArr;
-    private JsonObject aggLatJsonObject;
-    private JsonArray aggLatJsonArr;
-    private JsonArray retryJsonArr;
+    public TPCCJsonMetrics tpccJsonMetrics;
 
-    private int numWarehouses;
-    private int numDBConnections;
-    private int warmupTime;
-    private int numNodes;
+    List <TPCCJsonMetrics.LatencyList> workerTaskLatList;
 
-    private final List<String> latencyKeyList = new ArrayList<String>() {{
-        add("Transaction");
-        add("Count");
-        add("Avg. Latency");
-        add("P99Latency");
-        add("Connection Acq Latency");
-    }};
-
-    private final List<String> workerTaskKeyList = new ArrayList<String>() {
-        {
-            add("Task");
-            add("Count");
-            add("Avg. Latency");
-            add("P99Latency");
-        }
-    };
-
-    List<String> retryKeyList;
 
     public JsonMetricsBuilder() {
         jsonObject = new JsonObject();
+        tpccJsonMetrics = new TPCCJsonMetrics();
     }
 
-    private JsonObject getJson(List<String> keyList, List<String> valueList) {
-        JsonObject jsonObject = new JsonObject();
-        for (int i = 0; i < keyList.size(); i++)
-            jsonObject.addProperty(keyList.get(i), valueList.get(i));
-        return jsonObject;
-    }
-
-    public void buildTestConfigJson(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime) {
-        this.numWarehouses = warehouses;
-        this.numDBConnections = numDBConn;
-        this.warmupTime = warmuptime;
-        this.numNodes = numNodes;
-
-        JsonObject testConfigJson = new JsonObject();
-        testConfigJson.addProperty("#Nodes", numNodes);
-        testConfigJson.addProperty("#Warehouses", warehouses);
-        testConfigJson.addProperty("#DBConnections", numDBConn);
-        testConfigJson.addProperty("WarmupTime (secs)", warmuptime);
-        testConfigJson.addProperty("RunTime (secs)", runtime);
-        testConfigJson.addProperty("Test start time", new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()));
-        jsonObject.add("Test Configuration", testConfigJson);
+    public void buildTestConfigJson(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime, int numRetries) {
+        if(tpccJsonMetrics.TestConfiguration == null)
+            tpccJsonMetrics.TestConfiguration = tpccJsonMetrics.new TestConfigurationObject();
+        tpccJsonMetrics.TestConfiguration.Num_Nodes = numNodes;
+        tpccJsonMetrics.TestConfiguration.Num_Warehouses = warehouses;
+        tpccJsonMetrics.TestConfiguration.Num_DBConnections = numDBConn;
+        tpccJsonMetrics.TestConfiguration.WarmupTime_secs = warmuptime;
+        tpccJsonMetrics.TestConfiguration.RunTime_secs = runtime;
+        tpccJsonMetrics.TestConfiguration.Num_Retries = numRetries;
+        tpccJsonMetrics.TestConfiguration.TestStartTime = new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date());
     }
 
     public void buildResultJson(String tpmc, String efficiency, String throughput) {
-        JsonObject resultJson = new JsonObject();
-        resultJson.addProperty("TPM-C", tpmc);
-        resultJson.addProperty("Efficiency", efficiency);
-        resultJson.addProperty("Throughput", throughput);
-        jsonObject.add("Results", resultJson);
-    }
-
-    public void buildLatencyJson(String latType) {
-        jsonObject.add(latType, latJsonArr);
-        latJsonArr = null;
+        if(tpccJsonMetrics.Results == null)
+            tpccJsonMetrics.Results = tpccJsonMetrics.new ResultObject();
+        tpccJsonMetrics.Results.TPMC = tpmc;
+        tpccJsonMetrics.Results.Efficiency = efficiency;
+        tpccJsonMetrics.Results.Throughput = throughput;
     }
 
     public void addLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        if (latJsonArr == null)
-            latJsonArr = new JsonArray();
-        latJsonArr.add(getJson(latencyKeyList, getValueList(op, latencyList, connLatencyList)));
+        if (tpccJsonMetrics.Latencies == null)
+            tpccJsonMetrics.Latencies = new ArrayList<>();
+        tpccJsonMetrics.Latencies.add(getValueList(op, latencyList, connLatencyList));
+    }
+
+    public void addFailureLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
+        if (tpccJsonMetrics.Failure_Latencies == null)
+            tpccJsonMetrics.Failure_Latencies = new ArrayList<>();
+        tpccJsonMetrics.Failure_Latencies.add(getValueList(op, latencyList, connLatencyList));
     }
 
     public void buildWorkerTaskLatJson(String op) {
-        if (op.equalsIgnoreCase("Worker Task Latency")) {
-            jsonObject.add(op, aggLatJsonObject);
-            aggLatJsonObject = null;
-        } else {
-            aggLatJsonObject.add(op, aggLatJsonArr);
-            aggLatJsonArr = null;
-        }
-
+        if (tpccJsonMetrics.Worker_Task_Latency == null)
+            tpccJsonMetrics.Worker_Task_Latency = new HashMap<>();
+        tpccJsonMetrics.Worker_Task_Latency.put(op,workerTaskLatList);
+        workerTaskLatList = null;
     }
 
     public void addWorkerTaskLatencyJson(String task, List<Integer> latencyList) {
-        if (aggLatJsonObject == null)
-            aggLatJsonObject = new JsonObject();
-        if (aggLatJsonArr == null)
-            aggLatJsonArr = new JsonArray();
-        aggLatJsonArr.add(getJson(workerTaskKeyList, getValueList(task, latencyList, null)));
+        if (workerTaskLatList == null)
+            workerTaskLatList = new ArrayList<>();
+        workerTaskLatList.add(getValueList(task, latencyList, null));
     }
 
-    public void buildQueryAttemptsJson() {
-        jsonObject.add("Retry Attempts", retryJsonArr);
+    public void addRetryJson( String op, int count, int numTriesPerProc, List<String> retryOpList) {
+        if(tpccJsonMetrics.Retry_Attempts == null)
+            tpccJsonMetrics.Retry_Attempts = new ArrayList<>();
+        TPCCJsonMetrics.RetryAttemptsObject retryObj = tpccJsonMetrics.new RetryAttemptsObject();
+        retryObj.Transaction = op;
+        retryObj.Count = String.valueOf(count);
+        retryObj.Retries = retryOpList;
+        tpccJsonMetrics.Retry_Attempts.add(retryObj);
     }
 
-    public void addRetryJson(String op, int numTriesPerProc, List<String> retryOpList) {
-        if (retryJsonArr == null) {
-            retryKeyList = new ArrayList<String>() {
-                {
-                    add("Transaction");
-                    add("Count");
-                }
-            };
-            for (int j = 0; j < numTriesPerProc; ++j)
-                retryKeyList.add(String.format("Retry #%1d - Failure Count", j));
-            retryJsonArr = new JsonArray();
-        }
-        retryJsonArr.add(getJson(retryKeyList, retryOpList));
-    }
-
-    private List<String> getValueList(String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+    private TPCCJsonMetrics.LatencyList getValueList(String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
         DecimalFormat df = new DecimalFormat();
         df.setMaximumFractionDigits(2);
         df.setGroupingUsed(false);
-        List<String> valueList = new ArrayList<String>();
-        valueList.add(op);
-        valueList.add(df.format(latencyList.size()));
-        valueList.add(df.format(ComputeUtil.getAverageLatency(latencyList)));
-        valueList.add(df.format(ComputeUtil.getP99Latency(latencyList)));
+        TPCCJsonMetrics.LatencyList valueList = tpccJsonMetrics.new LatencyList();
+        valueList.Transaction = op;
+        valueList.Count = df.format(latencyList.size());
+        valueList.Avg_Latency = df.format(ComputeUtil.getAverageLatency(latencyList));
+        valueList.P99_Latency = df.format(ComputeUtil.getP99Latency(latencyList));
         if (connAcqLatencyList != null)
-            valueList.add(df.format(ComputeUtil.getAverageLatency(connAcqLatencyList)));
+            valueList.Connection_Acq_Latency = df.format(ComputeUtil.getAverageLatency(connAcqLatencyList));
         return valueList;
     }
 
@@ -203,7 +156,6 @@ public class JsonMetricsBuilder {
             }
             try {
                 jsonStrings.add(new String(Files.readAllBytes(Paths.get(file))));
-                LOG.info("\nJSON file retrieved : " + jsonStrings.get(jsonStrings.size() - 1));
             } catch (IOException ie) {
                 LOG.error("Got exception while reading file", ie);
                 return;
@@ -212,7 +164,15 @@ public class JsonMetricsBuilder {
         LOG.info("Printing JSON info.. ");
 
         for (String jsonStr : jsonStrings) {
-            JsonObject jsonObj = (JsonObject) new JsonParser().parse(jsonStr);
+            TPCCJsonMetrics jsonObj = new Gson().fromJson(jsonStr, TPCCJsonMetrics.class);
+            LOG.info("Efficiency  : " + jsonObj.Results.Efficiency);
+            LOG.info("Latency : " + jsonObj.Latencies.size() );
+            LOG.info("Failure Latency : " + jsonObj.Failure_Latencies.size());
+            LOG.info("WorkerTaskLatencies : " + jsonObj.Worker_Task_Latency.size());
+            LOG.info("RetryAttempts : " + jsonObj.Retry_Attempts.size());
+
+            /*JsonObject jsonObj = (JsonObject) new JsonParser().parse(jsonStr);
+
             JsonObject resultJson = (JsonObject) jsonObj.get("Results");
             sum_tpmc += Double.parseDouble(resultJson.get("TPM-C").getAsString());
             sumEfficiency += Double.parseDouble(resultJson.get("Efficiency").getAsString());
@@ -228,15 +188,15 @@ public class JsonMetricsBuilder {
                 switch (jObj.get("Transaction").getAsString()) {
                     case "NewOrder":
                         sum_newOrderLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
-                        sum_newOrderLat[1] += Double.parseDouble(jObj.get("Avg. Latency").toString());
-                        sum_newOrderLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
-                        sum_newOrderLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        sum_newOrderLat[1] += Double.parseDouble(jObj.get("Avg_Latency").getAsString());
+                        sum_newOrderLat[2] += Double.parseDouble(jObj.get("P99_Latency").getAsString());
+                        sum_newOrderLat[3] += Double.parseDouble(jObj.get("Connection_Acq_Latency").getAsString());
                         break;
                     case "Payment":
                         sum_paymentLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
-                        sum_paymentLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
-                        sum_paymentLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
-                        sum_paymentLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        sum_paymentLat[1] += Double.parseDouble(jObj.get("Avg_Latency").getAsString());
+                        sum_paymentLat[2] += Double.parseDouble(jObj.get("P99_Latency").getAsString());
+                        sum_paymentLat[3] += Double.parseDouble(jObj.get("Connection_Acq_Latency").getAsString());
                         break;
                     case "OrderStatus":
                         sum_orderStatusLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
@@ -246,21 +206,21 @@ public class JsonMetricsBuilder {
                         break;
                     case "Delivery":
                         sum_deliveryLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
-                        sum_deliveryLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
-                        sum_deliveryLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
-                        sum_deliveryLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        sum_deliveryLat[1] += Double.parseDouble(jObj.get("Avg_Latency").getAsString());
+                        sum_deliveryLat[2] += Double.parseDouble(jObj.get("P99_Latency").getAsString());
+                        sum_deliveryLat[3] += Double.parseDouble(jObj.get("Connection_Acq_Latency").getAsString());
                         break;
                     case "StockLevel":
                         sum_stockLevelLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
-                        sum_stockLevelLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
-                        sum_stockLevelLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
-                        sum_stockLevelLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        sum_stockLevelLat[1] += Double.parseDouble(jObj.get("Avg_Latency").getAsString());
+                        sum_stockLevelLat[2] += Double.parseDouble(jObj.get("P99_Latency").getAsString());
+                        sum_stockLevelLat[3] += Double.parseDouble(jObj.get("Connection_Acq_Latency").getAsString());
                         break;
                     case "All":
                         sum_AllLat[0] += Double.parseDouble(jObj.get("Count").getAsString());
-                        sum_AllLat[1] += Double.parseDouble(jObj.get("Avg. Latency").getAsString());
-                        sum_AllLat[2] += Double.parseDouble(jObj.get("P99Latency").getAsString());
-                        sum_AllLat[3] += Double.parseDouble(jObj.get("Connection Acq Latency").getAsString());
+                        sum_AllLat[1] += Double.parseDouble(jObj.get("Avg_Latency").getAsString());
+                        sum_AllLat[2] += Double.parseDouble(jObj.get("P99_Latency").getAsString());
+                        sum_AllLat[3] += Double.parseDouble(jObj.get("Connection_Acq_Latency").getAsString());
                         break;
                 }
             }
@@ -337,4 +297,7 @@ public class JsonMetricsBuilder {
       */
     }
 
+    public static void main(String args[]) {
+        mergeJsonResults("results_dir",new String[]{"results_dir/try.json", "results_dir/try1.json"});
+    }
 }

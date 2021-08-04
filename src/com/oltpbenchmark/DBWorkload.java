@@ -294,7 +294,7 @@ public class DBWorkload {
                     terminals,
                     Phase.Arrival.REGULAR);
 
-      jsonMetricsBuilder.buildTestConfigJson(nodes.size(),numWarehouses, numDBConnections, warmupTime, time);
+      jsonMetricsBuilder.buildTestConfigJson(nodes.size(),numWarehouses, numDBConnections, warmupTime, time, wrkld.getMaxRetriesPerTransaction());
 
       // CHECKING INPUT PHASES
       int j = 0;
@@ -616,8 +616,6 @@ public class DBWorkload {
     jsonMetricsBuilder.addWorkerTaskLatencyJson("Thinking", thinkAll);
     jsonMetricsBuilder.addWorkerTaskLatencyJson("All",totalLatencyAcrossTransactions);
     jsonMetricsBuilder.buildWorkerTaskLatJson("All");
-    jsonMetricsBuilder.buildWorkerTaskLatJson("Worker Task Latency");
-
     LOG.info(resultOut.toString());
   }
 
@@ -671,7 +669,7 @@ public class DBWorkload {
             "All ", latenciesAll.size(), ComputeUtil.getAverageLatency(latenciesAll), ComputeUtil.getP99Latency(latenciesAll),
             ComputeUtil.getAverageLatency(connLatenciesAll)));
     jsonMetricsBuilder.addLatencyJson("All", latenciesAll, connLatenciesAll);
-    jsonMetricsBuilder.buildLatencyJson("Latencies");
+
     LOG.info(resultOut.toString());
     if (outputVerboseRes) {
       resultOut = new StringBuilder();
@@ -696,8 +694,7 @@ public class DBWorkload {
               "All ", failureLatenciesAll.size(), ComputeUtil.getAverageLatency(failureLatenciesAll), ComputeUtil.getP99Latency(failureLatenciesAll),
               ComputeUtil.getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
-      jsonMetricsBuilder.addLatencyJson("All", failureLatenciesAll, connLatenciesAll);
-      jsonMetricsBuilder.buildLatencyJson("Failure Latencies");
+      jsonMetricsBuilder.addFailureLatencyJson("All", failureLatenciesAll, connLatenciesAll);
     }
   }
 
@@ -738,10 +735,7 @@ public class DBWorkload {
       String op = transactionTypes.get(i + 1);
       int totalTasks = workerTotalTasks[i];
       resultOut.append(String.format("%14s |%10d |", op, totalTasks));
-      List<String> valueList = new ArrayList<String> (){ {
-              add(op);
-              add(String.valueOf(totalTasks));
-      }};
+      List<String> valueList = new ArrayList<> ();
       for (int retry = 0; retry < numTriesPerProc; ++retry) {
         int numRetries = totalFailedTries[i][retry];
         double pctRetried = numRetries;
@@ -750,10 +744,9 @@ public class DBWorkload {
         resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
         valueList.add(numRetries + " (" + df.format(pctRetried) + ")");
       }
-      jsonMetricsBuilder.addRetryJson(op, numTriesPerProc, valueList);
+      jsonMetricsBuilder.addRetryJson(op, totalTasks,numTriesPerProc, valueList);
       resultOut.append("\n");
     }
-    jsonMetricsBuilder.buildQueryAttemptsJson();
     LOG.info(resultOut.toString());
   }
 

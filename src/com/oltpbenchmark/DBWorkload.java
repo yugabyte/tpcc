@@ -21,7 +21,7 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import com.oltpbenchmark.benchmarks.tpcc.JsonMetricsBuilder;
+import com.oltpbenchmark.benchmarks.tpcc.JsonMetricsHelper;
 import com.oltpbenchmark.util.ComputeUtil;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.commons.lang.StringUtils;
@@ -49,7 +49,7 @@ public class DBWorkload {
   private static int time = 0;
   private static int warmupTime = 0;
   private static final Map<Integer, String> transactionTypes = new HashMap<>();
-  private static JsonMetricsBuilder jsonMetricsBuilder = new JsonMetricsBuilder();
+  private static JsonMetricsHelper jsonMetricsHelper = new JsonMetricsHelper();
 
 
   /**
@@ -294,7 +294,7 @@ public class DBWorkload {
                     terminals,
                     Phase.Arrival.REGULAR);
 
-      jsonMetricsBuilder.buildTestConfigJson(nodes.size(),numWarehouses, numDBConnections, warmupTime, time, wrkld.getMaxRetriesPerTransaction());
+      jsonMetricsHelper.buildTestConfig(nodes.size(),numWarehouses, numDBConnections, warmupTime, time, wrkld.getMaxRetriesPerTransaction());
 
       // CHECKING INPUT PHASES
       int j = 0;
@@ -491,7 +491,7 @@ public class DBWorkload {
       Delivery.printLatencyStats();
       StockLevel.printLatencyStats();
     }
-    jsonMetricsBuilder.writeMetricsToJSONFile();
+    jsonMetricsHelper.writeMetricsToJSONFile();
     return r;
   }
 
@@ -516,7 +516,7 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
-    jsonMetricsBuilder.buildResultJson(df.format(tpmc), df.format(efficiency), df.format(r.getRequestsPerSecond()));
+    jsonMetricsHelper.buildTestResults(df.format(tpmc), df.format(efficiency), df.format(r.getRequestsPerSecond()));
 
   }
 
@@ -581,11 +581,11 @@ public class DBWorkload {
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
               op, "Thinking", thinkLatencyList.size(), ComputeUtil.getAverageLatency(thinkLatencyList), ComputeUtil.getP99Latency(thinkLatencyList)));
 
-      jsonMetricsBuilder.addWorkerTaskLatencyJson("Fetch Work", fetchWork);
-      jsonMetricsBuilder.addWorkerTaskLatencyJson("Keying", keyingLatencyList);
-      jsonMetricsBuilder.addWorkerTaskLatencyJson("Op With Retry", workLatencyList);
-      jsonMetricsBuilder.addWorkerTaskLatencyJson("Thinking", thinkLatencyList);
-      jsonMetricsBuilder.buildWorkerTaskLatJson(op);
+      jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWork);
+      jsonMetricsHelper.addWorkerTaskLatency("Keying", keyingLatencyList);
+      jsonMetricsHelper.addWorkerTaskLatency("Op With Retry", workLatencyList);
+      jsonMetricsHelper.addWorkerTaskLatency("Thinking", thinkLatencyList);
+      jsonMetricsHelper.buildWorkerTaskLat(op);
     }
     List<Integer> fetchWorkAll = combineListsAcrossTransactions(fetchWorkLatencies);
     List<Integer> keyingAll = combineListsAcrossTransactions(keyingTimeLatencies);
@@ -610,12 +610,12 @@ public class DBWorkload {
             "All ","All",  totalLatencyAcrossTransactions.size(), ComputeUtil.getAverageLatency(totalLatencyAcrossTransactions),
             ComputeUtil.getP99Latency(totalLatencyAcrossTransactions)));
 
-    jsonMetricsBuilder.addWorkerTaskLatencyJson("Fetch Work", fetchWorkAll);
-    jsonMetricsBuilder.addWorkerTaskLatencyJson("Keying", keyingAll);
-    jsonMetricsBuilder.addWorkerTaskLatencyJson("Op With Retry", workAll);
-    jsonMetricsBuilder.addWorkerTaskLatencyJson("Thinking", thinkAll);
-    jsonMetricsBuilder.addWorkerTaskLatencyJson("All",totalLatencyAcrossTransactions);
-    jsonMetricsBuilder.buildWorkerTaskLatJson("All");
+    jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWorkAll);
+    jsonMetricsHelper.addWorkerTaskLatency("Keying", keyingAll);
+    jsonMetricsHelper.addWorkerTaskLatency("Op With Retry", workAll);
+    jsonMetricsHelper.addWorkerTaskLatency("Thinking", thinkAll);
+    jsonMetricsHelper.addWorkerTaskLatency("All",totalLatencyAcrossTransactions);
+    jsonMetricsHelper.buildWorkerTaskLat("All");
     LOG.info(resultOut.toString());
   }
 
@@ -659,7 +659,7 @@ public class DBWorkload {
           "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
           op, latencies.size(), ComputeUtil.getAverageLatency(latencies), ComputeUtil.getP99Latency(latencies),
           ComputeUtil.getAverageLatency(conn_latencies)));
-      jsonMetricsBuilder.addLatencyJson(op, latencies, conn_latencies);
+      jsonMetricsHelper.addLatency(op, latencies, conn_latencies);
     }
     List<Integer> latenciesAll = combineListsAcrossTransactions(list_latencies);
     List<Integer> connLatenciesAll = combineListsAcrossTransactions(list_conn_latencies);
@@ -668,7 +668,7 @@ public class DBWorkload {
             "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
             "All ", latenciesAll.size(), ComputeUtil.getAverageLatency(latenciesAll), ComputeUtil.getP99Latency(latenciesAll),
             ComputeUtil.getAverageLatency(connLatenciesAll)));
-    jsonMetricsBuilder.addLatencyJson("All", latenciesAll, connLatenciesAll);
+    jsonMetricsHelper.addLatency("All", latenciesAll, connLatenciesAll);
 
     LOG.info(resultOut.toString());
     if (outputVerboseRes) {
@@ -684,7 +684,7 @@ public class DBWorkload {
                 "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
                 op, latencies.size(), ComputeUtil.getAverageLatency(latencies), ComputeUtil.getP99Latency(latencies),
                 ComputeUtil.getAverageLatency(conn_latencies)));
-        jsonMetricsBuilder.addLatencyJson(op, latencies, conn_latencies);
+        jsonMetricsHelper.addFailureLatency(op, latencies, conn_latencies);
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
       List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
@@ -694,7 +694,7 @@ public class DBWorkload {
               "All ", failureLatenciesAll.size(), ComputeUtil.getAverageLatency(failureLatenciesAll), ComputeUtil.getP99Latency(failureLatenciesAll),
               ComputeUtil.getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
-      jsonMetricsBuilder.addFailureLatencyJson("All", failureLatenciesAll, connLatenciesAll);
+      jsonMetricsHelper.addFailureLatency("All", failureLatenciesAll, connLatenciesAll);
     }
   }
 
@@ -742,9 +742,9 @@ public class DBWorkload {
         pctRetried /= totalTasks;
         pctRetried *= 100.0;
         resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
-        valueList.add(numRetries + " (" + df.format(pctRetried) + ")");
+        valueList.add(numRetries + " (" + df.format(pctRetried) + "%)");
       }
-      jsonMetricsBuilder.addRetryJson(op, totalTasks,numTriesPerProc, valueList);
+      jsonMetricsHelper.addRetry(op, totalTasks, valueList);
       resultOut.append("\n");
     }
     LOG.info(resultOut.toString());
@@ -823,7 +823,7 @@ public class DBWorkload {
       }
     }
 
-    jsonMetricsBuilder.mergeJsonResults(dirPath, fileNames);
+    jsonMetricsHelper.mergeJsonResults(dirPath, fileNames);
 
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
     double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;

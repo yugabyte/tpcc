@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class TPCCJsonMetrics {
+public class TPCC_Metrics {
 
     public TestConfigurationObject TestConfiguration;
 
@@ -45,7 +45,7 @@ public class TPCCJsonMetrics {
     public class RetryAttemptsObject {
         public String Transaction;
         public String Count;
-        public List<String> Retries;
+        public List<String> Retries_FailureCount;
     }
 
 }

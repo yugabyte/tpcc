@@ -1,15 +1,11 @@
 package com.oltpbenchmark.benchmarks.tpcc;
 
-import com.google.gson.JsonParser;
-import com.oltpbenchmark.benchmarks.tpcc.pojo.TPCCJsonMetrics;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.oltpbenchmark.benchmarks.tpcc.pojo.TPCC_Metrics;
+import com.oltpbenchmark.util.ComputeUtil;
 import com.oltpbenchmark.util.FileUtil;
 import org.apache.log4j.Logger;
-
-import com.google.gson.*;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.oltpbenchmark.util.ComputeUtil;
-
 
 import java.io.File;
 import java.io.FileWriter;
@@ -20,80 +16,78 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class JsonMetricsBuilder {
+public class JsonMetricsHelper {
 
-    private static final Logger LOG = Logger.getLogger(JsonMetricsBuilder.class);
-    public JsonObject jsonObject;
-    public TPCCJsonMetrics tpccJsonMetrics;
+    private static final Logger LOG = Logger.getLogger(JsonMetricsHelper.class);
+    public TPCC_Metrics tpccMetrics;
 
-    List <TPCCJsonMetrics.LatencyList> workerTaskLatList;
+    List <TPCC_Metrics.LatencyList> workerTaskLatList;
 
 
-    public JsonMetricsBuilder() {
-        jsonObject = new JsonObject();
-        tpccJsonMetrics = new TPCCJsonMetrics();
+    public JsonMetricsHelper() {
+        tpccMetrics = new TPCC_Metrics();
     }
 
-    public void buildTestConfigJson(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime, int numRetries) {
-        if(tpccJsonMetrics.TestConfiguration == null)
-            tpccJsonMetrics.TestConfiguration = tpccJsonMetrics.new TestConfigurationObject();
-        tpccJsonMetrics.TestConfiguration.Num_Nodes = numNodes;
-        tpccJsonMetrics.TestConfiguration.Num_Warehouses = warehouses;
-        tpccJsonMetrics.TestConfiguration.Num_DBConnections = numDBConn;
-        tpccJsonMetrics.TestConfiguration.WarmupTime_secs = warmuptime;
-        tpccJsonMetrics.TestConfiguration.RunTime_secs = runtime;
-        tpccJsonMetrics.TestConfiguration.Num_Retries = numRetries;
-        tpccJsonMetrics.TestConfiguration.TestStartTime = new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date());
+    public void buildTestConfig(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime, int numRetries) {
+        if(tpccMetrics.TestConfiguration == null)
+            tpccMetrics.TestConfiguration = tpccMetrics.new TestConfigurationObject();
+        tpccMetrics.TestConfiguration.Num_Nodes = numNodes;
+        tpccMetrics.TestConfiguration.Num_Warehouses = warehouses;
+        tpccMetrics.TestConfiguration.Num_DBConnections = numDBConn;
+        tpccMetrics.TestConfiguration.WarmupTime_secs = warmuptime;
+        tpccMetrics.TestConfiguration.RunTime_secs = runtime;
+        tpccMetrics.TestConfiguration.Num_Retries = numRetries;
+        tpccMetrics.TestConfiguration.TestStartTime = new SimpleDateFormat("dd-MM-yy_HH:mm:ss").format(new Date());
     }
 
-    public void buildResultJson(String tpmc, String efficiency, String throughput) {
-        if(tpccJsonMetrics.Results == null)
-            tpccJsonMetrics.Results = tpccJsonMetrics.new ResultObject();
-        tpccJsonMetrics.Results.TPMC = tpmc;
-        tpccJsonMetrics.Results.Efficiency = efficiency;
-        tpccJsonMetrics.Results.Throughput = throughput;
+    public void buildTestResults(String tpmc, String efficiency, String throughput) {
+        if(tpccMetrics.Results == null)
+            tpccMetrics.Results = tpccMetrics.new ResultObject();
+        tpccMetrics.Results.TPMC = tpmc;
+        tpccMetrics.Results.Efficiency = efficiency;
+        tpccMetrics.Results.Throughput = throughput;
     }
 
-    public void addLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        if (tpccJsonMetrics.Latencies == null)
-            tpccJsonMetrics.Latencies = new ArrayList<>();
-        tpccJsonMetrics.Latencies.add(getValueList(op, latencyList, connLatencyList));
+    public void addLatency(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
+        if (tpccMetrics.Latencies == null)
+            tpccMetrics.Latencies = new ArrayList<>();
+        tpccMetrics.Latencies.add(getValueList(op, latencyList, connLatencyList));
     }
 
-    public void addFailureLatencyJson(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        if (tpccJsonMetrics.Failure_Latencies == null)
-            tpccJsonMetrics.Failure_Latencies = new ArrayList<>();
-        tpccJsonMetrics.Failure_Latencies.add(getValueList(op, latencyList, connLatencyList));
+    public void addFailureLatency(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
+        if (tpccMetrics.Failure_Latencies == null)
+            tpccMetrics.Failure_Latencies = new ArrayList<>();
+        tpccMetrics.Failure_Latencies.add(getValueList(op, latencyList, connLatencyList));
     }
 
-    public void buildWorkerTaskLatJson(String op) {
-        if (tpccJsonMetrics.Worker_Task_Latency == null)
-            tpccJsonMetrics.Worker_Task_Latency = new HashMap<>();
-        tpccJsonMetrics.Worker_Task_Latency.put(op,workerTaskLatList);
+    public void buildWorkerTaskLat(String op) {
+        if (tpccMetrics.Worker_Task_Latency == null)
+            tpccMetrics.Worker_Task_Latency = new LinkedHashMap<>();
+        tpccMetrics.Worker_Task_Latency.put(op,workerTaskLatList);
         workerTaskLatList = null;
     }
 
-    public void addWorkerTaskLatencyJson(String task, List<Integer> latencyList) {
+    public void addWorkerTaskLatency(String task, List<Integer> latencyList) {
         if (workerTaskLatList == null)
             workerTaskLatList = new ArrayList<>();
         workerTaskLatList.add(getValueList(task, latencyList, null));
     }
 
-    public void addRetryJson( String op, int count, int numTriesPerProc, List<String> retryOpList) {
-        if(tpccJsonMetrics.Retry_Attempts == null)
-            tpccJsonMetrics.Retry_Attempts = new ArrayList<>();
-        TPCCJsonMetrics.RetryAttemptsObject retryObj = tpccJsonMetrics.new RetryAttemptsObject();
+    public void addRetry(String op, int count, List<String> retryOpList) {
+        if(tpccMetrics.Retry_Attempts == null)
+            tpccMetrics.Retry_Attempts = new ArrayList<>();
+        TPCC_Metrics.RetryAttemptsObject retryObj = tpccMetrics.new RetryAttemptsObject();
         retryObj.Transaction = op;
         retryObj.Count = String.valueOf(count);
-        retryObj.Retries = retryOpList;
-        tpccJsonMetrics.Retry_Attempts.add(retryObj);
+        retryObj.Retries_FailureCount = retryOpList;
+        tpccMetrics.Retry_Attempts.add(retryObj);
     }
 
-    private TPCCJsonMetrics.LatencyList getValueList(String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
+    private TPCC_Metrics.LatencyList getValueList(String op, List<Integer> latencyList, List<Integer> connAcqLatencyList) {
         DecimalFormat df = new DecimalFormat();
         df.setMaximumFractionDigits(2);
         df.setGroupingUsed(false);
-        TPCCJsonMetrics.LatencyList valueList = tpccJsonMetrics.new LatencyList();
+        TPCC_Metrics.LatencyList valueList = tpccMetrics.new LatencyList();
         valueList.Transaction = op;
         valueList.Count = df.format(latencyList.size());
         valueList.Avg_Latency = df.format(ComputeUtil.getAverageLatency(latencyList));
@@ -111,19 +105,13 @@ public class JsonMetricsBuilder {
         try {
             currentDir = new File(".").getCanonicalPath();
         } catch (IOException e) {
-            LOG.error("Exception occurred fetching current dir" +
+            LOG.error("Exception occurred fetching current dir. " +
                     "\nError Message:" + e.getMessage());
         }
         String dest = currentDir + File.separator + outputDirectory + File.separator + "output.json";
-        // + "json_" + numWarehouses + "WH_" + numDBConnections + "Conn_"
-        // + new SimpleDateFormat("dd-MM-yy_HHmm").format(new Date()) + "_"
-        // + UUID.randomUUID() + ".json";
 
-        String jsonString = new GsonBuilder().setPrettyPrinting().create().toJson(tpccJsonMetrics);
-        try {
-            FileWriter file = new FileWriter(dest);
-            file.write(jsonString);
-            file.close();
+        try (FileWriter fw = new FileWriter(dest)) {
+            new GsonBuilder().setPrettyPrinting().create().toJson(tpccMetrics, fw);
         } catch (IOException e) {
             LOG.error("Got exception while writing JSON metrics to file.");
             e.printStackTrace();
@@ -133,6 +121,11 @@ public class JsonMetricsBuilder {
     }
 
     public static void mergeJsonResults(String dirPath, String[] fileNames) {
+        List<TPCC_Metrics> tpcc_metrics_list = new ArrayList<>();
+        TPCC_Metrics tpccMetrics_avg =  new TPCC_Metrics();
+        TPCC_Metrics tpccMetrics_sum = new TPCC_Metrics();
+        Gson gson = new Gson();
+
         double tpmc, efficiency, throughput;
         double sumEfficiency = 0, sum_tpmc = 0, sumThroughput = 0;
 
@@ -155,25 +148,25 @@ public class JsonMetricsBuilder {
                 continue;
             }
             try {
-                jsonStrings.add(new String(Files.readAllBytes(Paths.get(file))));
+                tpcc_metrics_list.add(
+                        gson.fromJson(new String(Files.readAllBytes(Paths.get(file))), TPCC_Metrics.class));
             } catch (IOException ie) {
-                LOG.error("Got exception while reading file", ie);
+                LOG.error("Got exception while reading json file - " + file + " : ", ie);
                 return;
             }
         }
         LOG.info("Printing JSON info.. ");
 
-        for (String jsonStr : jsonStrings) {
-            TPCCJsonMetrics jsonObj = new Gson().fromJson(jsonStr, TPCCJsonMetrics.class);
-            LOG.info("Efficiency  : " + jsonObj.Results.Efficiency);
-            LOG.info("Latency : " + jsonObj.Latencies.size() );
-            LOG.info("Failure Latency : " + jsonObj.Failure_Latencies.size());
-            LOG.info("WorkerTaskLatencies : " + jsonObj.Worker_Task_Latency.size());
-            LOG.info("RetryAttempts : " + jsonObj.Retry_Attempts.size());
+        for (TPCC_Metrics tpccMetrics : tpcc_metrics_list) {
+            LOG.info("Efficiency  : " + tpccMetrics.Results.Efficiency);
+            LOG.info("Latency : " + tpccMetrics.Latencies.size() );
+            LOG.info("Failure Latency : " + tpccMetrics.Failure_Latencies.size());
+            LOG.info("WorkerTaskLatencies : " + tpccMetrics.Worker_Task_Latency.size());
+            LOG.info("RetryAttempts : " + tpccMetrics.Retry_Attempts.size());
 
-            /*JsonObject jsonObj = (JsonObject) new JsonParser().parse(jsonStr);
+            tpccMetrics_sum.Results.Efficiency += tpccMetrics.Results.Efficiency;
+            /*
 
-            JsonObject resultJson = (JsonObject) jsonObj.get("Results");
             sum_tpmc += Double.parseDouble(resultJson.get("TPM-C").getAsString());
             sumEfficiency += Double.parseDouble(resultJson.get("Efficiency").getAsString());
             sumThroughput += Double.parseDouble(resultJson.get("Throughput").getAsString());
@@ -288,7 +281,7 @@ public class JsonMetricsBuilder {
 
       /*
       jsonObject = new JsonObject();
-      buildResultJson(String.valueOf(tpmc),String.valueOf(efficiency),String.valueOf(throughput));
+      buildTestResults(String.valueOf(tpmc),String.valueOf(efficiency),String.valueOf(throughput));
       buildLatencyJson(latencyList);
       buildFailureLatencyJson(failureLatencyList);
       buildWorkerTaskLatencyJson(workerLatencyMap);

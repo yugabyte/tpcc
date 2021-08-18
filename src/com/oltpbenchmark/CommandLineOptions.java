@@ -60,6 +60,7 @@ public class CommandLineOptions {
         COMMAND_LINE_OPTS.addOption(null, "merge-results", true, "Merge results from various output files");
         COMMAND_LINE_OPTS.addOption(null, "dir", true, "Directory containing the csv files");
         COMMAND_LINE_OPTS.addOption(null, "vv", false, "Output verbose execute results");
+        COMMAND_LINE_OPTS.addOption(null, "single-transaction", false, "Examine RPC requests of a single random transaction");
     }
 
     public CommandLineOptions() {}
@@ -173,4 +174,6 @@ public class CommandLineOptions {
     }
 
     public boolean getShouldOutputVerboseExecuteResults() { return argsLine.hasOption("vv"); }
+
+    public boolean getSingleTransactionRPC() { return argsLine.hasOption("single-transaction"); }
 }

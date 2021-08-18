@@ -32,6 +32,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import org.apache.log4j.Logger;
 
+import com.oltpbenchmark.CommandLineOptions;
 import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.api.Loader.LoaderThread;
 import com.oltpbenchmark.util.ThreadUtil;
@@ -59,28 +60,33 @@ public class BenchmarkModule {
     protected final WorkloadConfiguration workConf;
 
     /**
+     * The command line options for this benchmark invocation
+     */
+    protected final CommandLineOptions options;
+
+    /**
      * A single Random object that should be re-used by all a benchmark's components
      */
     private final Random rng = new Random();
 
-    public BenchmarkModule(WorkloadConfiguration workConf) {
+    public BenchmarkModule(WorkloadConfiguration workConf, CommandLineOptions options) {
         assert (workConf != null) : "The WorkloadConfiguration instance is null.";
 
         this.benchmarkName = "tpcc";
         this.workConf = workConf;
+        this.options = options;
         if (workConf.getNeedsExecution()) {
             try {
                 createDataSource();
             } catch (Exception e) {
                 LOG.error("Failed to create Data source", e);
-                throw e;
             }
         }
     }
 
     private final List<HikariDataSource> listDataSource = new ArrayList<>();
 
-    public void createDataSource() {
+    public void createDataSource() throws Exception {
         int numConnections =
             (workConf.getNumDBConnections() + workConf.getNodes().size() - 1) / workConf.getNodes().size();
         for (String ip : workConf.getNodes()) {
@@ -111,6 +117,16 @@ public class BenchmarkModule {
             }
             config.setTransactionIsolation(workConf.getIsolationString());
             listDataSource.add(new HikariDataSource(config));
+        }
+
+        // if the single transaction flag is set
+        // get a random datasource
+        if (options.getSingleTransactionRPC()) {
+          HikariDataSource dataSource = listDataSource.get(rng.nextInt(workConf.getNodes().size()));
+          try(Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement()) {
+              statement.execute("SET yb_debug_log_docdb_requests=true");
+              statement.execute("SET log_statement='all'");
+          }
         }
     }
 

@@ -42,6 +42,7 @@
 		<dependency org="commons-io" name="commons-io" rev="2.2" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 
 		<dependency org="org.hdrhistogram" name="HdrHistogram" rev="2.1.4" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
+		<dependency org="com.google.code.gson" name="gson" rev="2.8.7" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
       <!-- Javax Stuff -->
 		<dependency org="javax.persistence" name="persistence-api" rev="1.0" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<dependency org="javax.activation" name="activation" rev="1.1.1"/>

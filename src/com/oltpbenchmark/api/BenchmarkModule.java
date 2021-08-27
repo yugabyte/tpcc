@@ -17,8 +17,6 @@
 
 package com.oltpbenchmark.api;
 
-import java.io.File;
-import java.net.URL;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +25,8 @@ import java.util.stream.Stream;
 
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
+import com.oltpbenchmark.schema.SchemaManager;
+import com.oltpbenchmark.schema.SchemaManagerFactory;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -192,7 +192,7 @@ public class BenchmarkModule {
     public final void createDatabase() {
         try {
             Connection conn = makeConnection();
-            SchemaManager schemaManager = new SchemaManager(conn);
+            SchemaManager schemaManager = SchemaManagerFactory.getSchemaManager(workConf, conn);
             schemaManager.create();
             conn.close();
         } catch (SQLException ex) {
@@ -393,36 +393,15 @@ public class BenchmarkModule {
       }
 
     // This function creates SQL procedures that the execution would need. Currently we have procedures to update the
-      // Stock table, and a procedure to get stock levels of items recently ordered.
-      public void createSqlProcedures() throws Exception {
-        try {
-          Connection conn = makeConnection();
-          Statement st = conn.createStatement();
-
-          StringBuilder argsSb = new StringBuilder();
-          StringBuilder updateStatements = new StringBuilder();
-
-          argsSb.append("wid int");
-          for (int i = 1; i <= 15; ++i) {
-            argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));
-            updateStatements.append(String.format(
-              "UPDATE STOCK SET S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
-              "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d;",
-              i, i, i, i));
-            String updateStmt =
-              String.format("CREATE PROCEDURE updatestock%d (%s) AS '%s' LANGUAGE SQL;",
-                            i, argsSb.toString(), updateStatements.toString());
-
-            st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d", i));
-            st.execute(updateStmt);
-          }
-
-          StockLevel.InitializeGetStockCountProc(conn);
+    // Stock table, and a procedure to get stock levels of items recently ordered.
+    public void createSqlProcedures() throws Exception {
+        try (Connection conn = makeConnection()) {
+            SchemaManagerFactory.getSchemaManager(workConf, conn).createSqlProcedures();
         } catch (SQLException se) {
-          BenchmarkModule.LOG.error(se.getMessage());
-          throw se;
+            BenchmarkModule.LOG.error(se.getMessage());
+            throw se;
         }
-      }
+    }
 
     public void test() throws Exception {
         Worker worker = new Worker(this, 1 /* worker_id */, 1, 1, 1);

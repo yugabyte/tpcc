@@ -18,6 +18,7 @@
 package com.oltpbenchmark;
 
 import com.oltpbenchmark.api.TransactionTypes;
+import com.oltpbenchmark.util.GeoPartitionPolicy;
 import com.oltpbenchmark.util.StringUtil;
 import com.oltpbenchmark.util.ThreadUtil;
 import org.apache.commons.collections15.map.ListOrderedMap;
@@ -31,7 +32,11 @@ import java.util.Map;
 public class WorkloadConfiguration {
   private String benchmarkName;
 
-  public void setBenchmarkName(String benchmarkName) {
+  public WorkloadConfiguration(GeoPartitionPolicy geoPartitionPolicy) {
+      this.geoPartitionPolicy = geoPartitionPolicy;
+  }
+
+public void setBenchmarkName(String benchmarkName) {
     this.benchmarkName = benchmarkName;
   }
 
@@ -90,6 +95,7 @@ public class WorkloadConfiguration {
   private int numberOfPhases = 0;
   private TransactionTypes transTypes = null;
   private int isolationMode = Connection.TRANSACTION_SERIALIZABLE;
+  private final GeoPartitionPolicy geoPartitionPolicy;
 
   public void addWork(int time, int warmup, int rate, List<String> weights, boolean rateLimited,
                       boolean disabled, boolean serial, boolean timed, int active_terminals,
@@ -357,6 +363,15 @@ public class WorkloadConfiguration {
 
   public int getMaxLoaderRetries() {
     return maxLoaderRetries;
+  }
+  
+  // Geo partitioned options.
+  public GeoPartitionPolicy getGeoPartitioningPolicy() {
+      return geoPartitionPolicy;
+  }
+  
+  public boolean getGeoPartitioningEnabled() {
+      return geoPartitionPolicy != null;
   }
 
   @Override

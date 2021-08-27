@@ -232,8 +232,7 @@ public class NewOrder extends Procedure {
         supplierWarehouseIDs[i] = terminalWarehouseID;
       } else {
         do {
-          supplierWarehouseIDs[i] = TPCCUtil.randomNumber(1,
-              numWarehouses, gen);
+          supplierWarehouseIDs[i] = TPCCUtil.getRandomWarehouseId(w, terminalWarehouseID, numWarehouses, gen);
         } while (supplierWarehouseIDs[i] == terminalWarehouseID
             && numWarehouses > 1);
         allLocal = 0;

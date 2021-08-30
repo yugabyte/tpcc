@@ -823,7 +823,7 @@ public class DBWorkload {
       }
     }
 
-    jsonMetricsHelper.mergeJsonResults(dirPath, fileNames);
+    jsonMetricsHelper.mergeJsonResults(dirPath);
 
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
     double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;

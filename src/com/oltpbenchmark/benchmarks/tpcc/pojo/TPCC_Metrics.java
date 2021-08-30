@@ -1,5 +1,7 @@
 package com.oltpbenchmark.benchmarks.tpcc.pojo;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,22 +10,26 @@ public class TPCC_Metrics {
 
     public TestConfigurationObject TestConfiguration;
 
-    public ResultObject Results;
+    public ResultObject Results = new ResultObject();
 
-    public List<LatencyList> Latencies;
+    public List<LatencyList> Latencies = new ArrayList<>();
 
-    public List<LatencyList> Failure_Latencies;
+    public List<LatencyList> Failure_Latencies = new ArrayList<>();
 
-    public Map<String, List<LatencyList>> Worker_Task_Latency;
+    public Map<String, List<LatencyList>> Worker_Task_Latency = new LinkedHashMap<>();
 
-    public List<RetryAttemptsObject> Retry_Attempts;
+    public List<RetryAttemptsObject> Retry_Attempts = new ArrayList<>();
 
     public class LatencyList {
         public String Transaction;
-        public String Count;
-        public String Avg_Latency;
-        public String P99_Latency;
-        public String Connection_Acq_Latency;
+        public int Count;
+        public double min_Latency;
+        public double Avg_Latency;
+        public double max_Latency;
+        public double P99_Latency;
+        public double Connection_Acq_Latency;
+        public double min_Conn_Acq_Latency;
+        public double max_Conn_Acq_Latency;
     }
 
     public class TestConfigurationObject {
@@ -37,14 +43,16 @@ public class TPCC_Metrics {
     }
 
     public class ResultObject {
-        public String TPMC;
-        public String Efficiency;
-        public String Throughput;
+        public double TPMC;
+        public double Efficiency;
+        public double Throughput;
+        public double Throughput_min;
+        public double Throughput_max;
     }
 
     public class RetryAttemptsObject {
         public String Transaction;
-        public String Count;
+        public int Count;
         public List<String> Retries_FailureCount;
     }
 

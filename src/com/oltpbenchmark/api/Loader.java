@@ -24,6 +24,10 @@ import java.util.concurrent.CountDownLatch;
 
 import com.oltpbenchmark.benchmarks.tpcc.*;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.*;
+import com.oltpbenchmark.schema.SchemaManager;
+import com.oltpbenchmark.schema.SchemaManagerFactory;
+import com.oltpbenchmark.schema.Table;
+
 import org.apache.log4j.Logger;
 
 import com.oltpbenchmark.WorkloadConfiguration;
@@ -43,8 +47,8 @@ public class Loader {
 
     /**
      * A LoaderThread is responsible for loading some portion of a
-     * benchmark's databsae.
-     * Note that each LoaderThread has its own databsae Connection handle.
+     * benchmark's database.
+     * Note that each LoaderThread has its own database Connection handle.
      */
     public abstract class LoaderThread implements Runnable {
         public LoaderThread() {}
@@ -160,7 +164,7 @@ public class Loader {
     }
 
     private PreparedStatement getInsertStatement(Connection conn, String tableName) throws SQLException {
-      return conn.prepareStatement(SchemaManager.getInsertDml(tableName));
+      return conn.prepareStatement(Table.getInsertDml(tableName));
     }
 
     protected void transRollback(Connection conn) {
@@ -196,7 +200,7 @@ public class Loader {
 
     public void EnableForeignKeyConstraints(Connection conn) {
       try {
-        SchemaManager schemaManager = new SchemaManager(conn);
+        SchemaManager schemaManager = SchemaManagerFactory.getSchemaManager(workConf, conn);
         schemaManager.enableForeignKeyConstraints();
       } catch (SQLException se) {
         LOG.error("Could not create foreign keys" + se.getMessage());

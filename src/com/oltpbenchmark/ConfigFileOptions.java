@@ -1,17 +1,12 @@
 package com.oltpbenchmark;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 
 import java.util.Optional;
 
-public class ConfigFileOptions {
-    XMLConfiguration xmlConfig;
-
-    ConfigFileOptions(String filePath) throws ConfigurationException {
-        xmlConfig = new XMLConfiguration(filePath);
-        xmlConfig.setExpressionEngine(new XPathExpressionEngine());
+public class ConfigFileOptions extends ConfigFileOptionsBase {
+    public ConfigFileOptions(String filePath) throws ConfigurationException {
+        super(filePath);
     }
 
     public String getDbDriver() {
@@ -30,13 +25,6 @@ public class ConfigFileOptions {
         return xmlConfig.getString("password");
     }
 
-    private Optional<String> getStringOpt(String key) {
-        if (xmlConfig.containsKey(key) && xmlConfig.getString(key).length() > 0) {
-            return Optional.of(xmlConfig.getString(key));
-        }
-        return Optional.empty();
-    }
-
     public Optional<String> getSslCert() {
         return getStringOpt("sslCert");
     }
@@ -51,13 +39,6 @@ public class ConfigFileOptions {
 
     public Optional<String> getIsolationLevel() {
         return getStringOpt("isolation");
-    }
-
-    private Optional<Boolean> getBoolOpt(String key) {
-        if (xmlConfig.containsKey(key)) {
-            return Optional.of(xmlConfig.getBoolean(key));
-        }
-        return Optional.empty();
     }
 
     public Optional<Boolean> getUseKeyingTime() {
@@ -78,13 +59,6 @@ public class ConfigFileOptions {
 
     public Optional<Boolean> getUseStoredProcedures() {
         return getBoolOpt("useStoredProcedures");
-    }
-
-    private Optional<Integer> getIntOpt(String key) {
-        if (xmlConfig.containsKey(key)) {
-            return Optional.of(xmlConfig.getInt(key));
-        }
-        return Optional.empty();
     }
 
     public Optional<Integer> getBatchSize() {
@@ -126,5 +100,4 @@ public class ConfigFileOptions {
     public Optional<Integer> getRuntime() {
         return getIntOpt("runtime");
     }
-
 }

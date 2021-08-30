@@ -161,7 +161,7 @@ public class Payment extends Procedure {
     } else {
       customerDistrictID = TPCCUtil.randomNumber(1, TPCCConfig.configDistPerWhse, gen);
       do {
-          customerWarehouseID = TPCCUtil.randomNumber(1, numWarehouses, gen);
+          customerWarehouseID = TPCCUtil.getRandomWarehouseId(w, w_id, numWarehouses, gen);
       } while (customerWarehouseID == w_id && numWarehouses > 1);
     }
 

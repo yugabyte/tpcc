@@ -17,7 +17,6 @@
 package com.oltpbenchmark.api;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Random;
 
 public class TransactionType implements Comparable<TransactionType> {

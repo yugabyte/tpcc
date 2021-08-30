@@ -32,7 +32,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Random;
 
+import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
+import com.oltpbenchmark.util.GeoPartitionPolicy;
 import com.oltpbenchmark.util.RandomGenerator;
 
 public class TPCCUtil {
@@ -121,6 +123,21 @@ public class TPCCUtil {
 
   public static String getNonUniformRandomLastNameForLoad(Random r) {
     return getLastName(nonUniformRandom(255, C_LAST_LOAD_C, 0, 999, r));
+  }
+  
+  /**
+   * Return a random warehouse among numWarehouses. If this is a geo-partitioned setup,
+   * return a random warehouse from the same partition that warehouseId belongs to.
+   */
+  public static int getRandomWarehouseId(Worker w, int warehouseId, int numWarehouses, Random gen) {
+      if (!w.getBenchmarkModule().getWorkloadConfiguration().getGeoPartitioningEnabled()) {
+          return TPCCUtil.randomNumber(1, numWarehouses, gen);
+      }
+      GeoPartitionPolicy policy = w.getBenchmarkModule().getWorkloadConfiguration().getGeoPartitioningPolicy();
+      int partitionIndex = policy.getPartitionForWarehouse(warehouseId);
+      int startPartition = policy.getStartWarehouseForPartition(partitionIndex);
+      int endPartition = partitionIndex * policy.numWareHousesPerSplit();
+      return randomNumber(startPartition, endPartition, gen);
   }
 
   public static int randomNumber(int min, int max, Random r) {

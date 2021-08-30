@@ -39,6 +39,12 @@ public class CommandLineOptions {
                 "config",
                 true,
                 "Workload configuration file [default: config/workload_all.xml]");
+        
+        COMMAND_LINE_OPTS.addOption(
+                "gpc",
+                "geopartitioned-config",
+                true,
+                "GeoPartitioning configuration file [default: config/geopartitioned_workload.xml]");
 
         COMMAND_LINE_OPTS.addOption("im", "interval-monitor", true,
                 "Throughput Monitoring Interval in milliseconds");
@@ -71,7 +77,8 @@ public class CommandLineOptions {
         LOAD,
         EXECUTE,
         MERGE_RESULTS,
-        ENABLE_FOREIGN_KEYS
+        ENABLE_FOREIGN_KEYS,
+        CREATE_SQL_PROCEDURES,
     }
 
     void init(String[] args) throws ParseException {
@@ -94,6 +101,7 @@ public class CommandLineOptions {
         if (isBooleanOptionSet("load")) return Mode.LOAD;
         if (isBooleanOptionSet("execute")) return Mode.EXECUTE;
         if (isBooleanOptionSet("enable-foreign-keys")) return Mode.ENABLE_FOREIGN_KEYS;
+        if (isBooleanOptionSet("create-sql-procedures")) return Mode.CREATE_SQL_PROCEDURES;
         assert isBooleanOptionSet("merge-results");
         return Mode.MERGE_RESULTS;
     }
@@ -112,6 +120,10 @@ public class CommandLineOptions {
 
     public Optional<String> getConfigFile() {
         return getStringOpt("c");
+    }
+    
+    public Optional<String> getGeoPartitionedConfigFile() {
+        return getStringOpt("gpc");
     }
 
     private Optional<Integer> getIntOpt(String key) {

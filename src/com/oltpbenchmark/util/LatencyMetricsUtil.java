@@ -3,7 +3,7 @@ package com.oltpbenchmark.util;
 import java.util.Collections;
 import java.util.List;
 
-public class ComputeUtil {
+public class LatencyMetricsUtil {
 
     public static double getAverageLatency(List<Integer> latencies) {
       if (latencies.size() == 0) {

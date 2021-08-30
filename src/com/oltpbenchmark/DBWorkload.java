@@ -22,7 +22,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 
 import com.oltpbenchmark.benchmarks.tpcc.JsonMetricsHelper;
-import com.oltpbenchmark.util.ComputeUtil;
+import com.oltpbenchmark.util.LatencyMetricsUtil;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -50,7 +50,6 @@ public class DBWorkload {
   private static int warmupTime = 0;
   private static final Map<Integer, String> transactionTypes = new HashMap<>();
   private static JsonMetricsHelper jsonMetricsHelper = new JsonMetricsHelper();
-
 
   /**
    * Returns true if asserts are enabled. This assumes that
@@ -294,7 +293,8 @@ public class DBWorkload {
                     terminals,
                     Phase.Arrival.REGULAR);
 
-      jsonMetricsHelper.buildTestConfig(nodes.size(),numWarehouses, numDBConnections, warmupTime, time, wrkld.getMaxRetriesPerTransaction());
+      jsonMetricsHelper.buildTestConfig(nodes.size(),numWarehouses, numDBConnections, warmupTime,
+              time, wrkld.getMaxRetriesPerTransaction());
 
       // CHECKING INPUT PHASES
       int j = 0;
@@ -513,8 +513,8 @@ public class DBWorkload {
     String resultOut = "\n" +
             "================RESULTS================\n" +
             String.format("%18s | %18.2f\n", "TPM-C", tpmc) +
-            String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
-            String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
+            String.format("%18s | %17.2f%%\n", "efficiency", efficiency) +
+            String.format("%18s | %18.2f\n", "throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
     jsonMetricsHelper.buildTestResults(df.format(tpmc), df.format(efficiency), df.format(r.getRequestsPerSecond()));
 
@@ -560,7 +560,7 @@ public class DBWorkload {
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
     resultOut.append("=======================WORKER TASK LATENCIES=======================\n");
-    resultOut.append(" Transaction |     Task     |  Count   | Avg. Latency | P99 Latency\n");
+    resultOut.append(" transaction |     Task     |  count   | Avg. Latency | P99 Latency\n");
     for (int i = 0; i < fetchWorkLatencies.size(); ++i) {
       String op = transactionTypes.get(i + 1);
       List<Integer> fetchWork = fetchWorkLatencies.get(i);
@@ -570,16 +570,20 @@ public class DBWorkload {
 
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op,"Fetch Work",  fetchWork.size(), ComputeUtil.getAverageLatency(fetchWork), ComputeUtil.getP99Latency(fetchWork)));
+              op,"Fetch Work",  fetchWork.size(), LatencyMetricsUtil.getAverageLatency(fetchWork),
+              LatencyMetricsUtil.getP99Latency(fetchWork)));
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op, "Keying", keyingLatencyList.size(), ComputeUtil.getAverageLatency(keyingLatencyList), ComputeUtil.getP99Latency(keyingLatencyList)));
+              op, "Keying", keyingLatencyList.size(), LatencyMetricsUtil.getAverageLatency(keyingLatencyList),
+              LatencyMetricsUtil.getP99Latency(keyingLatencyList)));
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op, "Op With Retry",workLatencyList.size(), ComputeUtil.getAverageLatency(workLatencyList), ComputeUtil.getP99Latency(workLatencyList)));
+              op, "Op With Retry",workLatencyList.size(), LatencyMetricsUtil.getAverageLatency(workLatencyList),
+              LatencyMetricsUtil.getP99Latency(workLatencyList)));
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op, "Thinking", thinkLatencyList.size(), ComputeUtil.getAverageLatency(thinkLatencyList), ComputeUtil.getP99Latency(thinkLatencyList)));
+              op, "Thinking", thinkLatencyList.size(), LatencyMetricsUtil.getAverageLatency(thinkLatencyList),
+              LatencyMetricsUtil.getP99Latency(thinkLatencyList)));
 
       jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWork);
       jsonMetricsHelper.addWorkerTaskLatency("Keying", keyingLatencyList);
@@ -595,20 +599,25 @@ public class DBWorkload {
 
     resultOut.append(String.format(
             "%12s |%13s |%9s |%13.2f |%12.2f\n",
-            "All ","Fetch Work",  fetchWorkAll.size(), ComputeUtil.getAverageLatency(fetchWorkAll), ComputeUtil.getP99Latency(fetchWorkAll)));
+            "All ","Fetch Work",  fetchWorkAll.size(), LatencyMetricsUtil.getAverageLatency(fetchWorkAll),
+            LatencyMetricsUtil.getP99Latency(fetchWorkAll)));
     resultOut.append(String.format(
             "%12s |%13s |%9s |%13.2f |%12.2f\n",
-            "All ","Keying",  keyingAll.size(), ComputeUtil.getAverageLatency(keyingAll), ComputeUtil.getP99Latency(keyingAll)));
+            "All ","Keying",  keyingAll.size(), LatencyMetricsUtil.getAverageLatency(keyingAll),
+            LatencyMetricsUtil.getP99Latency(keyingAll)));
     resultOut.append(String.format(
             "%12s |%13s |%9s |%13.2f |%12.2f\n",
-            "All ","Op with Retry",  workAll.size(), ComputeUtil.getAverageLatency(workAll), ComputeUtil.getP99Latency(workAll)));
+            "All ","Op with Retry",  workAll.size(), LatencyMetricsUtil.getAverageLatency(workAll),
+            LatencyMetricsUtil.getP99Latency(workAll)));
     resultOut.append(String.format(
             "%12s |%13s |%9s |%13.2f |%12.2f\n",
-            "All ","Thinking",  thinkAll.size(), ComputeUtil.getAverageLatency(thinkAll), ComputeUtil.getP99Latency(thinkAll)));
+            "All ","Thinking",  thinkAll.size(), LatencyMetricsUtil.getAverageLatency(thinkAll),
+            LatencyMetricsUtil.getP99Latency(thinkAll)));
     resultOut.append(String.format(
             "%12s |%13s |%9s |%13.2f |%12.2f\n",
-            "All ","All",  totalLatencyAcrossTransactions.size(), ComputeUtil.getAverageLatency(totalLatencyAcrossTransactions),
-            ComputeUtil.getP99Latency(totalLatencyAcrossTransactions)));
+            "All ","All",  totalLatencyAcrossTransactions.size(),
+            LatencyMetricsUtil.getAverageLatency(totalLatencyAcrossTransactions),
+            LatencyMetricsUtil.getP99Latency(totalLatencyAcrossTransactions)));
 
     jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWorkAll);
     jsonMetricsHelper.addWorkerTaskLatency("Keying", keyingAll);
@@ -649,7 +658,7 @@ public class DBWorkload {
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
     resultOut.append("======================LATENCIES (INCLUDE RETRY ATTEMPTS)=====================\n");
-    resultOut.append(" Transaction |  Count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
+    resultOut.append(" transaction |  count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
     for (int i = 0; i < list_latencies.size(); ++i) {
       String op = transactionTypes.get(i + 1);
       List<Integer> latencies = list_latencies.get(i);
@@ -657,8 +666,8 @@ public class DBWorkload {
 
       resultOut.append(String.format(
           "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
-          op, latencies.size(), ComputeUtil.getAverageLatency(latencies), ComputeUtil.getP99Latency(latencies),
-          ComputeUtil.getAverageLatency(conn_latencies)));
+          op, latencies.size(), LatencyMetricsUtil.getAverageLatency(latencies),
+              LatencyMetricsUtil.getP99Latency(latencies), LatencyMetricsUtil.getAverageLatency(conn_latencies)));
       jsonMetricsHelper.addLatency(op, latencies, conn_latencies);
     }
     List<Integer> latenciesAll = combineListsAcrossTransactions(list_latencies);
@@ -666,8 +675,8 @@ public class DBWorkload {
 
     resultOut.append(String.format(
             "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
-            "All ", latenciesAll.size(), ComputeUtil.getAverageLatency(latenciesAll), ComputeUtil.getP99Latency(latenciesAll),
-            ComputeUtil.getAverageLatency(connLatenciesAll)));
+            "All ", latenciesAll.size(), LatencyMetricsUtil.getAverageLatency(latenciesAll),
+            LatencyMetricsUtil.getP99Latency(latenciesAll), LatencyMetricsUtil.getAverageLatency(connLatenciesAll)));
     jsonMetricsHelper.addLatency("All", latenciesAll, connLatenciesAll);
 
     LOG.info(resultOut.toString());
@@ -675,15 +684,15 @@ public class DBWorkload {
       resultOut = new StringBuilder();
       resultOut.append("\n");
       resultOut.append("==============================FAILURE LATENCIES==============================\n");
-      resultOut.append(" Transaction |  Count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
+      resultOut.append(" transaction |  count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
       for (int i = 0; i < list_failure_latencies.size(); ++i) {
         String op = transactionTypes.get(i + 1);
         List<Integer> latencies = list_failure_latencies.get(i);
         List<Integer> conn_latencies = list_failure_conn_latencies.get(i);
         resultOut.append(String.format(
                 "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
-                op, latencies.size(), ComputeUtil.getAverageLatency(latencies), ComputeUtil.getP99Latency(latencies),
-                ComputeUtil.getAverageLatency(conn_latencies)));
+                op, latencies.size(), LatencyMetricsUtil.getAverageLatency(latencies),
+                LatencyMetricsUtil.getP99Latency(latencies), LatencyMetricsUtil.getAverageLatency(conn_latencies)));
         jsonMetricsHelper.addFailureLatency(op, latencies, conn_latencies);
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
@@ -691,8 +700,9 @@ public class DBWorkload {
       double totalPercentage = 100.0 * failureLatenciesAll.size() / (failureLatenciesAll.size() + latenciesAll.size());
       resultOut.append(String.format(
               "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
-              "All ", failureLatenciesAll.size(), ComputeUtil.getAverageLatency(failureLatenciesAll), ComputeUtil.getP99Latency(failureLatenciesAll),
-              ComputeUtil.getAverageLatency(failureConnLatenciesAll)));
+              "All ", failureLatenciesAll.size(), LatencyMetricsUtil.getAverageLatency(failureLatenciesAll),
+              LatencyMetricsUtil.getP99Latency(failureLatenciesAll),
+              LatencyMetricsUtil.getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());
       jsonMetricsHelper.addFailureLatency("All", failureLatenciesAll, connLatenciesAll);
     }
@@ -714,9 +724,9 @@ public class DBWorkload {
 
     resultOut.append("\n");
     resultOut.append("=================== RETRY ATTEMPTS ====================\n");
-    resultOut.append("  Transaction  |    Count  |");
+    resultOut.append("  transaction  |    count  |");
     for (int i = 0; i < numTriesPerProc; ++i) {
-      resultOut.append(String.format(" Retry #%1d - Failure Count |", i));
+      resultOut.append(String.format(" Retry #%1d - Failure count |", i));
     }
     resultOut.append("\n");
     int[] workerTotalTasks = new int[5];
@@ -784,7 +794,7 @@ public class DBWorkload {
         br = new BufferedReader(new FileReader(dirPath + "/" + file));
         long end = -1;
         while ((line = br.readLine()) != null) {
-          if (line.contains("Transaction Name")) {
+          if (line.contains("transaction Name")) {
             continue;
           }
 
@@ -832,7 +842,7 @@ public class DBWorkload {
 
     LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
     LOG.info("TPM-C: " + df.format(tpmc));
-    LOG.info("Efficiency : " + df.format(efficiency) + "%");
+    LOG.info("efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
                                          list_latencies.get(i)));

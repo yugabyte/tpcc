@@ -53,7 +53,7 @@ public class TPCCMetrics {
     public class RetryAttemptsObject {
         public String transaction;
         public int count;
-        public List<String> retriesFailureCount;
+        public List retriesFailureCount;
     }
 
 }

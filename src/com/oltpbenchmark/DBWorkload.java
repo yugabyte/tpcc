@@ -749,16 +749,14 @@ public class DBWorkload {
       String op = transactionTypes.get(i + 1);
       int totalTasks = workerTotalTasks[i];
       resultOut.append(String.format("%14s |%10d |", op, totalTasks));
-      List<String> valueList = new ArrayList<> ();
       for (int retry = 0; retry < numTriesPerProc; ++retry) {
         int numRetries = totalFailedTries[i][retry];
         double pctRetried = numRetries;
         pctRetried /= totalTasks;
         pctRetried *= 100.0;
         resultOut.append(String.format("%16d (%5.2f%%) |", numRetries, pctRetried));
-        valueList.add(numRetries + " (" + df.format(pctRetried) + "%)");
       }
-      jsonMetricsHelper.addRetry(op, totalTasks, valueList);
+      jsonMetricsHelper.addRetry(op, totalTasks, totalFailedTries[i]);
       resultOut.append("\n");
     }
     LOG.info(resultOut.toString());
@@ -848,8 +846,7 @@ public class DBWorkload {
     LOG.info("TPM-C: " + df.format(tpmc));
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {
-      LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
-                                         list_latencies.get(i)));
+      LOG.info(getOperationLatencyString(transactionTypes.get(i+1), list_latencies.get(i)));
     }
   }
 

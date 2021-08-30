@@ -72,13 +72,13 @@ public class JsonMetricsHelper {
         workerTaskLatList.add(getValueList(task, latencyList, null));
     }
 
-    public void addRetry(String op, int count, List<String> retryOpList) {
+    public void addRetry(String op, int count,int[] retryOpList) {
         if(tpccMetrics.RetryAttempts == null)
             tpccMetrics.RetryAttempts = new ArrayList<>();
         TPCCMetrics.RetryAttemptsObject retryObj = tpccMetrics.new RetryAttemptsObject();
         retryObj.transaction = op;
         retryObj.count = count;
-        retryObj.retriesFailureCount = retryOpList;
+        retryObj.retriesFailureCount = Arrays.asList(retryOpList);
         tpccMetrics.RetryAttempts.add(retryObj);
     }
 

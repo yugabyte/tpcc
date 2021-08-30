@@ -520,7 +520,8 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
-    jsonMetricsHelper.buildTestResults(df.format(tpmc), df.format(efficiency), df.format(r.getRequestsPerSecond()));
+    jsonMetricsHelper.buildTestResults(df.format(tpmc), df.format(efficiency),
+            df.format(r.getRequestsPerSecond()));
 
   }
 
@@ -578,15 +579,18 @@ public class DBWorkload {
               LatencyMetricsUtil.getP99Latency(fetchWork)));
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op, "Keying", keyingLatencyList.size(), LatencyMetricsUtil.getAverageLatency(keyingLatencyList),
+              op, "Keying", keyingLatencyList.size(),
+              LatencyMetricsUtil.getAverageLatency(keyingLatencyList),
               LatencyMetricsUtil.getP99Latency(keyingLatencyList)));
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op, "Op With Retry",workLatencyList.size(), LatencyMetricsUtil.getAverageLatency(workLatencyList),
+              op, "Op With Retry",workLatencyList.size(),
+              LatencyMetricsUtil.getAverageLatency(workLatencyList),
               LatencyMetricsUtil.getP99Latency(workLatencyList)));
       resultOut.append(String.format(
               "%12s |%13s |%9s |%13.2f |%12.2f\n",
-              op, "Thinking", thinkLatencyList.size(), LatencyMetricsUtil.getAverageLatency(thinkLatencyList),
+              op, "Thinking", thinkLatencyList.size(),
+              LatencyMetricsUtil.getAverageLatency(thinkLatencyList),
               LatencyMetricsUtil.getP99Latency(thinkLatencyList)));
 
       jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWork);
@@ -671,7 +675,8 @@ public class DBWorkload {
       resultOut.append(String.format(
           "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
           op, latencies.size(), LatencyMetricsUtil.getAverageLatency(latencies),
-              LatencyMetricsUtil.getP99Latency(latencies), LatencyMetricsUtil.getAverageLatency(conn_latencies)));
+              LatencyMetricsUtil.getP99Latency(latencies),
+              LatencyMetricsUtil.getAverageLatency(conn_latencies)));
       jsonMetricsHelper.addLatency(op, latencies, conn_latencies);
     }
     List<Integer> latenciesAll = combineListsAcrossTransactions(list_latencies);
@@ -680,7 +685,8 @@ public class DBWorkload {
     resultOut.append(String.format(
             "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
             "All ", latenciesAll.size(), LatencyMetricsUtil.getAverageLatency(latenciesAll),
-            LatencyMetricsUtil.getP99Latency(latenciesAll), LatencyMetricsUtil.getAverageLatency(connLatenciesAll)));
+            LatencyMetricsUtil.getP99Latency(latenciesAll),
+            LatencyMetricsUtil.getAverageLatency(connLatenciesAll)));
     jsonMetricsHelper.addLatency("All", latenciesAll, connLatenciesAll);
 
     LOG.info(resultOut.toString());
@@ -696,7 +702,8 @@ public class DBWorkload {
         resultOut.append(String.format(
                 "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
                 op, latencies.size(), LatencyMetricsUtil.getAverageLatency(latencies),
-                LatencyMetricsUtil.getP99Latency(latencies), LatencyMetricsUtil.getAverageLatency(conn_latencies)));
+                LatencyMetricsUtil.getP99Latency(latencies),
+                LatencyMetricsUtil.getAverageLatency(conn_latencies)));
         jsonMetricsHelper.addFailureLatency(op, latencies, conn_latencies);
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
@@ -704,7 +711,8 @@ public class DBWorkload {
       double totalPercentage = 100.0 * failureLatenciesAll.size() / (failureLatenciesAll.size() + latenciesAll.size());
       resultOut.append(String.format(
               "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
-              "All ", failureLatenciesAll.size(), LatencyMetricsUtil.getAverageLatency(failureLatenciesAll),
+              "All ", failureLatenciesAll.size(),
+              LatencyMetricsUtil.getAverageLatency(failureLatenciesAll),
               LatencyMetricsUtil.getP99Latency(failureLatenciesAll),
               LatencyMetricsUtil.getAverageLatency(failureConnLatenciesAll)));
       LOG.info(resultOut.toString());

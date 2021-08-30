@@ -300,7 +300,6 @@ public class DBWorkload {
 
       jsonMetricsHelper.buildTestConfig(nodes.size(),numWarehouses, numDBConnections, warmupTime,
               time, wrkld.getMaxRetriesPerTransaction());
-
       // CHECKING INPUT PHASES
       int j = 0;
       for (Phase p : wrkld.getAllPhases()) {
@@ -518,8 +517,8 @@ public class DBWorkload {
     String resultOut = "\n" +
             "================RESULTS================\n" +
             String.format("%18s | %18.2f\n", "TPM-C", tpmc) +
-            String.format("%18s | %17.2f%%\n", "efficiency", efficiency) +
-            String.format("%18s | %18.2f\n", "throughput (req/s)", r.getRequestsPerSecond());
+            String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
+            String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
     jsonMetricsHelper.buildTestResults(df.format(tpmc), df.format(efficiency), df.format(r.getRequestsPerSecond()));
 
@@ -565,7 +564,7 @@ public class DBWorkload {
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
     resultOut.append("=======================WORKER TASK LATENCIES=======================\n");
-    resultOut.append(" transaction |     Task     |  count   | Avg. Latency | P99 Latency\n");
+    resultOut.append(" Transaction |     Task     |  Count   | Avg. Latency | P99 Latency\n");
     for (int i = 0; i < fetchWorkLatencies.size(); ++i) {
       String op = transactionTypes.get(i + 1);
       List<Integer> fetchWork = fetchWorkLatencies.get(i);
@@ -663,7 +662,7 @@ public class DBWorkload {
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
     resultOut.append("======================LATENCIES (INCLUDE RETRY ATTEMPTS)=====================\n");
-    resultOut.append(" transaction |  count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
+    resultOut.append(" Transaction |  Count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
     for (int i = 0; i < list_latencies.size(); ++i) {
       String op = transactionTypes.get(i + 1);
       List<Integer> latencies = list_latencies.get(i);
@@ -689,7 +688,7 @@ public class DBWorkload {
       resultOut = new StringBuilder();
       resultOut.append("\n");
       resultOut.append("==============================FAILURE LATENCIES==============================\n");
-      resultOut.append(" transaction |  count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
+      resultOut.append(" Transaction |  Count   | Avg. Latency | P99 Latency | Connection Acq Latency\n");
       for (int i = 0; i < list_failure_latencies.size(); ++i) {
         String op = transactionTypes.get(i + 1);
         List<Integer> latencies = list_failure_latencies.get(i);
@@ -729,9 +728,9 @@ public class DBWorkload {
 
     resultOut.append("\n");
     resultOut.append("=================== RETRY ATTEMPTS ====================\n");
-    resultOut.append("  transaction  |    count  |");
+    resultOut.append("  Transaction  |    Count  |");
     for (int i = 0; i < numTriesPerProc; ++i) {
-      resultOut.append(String.format(" Retry #%1d - Failure count |", i));
+      resultOut.append(String.format(" Retry #%1d - Failure Count |", i));
     }
     resultOut.append("\n");
     int[] workerTotalTasks = new int[5];
@@ -799,7 +798,7 @@ public class DBWorkload {
         br = new BufferedReader(new FileReader(dirPath + "/" + file));
         long end = -1;
         while ((line = br.readLine()) != null) {
-          if (line.contains("transaction Name")) {
+          if (line.contains("Transaction Name")) {
             continue;
           }
 
@@ -847,7 +846,7 @@ public class DBWorkload {
 
     LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
     LOG.info("TPM-C: " + df.format(tpmc));
-    LOG.info("efficiency : " + df.format(efficiency) + "%");
+    LOG.info("Efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
                                          list_latencies.get(i)));

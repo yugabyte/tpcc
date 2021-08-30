@@ -27,11 +27,11 @@ public class JsonMetricsHelper {
         tpccMetrics = new TPCCMetrics();
     }
 
-    public void buildTestConfig(int numNodes, int warehouses, int numDBConn, int warmuptime, int runtime, int numRetries) {
+    public void buildTestConfig(int numNodes, int numWH, int numDBConn, int warmuptime, int runtime, int numRetries) {
         if(tpccMetrics.TestConfiguration == null)
             tpccMetrics.TestConfiguration = tpccMetrics.new TestConfigurationObject();
         tpccMetrics.TestConfiguration.numNodes = numNodes;
-        tpccMetrics.TestConfiguration.numWarehouses = warehouses;
+        tpccMetrics.TestConfiguration.numWarehouses = numWH;
         tpccMetrics.TestConfiguration.numDBConnections = numDBConn;
         tpccMetrics.TestConfiguration.warmupTimeInSecs = warmuptime;
         tpccMetrics.TestConfiguration.runTimeInSecs = runtime;
@@ -92,7 +92,8 @@ public class JsonMetricsHelper {
         valueList.avgLatency = Double.parseDouble(df.format(LatencyMetricsUtil.getAverageLatency(latencyList)));
         valueList.P99Latency = Double.parseDouble(df.format(LatencyMetricsUtil.getP99Latency(latencyList)));
         if (connAcqLatencyList != null)
-            valueList.connectionAcqLatency = Double.parseDouble(df.format(LatencyMetricsUtil.getAverageLatency(connAcqLatencyList)));
+            valueList.connectionAcqLatency =
+                    Double.parseDouble(df.format(LatencyMetricsUtil.getAverageLatency(connAcqLatencyList)));
         return valueList;
     }
 
@@ -116,19 +117,15 @@ public class JsonMetricsHelper {
             e.printStackTrace();
             return;
         }
-        LOG.info("Output Raw data into file: " + dest);
+        LOG.info("Output json data into file: " + dest);
     }
 
     private double computeAverage(double old_value, double newValue, int count) {
         return ((old_value * count) + newValue) / (count + 1);
     }
 
-    private int computeAverage(int old_value, int newValue, int count) {
-        return ((old_value * count) + newValue) / (count + 1);
-    }
-
     public void mergeJsonResults(String dirPath) {
-        List<TPCCMetrics> tpcc_metrics_list = new ArrayList<>();
+        List<TPCCMetrics> listTpccMetrics = new ArrayList<>();
         String[] fileNames = new File(dirPath).list();
         TPCCMetrics mergedTPCC_Metrics = new TPCCMetrics();
         Gson gson = new Gson();
@@ -137,7 +134,7 @@ public class JsonMetricsHelper {
                 continue;
             }
             try {
-                tpcc_metrics_list.add(
+                listTpccMetrics.add(
                         gson.fromJson(new String(Files.readAllBytes(Paths.get(file))), TPCCMetrics.class));
             } catch (IOException ie) {
                 LOG.error("Got exception while reading json file - " + file + " : ", ie);
@@ -145,15 +142,12 @@ public class JsonMetricsHelper {
             }
         }
         int numNewOrder = 0;
-        LOG.info("Printing JSON info.. ");
+
         int fileCnt = 0;
-        for (TPCCMetrics tpcc_metrics : tpcc_metrics_list) {
+        for (TPCCMetrics tpcc_metrics : listTpccMetrics) {
             tpccMetrics.TestConfiguration = tpcc_metrics.TestConfiguration;
-            LOG.info("efficiency  : " + tpcc_metrics.Results.efficiency);
-            LOG.info("tpmc  : " + tpcc_metrics.Results.tpmc);
-            LOG.info("throughput  : " + tpcc_metrics.Results.throughput);
+
             if(fileCnt == 0) {
-                System.out.println("Inside If...");
                 mergedTPCC_Metrics.Results.throughputMin = tpcc_metrics.Results.throughput;
                 mergedTPCC_Metrics.Results.throughputMax = tpcc_metrics.Results.throughput;
             } else {
@@ -162,7 +156,8 @@ public class JsonMetricsHelper {
                 if (mergedTPCC_Metrics.Results.throughputMax < tpcc_metrics.Results.throughput)
                     mergedTPCC_Metrics.Results.throughputMax = tpcc_metrics.Results.throughput;
             }
-            mergedTPCC_Metrics.Results.throughput = computeAverage(mergedTPCC_Metrics.Results.throughput, tpcc_metrics.Results.throughput, fileCnt);
+            mergedTPCC_Metrics.Results.throughput = computeAverage(mergedTPCC_Metrics.Results.throughput,
+                    tpcc_metrics.Results.throughput, fileCnt);
 
             List<TPCCMetrics.LatencyList> latList = tpcc_metrics.Latencies;
             for (int i = 0; i < latList.size() ; i++) {
@@ -184,19 +179,22 @@ public class JsonMetricsHelper {
                     sumLat.minLatency = sumLat.minLatency > opLatency.avgLatency ? opLatency.avgLatency : sumLat.minLatency;
                     sumLat.maxLatency = sumLat.maxLatency < opLatency.avgLatency ? opLatency.avgLatency : sumLat.maxLatency;
                     sumLat.P99Latency = sumLat.P99Latency > opLatency.P99Latency ? opLatency.P99Latency : sumLat.P99Latency;
-                    sumLat.minConnAcqLatency = sumLat.minConnAcqLatency > opLatency.connectionAcqLatency ? opLatency.connectionAcqLatency : sumLat.minConnAcqLatency;
-                    sumLat.maxConnAcqLatency = sumLat.maxConnAcqLatency < opLatency.connectionAcqLatency ? opLatency.connectionAcqLatency : sumLat.maxConnAcqLatency;
+                    sumLat.minConnAcqLatency = sumLat.minConnAcqLatency > opLatency.connectionAcqLatency ?
+                            opLatency.connectionAcqLatency : sumLat.minConnAcqLatency;
+                    sumLat.maxConnAcqLatency = sumLat.maxConnAcqLatency < opLatency.connectionAcqLatency ?
+                            opLatency.connectionAcqLatency : sumLat.maxConnAcqLatency;
                 }
                 sumLat.Count +=  opLatency.Count;
                 sumLat.avgLatency = computeAverage(sumLat.avgLatency, opLatency.avgLatency, fileCnt);
-                sumLat.connectionAcqLatency = computeAverage(sumLat.connectionAcqLatency, opLatency.connectionAcqLatency, fileCnt);
+                sumLat.connectionAcqLatency = computeAverage(sumLat.connectionAcqLatency,
+                        opLatency.connectionAcqLatency, fileCnt);
                 mergedTPCC_Metrics.Latencies.set(i, sumLat);
             }
 
             List<TPCCMetrics.LatencyList> failureLatList = tpcc_metrics.FailureLatencies;
             for (int i = 0; i < failureLatList.size() ; i++) {
                 TPCCMetrics.LatencyList opLatency = failureLatList.get(i);
-                TPCCMetrics.LatencyList sumFailureLat = mergedTPCC_Metrics.new LatencyList();
+                TPCCMetrics.LatencyList sumFailureLat;
                 if (mergedTPCC_Metrics.FailureLatencies.size() <= i) {
                     sumFailureLat = mergedTPCC_Metrics.new LatencyList();
                     sumFailureLat.Transaction = opLatency.Transaction;
@@ -208,34 +206,36 @@ public class JsonMetricsHelper {
                     mergedTPCC_Metrics.FailureLatencies.add(sumFailureLat);
                 } else {
                     sumFailureLat = mergedTPCC_Metrics.FailureLatencies.get(i);
-                    sumFailureLat.minLatency = sumFailureLat.minLatency > opLatency.avgLatency ? opLatency.avgLatency : sumFailureLat.minLatency;
-                    sumFailureLat.maxLatency = sumFailureLat.maxLatency < opLatency.avgLatency ? opLatency.avgLatency : sumFailureLat.maxLatency;
-                    sumFailureLat.P99Latency = sumFailureLat.P99Latency > opLatency.P99Latency ? opLatency.P99Latency : sumFailureLat.P99Latency;
-                    sumFailureLat.minConnAcqLatency = sumFailureLat.minConnAcqLatency > opLatency.connectionAcqLatency ? opLatency.connectionAcqLatency : sumFailureLat.minConnAcqLatency;
-                    sumFailureLat.maxConnAcqLatency = sumFailureLat.maxConnAcqLatency < opLatency.connectionAcqLatency ? opLatency.connectionAcqLatency : sumFailureLat.maxConnAcqLatency;
+                    sumFailureLat.minLatency = sumFailureLat.minLatency > opLatency.avgLatency ?
+                            opLatency.avgLatency : sumFailureLat.minLatency;
+                    sumFailureLat.maxLatency = sumFailureLat.maxLatency < opLatency.avgLatency ?
+                            opLatency.avgLatency : sumFailureLat.maxLatency;
+                    sumFailureLat.P99Latency = sumFailureLat.P99Latency > opLatency.P99Latency ?
+                            opLatency.P99Latency : sumFailureLat.P99Latency;
+                    sumFailureLat.minConnAcqLatency = sumFailureLat.minConnAcqLatency > opLatency.connectionAcqLatency ?
+                            opLatency.connectionAcqLatency : sumFailureLat.minConnAcqLatency;
+                    sumFailureLat.maxConnAcqLatency = sumFailureLat.maxConnAcqLatency < opLatency.connectionAcqLatency ?
+                            opLatency.connectionAcqLatency : sumFailureLat.maxConnAcqLatency;
                 }
                 sumFailureLat.Count += opLatency.Count;
                 sumFailureLat.avgLatency = computeAverage(sumFailureLat.avgLatency, opLatency.avgLatency, fileCnt);
-                sumFailureLat.connectionAcqLatency = computeAverage(sumFailureLat.connectionAcqLatency, opLatency.connectionAcqLatency, fileCnt);
+                sumFailureLat.connectionAcqLatency = computeAverage(sumFailureLat.connectionAcqLatency,
+                        opLatency.connectionAcqLatency, fileCnt);
                 mergedTPCC_Metrics.FailureLatencies.set(i, sumFailureLat);
             }
-
-
             fileCnt++;
         }
 
-        tpccMetrics.Results = mergedTPCC_Metrics.Results;
+        tpccMetrics = mergedTPCC_Metrics;
+
         double tpmc = 1.0 * numNewOrder * 60 / tpccMetrics.TestConfiguration.runTimeInSecs;
         tpccMetrics.Results.efficiency = 1.0 * tpmc * 100 / tpccMetrics.TestConfiguration.numWarehouses / 12.86;
         tpccMetrics.Results.tpmc = tpmc;
-
-        tpccMetrics.Latencies = mergedTPCC_Metrics.Latencies;
-        tpccMetrics.FailureLatencies = mergedTPCC_Metrics.FailureLatencies;
 
         writeMetricsToJSONFile();
     }
 
     public static void main(String args[]) {
-        new JsonMetricsHelper().mergeJsonResults("results_dir");
+        new JsonMetricsHelper().mergeJsonResults(args[0]);
     }
 }

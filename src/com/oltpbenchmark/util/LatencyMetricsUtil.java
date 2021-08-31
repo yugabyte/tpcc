@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class LatencyMetricsUtil {
-
     public static double getAverageLatency(List<Integer> latencies) {
       if (latencies.size() == 0) {
         return -1;

@@ -298,8 +298,8 @@ public class DBWorkload {
                     terminals,
                     Phase.Arrival.REGULAR);
 
-      jsonMetricsHelper.buildTestConfig(nodes.size(),numWarehouses, numDBConnections, warmupTime,
-              time, wrkld.getMaxRetriesPerTransaction());
+      jsonMetricsHelper.setTestConfig(nodes.size(),numWarehouses, numDBConnections,
+              warmupTime, time, wrkld.getMaxRetriesPerTransaction());
       // CHECKING INPUT PHASES
       int j = 0;
       for (Phase p : wrkld.getAllPhases()) {
@@ -520,9 +520,8 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
-    jsonMetricsHelper.buildTestResults(df.format(tpmc), df.format(efficiency),
+    jsonMetricsHelper.setTestResults(df.format(tpmc), df.format(efficiency),
             df.format(r.getRequestsPerSecond()));
-
   }
 
   private static List<Integer> combineListsAcrossTransactions(List<List<Integer>> listofLists) {
@@ -593,11 +592,10 @@ public class DBWorkload {
               LatencyMetricsUtil.getAverageLatency(thinkLatencyList),
               LatencyMetricsUtil.getP99Latency(thinkLatencyList)));
 
-      jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWork);
-      jsonMetricsHelper.addWorkerTaskLatency("Keying", keyingLatencyList);
-      jsonMetricsHelper.addWorkerTaskLatency("Op With Retry", workLatencyList);
-      jsonMetricsHelper.addWorkerTaskLatency("Thinking", thinkLatencyList);
-      jsonMetricsHelper.buildWorkerTaskLat(op);
+      jsonMetricsHelper.addWorkerTaskLatency(op,"Fetch Work", fetchWork);
+      jsonMetricsHelper.addWorkerTaskLatency(op,"Keying", keyingLatencyList);
+      jsonMetricsHelper.addWorkerTaskLatency(op,"Op With Retry", workLatencyList);
+      jsonMetricsHelper.addWorkerTaskLatency(op,"Thinking", thinkLatencyList);
     }
     List<Integer> fetchWorkAll = combineListsAcrossTransactions(fetchWorkLatencies);
     List<Integer> keyingAll = combineListsAcrossTransactions(keyingTimeLatencies);
@@ -627,12 +625,11 @@ public class DBWorkload {
             LatencyMetricsUtil.getAverageLatency(totalLatencyAcrossTransactions),
             LatencyMetricsUtil.getP99Latency(totalLatencyAcrossTransactions)));
 
-    jsonMetricsHelper.addWorkerTaskLatency("Fetch Work", fetchWorkAll);
-    jsonMetricsHelper.addWorkerTaskLatency("Keying", keyingAll);
-    jsonMetricsHelper.addWorkerTaskLatency("Op With Retry", workAll);
-    jsonMetricsHelper.addWorkerTaskLatency("Thinking", thinkAll);
-    jsonMetricsHelper.addWorkerTaskLatency("All",totalLatencyAcrossTransactions);
-    jsonMetricsHelper.buildWorkerTaskLat("All");
+    jsonMetricsHelper.addWorkerTaskLatency("All", "Fetch Work", fetchWorkAll);
+    jsonMetricsHelper.addWorkerTaskLatency("All", "Keying", keyingAll);
+    jsonMetricsHelper.addWorkerTaskLatency("All", "Op With Retry", workAll);
+    jsonMetricsHelper.addWorkerTaskLatency("All", "Thinking", thinkAll);
+    jsonMetricsHelper.addWorkerTaskLatency("All", "All",totalLatencyAcrossTransactions);
     LOG.info(resultOut.toString());
   }
 
@@ -749,9 +746,6 @@ public class DBWorkload {
         workerTotalTasks[sample.tranType - 1]++;
       }
     }
-    
-    DecimalFormat df = new DecimalFormat();
-    df.setMaximumFractionDigits(2);
 
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);
@@ -854,7 +848,8 @@ public class DBWorkload {
     LOG.info("TPM-C: " + df.format(tpmc));
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {
-      LOG.info(getOperationLatencyString(transactionTypes.get(i+1), list_latencies.get(i)));
+      LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
+              list_latencies.get(i)));
     }
   }
 

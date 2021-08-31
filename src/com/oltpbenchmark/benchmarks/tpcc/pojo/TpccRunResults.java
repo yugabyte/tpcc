@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 
-public class TPCCMetrics {
+public class TpccRunResults {
 
-    public TestConfigurationObject TestConfiguration;
+    public TestConf TestConfiguration = new TestConf();
 
-    public ResultObject Results = new ResultObject();
+    public RunResults Results = new RunResults();
 
     public List<LatencyList> Latencies = new ArrayList<>();
 
@@ -18,7 +18,7 @@ public class TPCCMetrics {
 
     public Map<String, List<LatencyList>> WorkerTaskLatency = new LinkedHashMap<>();
 
-    public List<RetryAttemptsObject> RetryAttempts = new ArrayList<>();
+    public Map<String,RetryAttemptsData> RetryAttempts = new LinkedHashMap<>();
 
     public class LatencyList {
         public String Transaction;
@@ -32,7 +32,7 @@ public class TPCCMetrics {
         public double maxConnAcqLatency;
     }
 
-    public class TestConfigurationObject {
+    public class TestConf {
         public int numNodes;
         public int numWarehouses;
         public int numDBConnections;
@@ -42,7 +42,7 @@ public class TPCCMetrics {
         public String testStartTime;
     }
 
-    public class ResultObject {
+    public class RunResults {
         public double tpmc;
         public double efficiency;
         public double throughput;
@@ -50,11 +50,9 @@ public class TPCCMetrics {
         public double throughputMax;
     }
 
-    public class RetryAttemptsObject {
-        public String transaction;
+    public class RetryAttemptsData {
         public int count;
         public List retriesFailureCount;
     }
-
 }
 

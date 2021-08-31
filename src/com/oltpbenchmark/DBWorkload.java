@@ -560,7 +560,6 @@ public class DBWorkload {
                 asample.keyingLatencyUs + asample.aggregateExecuteUs + asample.thinkTimeUs);
       }
     }
-
     StringBuilder resultOut = new StringBuilder();
     resultOut.append("\n");
     resultOut.append("=======================WORKER TASK LATENCIES=======================\n");
@@ -705,7 +704,6 @@ public class DBWorkload {
       }
       List<Integer> failureLatenciesAll = combineListsAcrossTransactions(list_failure_latencies);
       List<Integer> failureConnLatenciesAll = combineListsAcrossTransactions(list_failure_conn_latencies);
-      double totalPercentage = 100.0 * failureLatenciesAll.size() / (failureLatenciesAll.size() + latenciesAll.size());
       resultOut.append(String.format(
               "%12s |%9s |%13.2f |%12.2f |%23.2f\n",
               "All ", failureLatenciesAll.size(),
@@ -746,7 +744,6 @@ public class DBWorkload {
         workerTotalTasks[sample.tranType - 1]++;
       }
     }
-
     for (int i = 0; i < numTxnTypes; ++i) {
       String op = transactionTypes.get(i + 1);
       int totalTasks = workerTotalTasks[i];
@@ -838,7 +835,6 @@ public class DBWorkload {
     }
 
     jsonMetricsHelper.mergeJsonResults(dirPath);
-
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
     double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
     DecimalFormat df = new DecimalFormat();
@@ -849,7 +845,7 @@ public class DBWorkload {
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
-              list_latencies.get(i)));
+                                         list_latencies.get(i)));
     }
   }
 

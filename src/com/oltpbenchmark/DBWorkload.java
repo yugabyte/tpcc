@@ -834,7 +834,6 @@ public class DBWorkload {
       }
     }
 
-    jsonMetricsHelper.mergeJsonResults(dirPath);
     double tpmc = 1.0 * numNewOrderTransactions * 60 / time;
     double efficiency = 1.0 * tpmc * 100 / numWarehouses / 12.86;
     DecimalFormat df = new DecimalFormat();
@@ -847,6 +846,7 @@ public class DBWorkload {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
                                          list_latencies.get(i)));
     }
+    JsonMetricsHelper.mergeJsonResults(dirPath);
   }
 
   public static String getAssertWarning() {

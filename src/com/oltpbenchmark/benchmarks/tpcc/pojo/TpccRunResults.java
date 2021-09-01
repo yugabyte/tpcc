@@ -7,7 +7,6 @@ import java.util.Map;
 
 
 public class TpccRunResults {
-
     public TestConf TestConfiguration = new TestConf();
 
     public RunResults Results = new RunResults();
@@ -18,7 +17,7 @@ public class TpccRunResults {
 
     public Map<String, List<LatencyList>> WorkerTaskLatency = new LinkedHashMap<>();
 
-    public Map<String,RetryAttemptsData> RetryAttempts = new LinkedHashMap<>();
+    public Map<String, RetryAttemptsData> RetryAttempts = new LinkedHashMap<>();
 
     public class LatencyList {
         public String Transaction;

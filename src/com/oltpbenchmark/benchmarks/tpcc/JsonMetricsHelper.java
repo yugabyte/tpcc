@@ -41,18 +41,18 @@ public class JsonMetricsHelper {
     }
 
     public void addLatency(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        tpccRunResults.Latencies.add(getValueList(op, latencyList, connLatencyList));
+        tpccRunResults.Latencies.add(getLatencyValueList(op, latencyList, connLatencyList));
     }
 
     public void addFailureLatency(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        tpccRunResults.FailureLatencies.add(getValueList(op, latencyList, connLatencyList));
+        tpccRunResults.FailureLatencies.add(getLatencyValueList(op, latencyList, connLatencyList));
     }
 
     public void addWorkerTaskLatency(String op, String task, List<Integer> latencyList) {
         if (!tpccRunResults.WorkerTaskLatency.containsKey(op)) {
             tpccRunResults.WorkerTaskLatency.put(op, new ArrayList<>());
         }
-        tpccRunResults.WorkerTaskLatency.get(op).add(getValueList(task, latencyList, null));
+        tpccRunResults.WorkerTaskLatency.get(op).add(getLatencyValueList(task, latencyList, null));
     }
 
     public void addRetry(String op, int count,int[] retryOpList) {
@@ -62,8 +62,8 @@ public class JsonMetricsHelper {
         tpccRunResults.RetryAttempts.put(op,retryObj);
     }
 
-    private TpccRunResults.LatencyList getValueList(String op, List<Integer> latencyList,
-                                                    List<Integer> connAcqLatencyList) {
+    private TpccRunResults.LatencyList getLatencyValueList(String op, List<Integer> latencyList,
+                                                           List<Integer> connAcqLatencyList) {
         DecimalFormat df = new DecimalFormat();
         df.setMaximumFractionDigits(2);
         df.setGroupingUsed(false);

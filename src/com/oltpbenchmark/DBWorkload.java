@@ -520,6 +520,7 @@ public class DBWorkload {
             String.format("%18s | %17.2f%%\n", "Efficiency", efficiency) +
             String.format("%18s | %18.2f\n", "Throughput (req/s)", r.getRequestsPerSecond());
     LOG.info(resultOut);
+    df.setGroupingUsed(false);
     jsonMetricsHelper.setTestResults(df.format(tpmc), df.format(efficiency),
             df.format(r.getRequestsPerSecond()));
   }

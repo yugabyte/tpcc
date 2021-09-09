@@ -3,8 +3,8 @@ package com.oltpbenchmark.benchmarks.tpcc;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.TpccRunResults;
-import com.oltpbenchmark.util.LatencyMetricsUtil;
 import com.oltpbenchmark.util.FileUtil;
+import com.oltpbenchmark.util.LatencyMetricsUtil;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -219,8 +219,9 @@ public class JsonMetricsHelper {
         double tpmc = 1.0 * numNewOrder * 60 / mergedTpccResults.TestConfiguration.runTimeInSecs;
         mergedTpccResults.Results.efficiency = 1.0 * tpmc * 100 / mergedTpccResults.TestConfiguration.numWarehouses / 12.86;
         mergedTpccResults.Results.tpmc = tpmc;
+        if(mergedTpccResults.RetryAttempts.size() == 0) mergedTpccResults.RetryAttempts = null;
+        if(mergedTpccResults.WorkerTaskLatency.size() == 0) mergedTpccResults.WorkerTaskLatency = null;
 
         jsonHelper.writeMetricsToJSONFile();
     }
-
 }

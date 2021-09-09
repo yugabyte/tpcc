@@ -539,7 +539,7 @@ public class Worker implements Runnable {
                                 Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
                             // 53200 - Postgres OOM error
                             // XX000 - Postgres no pinned buffers available
-                            throw ex;
+                            LOG.warn("Error while executing the transaction. SQL State: " + ex.getSQLState() , ex);
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
                             LOG.warn("The DBMS rejected the transaction without an error code", ex);

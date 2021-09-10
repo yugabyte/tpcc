@@ -579,9 +579,9 @@ public class Worker implements Runnable {
             } // WHILE
             conn.close();
         } catch (SQLException ex) {
-            String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
+            String msg = String.format("Unexpected error in '%s' when executing '%s'",
                                        this, next);
-            throw new RuntimeException(msg, ex);
+            LOG.warn(msg, ex);
         }
         return listExecutionStates;
     }

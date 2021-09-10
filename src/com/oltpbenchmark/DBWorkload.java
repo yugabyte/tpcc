@@ -200,7 +200,7 @@ public class DBWorkload {
         wrkld.setNeedsExecution(true);
       }
       configOptions.getUseStoredProcedures().ifPresent(wrkld::setUseStoredProcedures);
-
+      LOG.info("Ignore:Extra log for debug");
       LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
                ", port: " + wrkld.getPort() +
                ", startWH: " + wrkld.getStartWarehouseIdForShard() +

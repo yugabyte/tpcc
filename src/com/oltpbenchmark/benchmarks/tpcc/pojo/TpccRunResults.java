@@ -11,24 +11,24 @@ public class TpccRunResults {
 
     public RunResults Results = new RunResults();
 
-    public List<LatencyList> Latencies = new ArrayList<>();
+    public Map<String, LatencyList> Latencies = new LinkedHashMap<>();
 
-    public List<LatencyList> FailureLatencies = new ArrayList<>();
+    public Map<String, LatencyList> FailureLatencies = new LinkedHashMap<>();
 
     public Map<String, List<LatencyList>> WorkerTaskLatency = new LinkedHashMap<>();
 
     public Map<String, RetryAttemptsData> RetryAttempts = new LinkedHashMap<>();
 
     public class LatencyList {
-        public String Transaction;
+        //public String Transaction;
         public int Count;
-        public Double minLatency = null;
         public Double avgLatency;
-        public Double maxLatency = null;
+        public Double minLatency;
+        public Double maxLatency;
         public Double P99Latency;
         public Double connectionAcqLatency;
-        public Double minConnAcqLatency = null;
-        public Double maxConnAcqLatency = null;
+        public Double minConnAcqLatency;
+        public Double maxConnAcqLatency;
     }
 
     public class TestConf {

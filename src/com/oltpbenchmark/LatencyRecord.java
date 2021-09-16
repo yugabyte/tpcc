@@ -92,7 +92,10 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
       if (chunkIndex < values.size() - 1) {
         return true;
       }
-
+      else if (chunkIndex > values.size() - 1) {
+        return false;
+      }
+      
       assert chunkIndex == values.size() - 1;
       if (subIndex < nextIndex) {
         return true;

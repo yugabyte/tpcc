@@ -56,11 +56,6 @@ public class NewOrder extends Procedure {
       "  FROM " + TPCCConstants.TABLENAME_WAREHOUSE +
       " WHERE W_ID = ?");
 
-  public static final InstrumentedSQLStmt stmtGetDistSQL = new InstrumentedSQLStmt(
-      "SELECT D_NEXT_O_ID, D_TAX " +
-      "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
-      " WHERE D_W_ID = ? AND D_ID = ?");
-
   public static final InstrumentedSQLStmt  stmtInsertNewOrderSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_NEWORDER +
       " (NO_O_ID, NO_D_ID, NO_W_ID) " +
@@ -70,7 +65,8 @@ public class NewOrder extends Procedure {
       "UPDATE " + TPCCConstants.TABLENAME_DISTRICT +
       " SET D_NEXT_O_ID = D_NEXT_O_ID + 1 " +
       " WHERE D_W_ID = ? " +
-      "   AND D_ID = ?");
+      "   AND D_ID = ?" +
+      "   RETURNING D_NEXT_O_ID, D_TAX");
 
   public static final InstrumentedSQLStmt  stmtGetItemSQL = new InstrumentedSQLStmt(
       "SELECT I_PRICE, I_NAME , I_DATA " +
@@ -117,7 +113,6 @@ public class NewOrder extends Procedure {
   // NewOrder Txn
   private InstrumentedPreparedStatement stmtGetCust = null;
   private InstrumentedPreparedStatement stmtGetWhse = null;
-  private InstrumentedPreparedStatement stmtGetDist = null;
   private InstrumentedPreparedStatement stmtInsertNewOrder = null;
   private InstrumentedPreparedStatement stmtUpdateDist = null;
   private InstrumentedPreparedStatement stmtInsertOOrder = null;
@@ -131,7 +126,6 @@ public class NewOrder extends Procedure {
     LOG.info("NewOrder : ");
     LOG.info("latency GetCust " + stmtGetCustSQL.getStats());
     LOG.info("latency GetWhse " + stmtGetWhseSQL.getStats());
-    LOG.info("latency GetDist " + stmtGetDistSQL.getStats());
     LOG.info("latency InsertNewOrder " + stmtInsertNewOrderSQL.getStats());
     LOG.info("latency UpdateDist " + stmtUpdateDistSQL.getStats());
     LOG.info("latency InsertOOrder " + stmtInsertOOrderSQL.getStats());
@@ -249,7 +243,6 @@ public class NewOrder extends Procedure {
     // Initializing all prepared statements.
     stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
     stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
-    stmtGetDist=this.getPreparedStatement(conn, stmtGetDistSQL);
     stmtInsertNewOrder=this.getPreparedStatement(conn, stmtInsertNewOrderSQL);
     stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
     stmtUpdateStock =this.getPreparedStatement(conn, stmtUpdateStockSQL);
@@ -296,28 +289,20 @@ public class NewOrder extends Procedure {
       w_tax = rs.getFloat("W_TAX");
       rs.close();
 
-      stmtGetDist.setInt(1, w_id);
-      stmtGetDist.setInt(2, d_id);
-      rs = stmtGetDist.executeQuery();
-      if (!rs.next()) {
-        throw new RuntimeException("D_ID=" + d_id + " D_W_ID=" + w_id
-            + " not found!");
-      }
-      d_next_o_id = rs.getInt("D_NEXT_O_ID");
-      d_tax = rs.getFloat("D_TAX");
-      rs.close();
-
       //woonhak, need to change order because of foreign key constraints
       //update next_order_id first, but it might doesn't matter
       stmtUpdateDist.setInt(1, w_id);
       stmtUpdateDist.setInt(2, d_id);
-      int result = stmtUpdateDist.executeUpdate();
-      if (result == 0)
+      rs = stmtUpdateDist.executeQuery();
+      if (!rs.next())
         throw new RuntimeException(
             "Error!! Cannot update next_order_id on district for D_ID="
                 + d_id + " D_W_ID=" + w_id);
+      d_next_o_id = rs.getInt("D_NEXT_O_ID");
+      d_tax = rs.getFloat("D_TAX");
+      rs.close();
 
-      o_id = d_next_o_id;
+      o_id = d_next_o_id - 1;
 
       // woonhak, need to change order, because of foreign key constraints
       //[[insert ooder first
@@ -672,7 +657,6 @@ public class NewOrder extends Procedure {
     //initializing all prepared statements
     stmtGetCust=this.getPreparedStatement(conn, stmtGetCustSQL);
     stmtGetWhse=this.getPreparedStatement(conn, stmtGetWhseSQL);
-    stmtGetDist=this.getPreparedStatement(conn, stmtGetDistSQL);
     stmtInsertNewOrder=this.getPreparedStatement(conn, stmtInsertNewOrderSQL);
     stmtUpdateDist =this.getPreparedStatement(conn, stmtUpdateDistSQL);
     stmtInsertOOrder =this.getPreparedStatement(conn, stmtInsertOOrderSQL);

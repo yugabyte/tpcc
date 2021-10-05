@@ -41,24 +41,15 @@ public class Payment extends Procedure {
   public static final InstrumentedSQLStmt payUpdateWhseSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_WAREHOUSE +
       "   SET W_YTD = W_YTD + ? " +
-      " WHERE W_ID = ? ");
-
-  public static final InstrumentedSQLStmt payGetWhseSQL = new InstrumentedSQLStmt(
-      "SELECT W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_NAME" +
-      "  FROM " + TPCCConstants.TABLENAME_WAREHOUSE +
-      " WHERE W_ID = ?");
+      " WHERE W_ID = ? " +
+      " RETURNING W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_NAME");
 
   public static final InstrumentedSQLStmt payUpdateDistSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_DISTRICT +
       "   SET D_YTD = D_YTD + ? " +
       " WHERE D_W_ID = ? " +
-      "   AND D_ID = ?");
-
-  public static final InstrumentedSQLStmt payGetDistSQL = new InstrumentedSQLStmt(
-      "SELECT D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_NAME" +
-      "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
-      " WHERE D_W_ID = ? " +
-      "   AND D_ID = ?");
+      "   AND D_ID = ?" +
+      " RETURNING D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_NAME");
 
   public static final InstrumentedSQLStmt payGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, " +
@@ -112,9 +103,7 @@ public class Payment extends Procedure {
 
   // Payment Txn
   private InstrumentedPreparedStatement payUpdateWhse = null;
-  private InstrumentedPreparedStatement payGetWhse = null;
   private InstrumentedPreparedStatement payUpdateDist = null;
-  private InstrumentedPreparedStatement payGetDist = null;
   private InstrumentedPreparedStatement payGetCust = null;
   private InstrumentedPreparedStatement payGetCustCdata = null;
   private InstrumentedPreparedStatement payUpdateCustBalCdata = null;
@@ -125,9 +114,7 @@ public class Payment extends Procedure {
   public static void printLatencyStats() {
     LOG.info("Payment : ");
     LOG.info("latency UpdateWhse " + payUpdateWhseSQL.getStats());
-    LOG.info("latency GetWhse " + payGetWhseSQL.getStats());
     LOG.info("latency UpdateDist " + payUpdateDistSQL.getStats());
-    LOG.info("latency GetDist " + payGetDistSQL.getStats());
     LOG.info("latency GetCust " + payGetCustSQL.getStats());
     LOG.info("latency GetCustCdata " + payGetCustCdataSQL.getStats());
     LOG.info("latency UpdateCustBalCdata " + payUpdateCustBalCdataSQL.getStats());
@@ -140,9 +127,7 @@ public class Payment extends Procedure {
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
     payUpdateWhse = this.getPreparedStatement(conn, payUpdateWhseSQL);
-    payGetWhse = this.getPreparedStatement(conn, payGetWhseSQL);
     payUpdateDist = this.getPreparedStatement(conn, payUpdateDistSQL);
-    payGetDist = this.getPreparedStatement(conn, payGetDistSQL);
     payGetCust = this.getPreparedStatement(conn, payGetCustSQL);
     payGetCustCdata = this.getPreparedStatement(conn, payGetCustCdataSQL);
     payUpdateCustBalCdata = this.getPreparedStatement(conn, payUpdateCustBalCdataSQL);
@@ -186,12 +171,7 @@ public class Payment extends Procedure {
     payUpdateWhse.setInt(2, w_id);
     // MySQL reports deadlocks due to lock upgrades:
     // t1: read w_id = x; t2: update w_id = x; t1 update w_id = x
-    int result = payUpdateWhse.executeUpdate();
-    if (result == 0)
-        throw new RuntimeException("W_ID=" + w_id + " not found!");
-
-    payGetWhse.setInt(1, w_id);
-    ResultSet rs = payGetWhse.executeQuery();
+    ResultSet rs = payUpdateWhse.executeQuery();
     if (!rs.next())
         throw new RuntimeException("W_ID=" + w_id + " not found!");
     w_street_1 = rs.getString("W_STREET_1");
@@ -205,13 +185,7 @@ public class Payment extends Procedure {
     payUpdateDist.setDouble(1, paymentAmount);
     payUpdateDist.setInt(2, w_id);
     payUpdateDist.setInt(3, districtID);
-    result = payUpdateDist.executeUpdate();
-    if (result == 0)
-      throw new RuntimeException("D_ID=" + districtID + " D_W_ID=" + w_id + " not found!");
-
-    payGetDist.setInt(1, w_id);
-    payGetDist.setInt(2, districtID);
-    rs = payGetDist.executeQuery();
+    rs = payUpdateDist.executeQuery();
     if (!rs.next())
         throw new RuntimeException("D_ID=" + districtID + " D_W_ID=" + w_id + " not found!");
     d_street_1 = rs.getString("D_STREET_1");
@@ -226,6 +200,7 @@ public class Payment extends Procedure {
     c.c_ytd_payment += paymentAmount;
     c.c_payment_cnt += 1;
     String c_data = null;
+    int result;
     if (c.c_credit.equals("BC")) { // bad credit
       payGetCustCdata.setInt(1, customerWarehouseID);
       payGetCustCdata.setInt(2, customerDistrictID);

@@ -481,6 +481,8 @@ public class Worker implements Runnable {
             startConnection = System.nanoTime();
 
             conn = dataSource.getConnection();
+            conn.createStatement().executeQuery("set yb_debug_log_internal_restarts=true").next();
+            conn.createStatement().executeQuery("set yb_debug_log_docdb_requests=true").next();
             if (next.getProcedureClass() != StockLevel.class) {
                 // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
                 // Isolation.

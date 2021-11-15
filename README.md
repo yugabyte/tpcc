@@ -48,17 +48,17 @@ The workload descriptor works the same way as it does in the upstream branch and
 A utility script (./tpccbenchmark) is provided for running the benchmark. The options are
 
 ```
--c,--config &lt;arg&gt;            [required] Workload configuration file
-   --clear &lt;arg&gt;             Clear all records in the database for this
+-c,--config <arg>            [required] Workload configuration file
+   --clear <arg>             Clear all records in the database for this
                              benchmark
-   --create &lt;arg&gt;            Initialize the database for this benchmark
-   --execute &lt;arg&gt;           Execute the benchmark workload
+   --create <arg>            Initialize the database for this benchmark
+   --execute <arg>           Execute the benchmark workload
 -h,--help                    Print this help
    --histograms              Print txn histograms
-   --load &lt;arg&gt;              Load data using the benchmark's data loader
--o,--output &lt;arg&gt;            Output file (default System.out)
-   --runscript &lt;arg&gt;         Run an SQL script
--s,--sample &lt;arg&gt;            Sampling window
+   --load <arg>              Load data using the benchmark's data loader
+-o,--output <arg>            Output file (default System.out)
+   --runscript <arg>         Run an SQL script
+-s,--sample <arg>            Sampling window
 -v,--verbose                 Display Messages
 ```
 

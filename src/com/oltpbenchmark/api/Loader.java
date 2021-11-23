@@ -182,10 +182,12 @@ public class Loader {
         try {
            for (PreparedStatement stmt: stmts) {
               stmt.executeBatch();
-              stmt.clearBatch();
            }
-            conn.commit();
-            return;
+           conn.commit();
+           for (PreparedStatement stmt: stmts) {
+             stmt.clearBatch();
+           }
+           failure = null;
         } catch (SQLException ex) {
           LOG.warn("Fail to load batch with error: " + ex.getMessage());
           failure = ex;

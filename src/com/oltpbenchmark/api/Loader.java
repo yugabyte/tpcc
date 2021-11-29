@@ -185,12 +185,16 @@ public class Loader {
       SQLException failure = null;
       for (int i = 0; i < attempts; ++i) {
         try {
-           for (ArrayList<PreparedStatement> stmt: stmts) {
-             stmt.get(i).executeBatch();
-             stmt.get(i).clearBatch();
-           }
-           conn.commit();
-           return;
+          for (ArrayList<PreparedStatement> stmt : stmts) {
+            stmt.get(i).executeBatch();
+          }
+          conn.commit();
+          for (ArrayList<PreparedStatement> stmt : stmts) {
+            for (PreparedStatement preparedStatement : stmt) {
+              preparedStatement.clearBatch();
+            }
+          }
+          return;
         } catch (SQLException ex) {
           LOG.warn("Fail to load batch with error: " + ex.getMessage());
           failure = ex;

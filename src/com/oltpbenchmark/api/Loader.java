@@ -163,8 +163,13 @@ public class Loader {
         return (this.tableSizes);
     }
 
-    private PreparedStatement getInsertStatement(Connection conn, String tableName) throws SQLException {
-      return conn.prepareStatement(Table.getInsertDml(tableName));
+    private ArrayList<PreparedStatement> getInsertStatement(Connection conn, String tableName) throws SQLException {
+      int attempts = workConf.getMaxLoaderRetries() + 1;
+      ArrayList<PreparedStatement> statements = new ArrayList<>();
+      for (int i = 0; i < attempts; ++i) {
+        statements.add(conn.prepareStatement(Table.getInsertDml(tableName)));
+      }
+      return statements;
     }
 
     protected void transRollback(Connection conn) {
@@ -175,19 +180,17 @@ public class Loader {
       }
     }
 
-    private void performInsertsWithRetries(Connection conn, PreparedStatement... stmts) throws Exception {
+    private void performInsertsWithRetries(Connection conn, ArrayList<PreparedStatement>... stmts) throws Exception {
       int attempts = workConf.getMaxLoaderRetries() + 1;
       SQLException failure = null;
       for (int i = 0; i < attempts; ++i) {
         try {
-           for (PreparedStatement stmt: stmts) {
-              stmt.executeBatch();
+           for (ArrayList<PreparedStatement> stmt: stmts) {
+             stmt.get(i).executeBatch();
+             stmt.get(i).clearBatch();
            }
            conn.commit();
-           for (PreparedStatement stmt: stmts) {
-             stmt.clearBatch();
-           }
-           failure = null;
+           return;
         } catch (SQLException ex) {
           LOG.warn("Fail to load batch with error: " + ex.getMessage());
           failure = ex;
@@ -212,7 +215,7 @@ public class Loader {
 
     protected void loadItems(Connection conn) {
       try {
-        PreparedStatement itemPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_ITEM);
+        ArrayList<PreparedStatement> itemPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_ITEM);
         Item item = new Item();
         int batchSize = 0;
         for (int i = 1; i <= TPCCConfig.configItemCount; i++) {
@@ -235,22 +238,24 @@ public class Loader {
 
           item.i_im_id = TPCCUtil.randomNumber(1, 10000, benchmark.rng());
 
-          int idx = 0;
-          itemPrepStmt.setLong(++idx, item.i_id);
-          itemPrepStmt.setString(++idx, item.i_name);
-          itemPrepStmt.setDouble(++idx, item.i_price);
-          itemPrepStmt.setString(++idx, item.i_data);
-          itemPrepStmt.setLong(++idx, item.i_im_id);
-          itemPrepStmt.addBatch();
+          for (PreparedStatement itemPrepStmt : itemPrepStmts) {
+            int idx = 0;
+            itemPrepStmt.setLong(++idx, item.i_id);
+            itemPrepStmt.setString(++idx, item.i_name);
+            itemPrepStmt.setDouble(++idx, item.i_price);
+            itemPrepStmt.setString(++idx, item.i_data);
+            itemPrepStmt.setLong(++idx, item.i_im_id);
+            itemPrepStmt.addBatch();
+          }
           batchSize++;
 
           if (batchSize == workConf.getBatchSize()) {
-            performInsertsWithRetries(conn, itemPrepStmt);
+            performInsertsWithRetries(conn, itemPrepStmts);
             batchSize = 0;
           }
         }
         if (batchSize > 0)
-            performInsertsWithRetries(conn, itemPrepStmt);
+            performInsertsWithRetries(conn, itemPrepStmts);
 
       } catch (Exception ex) {
         LOG.error("Failed to load data for TPC-C", ex);
@@ -261,7 +266,7 @@ public class Loader {
 
     protected void loadWarehouse(Connection conn, int w_id) {
       try {
-        PreparedStatement whsePrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_WAREHOUSE);
+        ArrayList<PreparedStatement> whsePrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_WAREHOUSE);
         Warehouse warehouse = new Warehouse();
 
         warehouse.w_id = w_id;
@@ -276,19 +281,21 @@ public class Loader {
         warehouse.w_state = TPCCUtil.randomStr(2).toUpperCase();
         warehouse.w_zip = TPCCUtil.randomNStr(4) + "11111";
 
-        int idx = 0;
-        whsePrepStmt.setLong(++idx, warehouse.w_id);
-        whsePrepStmt.setDouble(++idx, warehouse.w_ytd);
-        whsePrepStmt.setDouble(++idx, warehouse.w_tax);
-        whsePrepStmt.setString(++idx, warehouse.w_name);
-        whsePrepStmt.setString(++idx, warehouse.w_street_1);
-        whsePrepStmt.setString(++idx, warehouse.w_street_2);
-        whsePrepStmt.setString(++idx, warehouse.w_city);
-        whsePrepStmt.setString(++idx, warehouse.w_state);
-        whsePrepStmt.setString(++idx, warehouse.w_zip);
-        whsePrepStmt.execute();
+        for (PreparedStatement whsePrepStmt : whsePrepStmts) {
+          int idx = 0;
+          whsePrepStmt.setLong(++idx, warehouse.w_id);
+          whsePrepStmt.setDouble(++idx, warehouse.w_ytd);
+          whsePrepStmt.setDouble(++idx, warehouse.w_tax);
+          whsePrepStmt.setString(++idx, warehouse.w_name);
+          whsePrepStmt.setString(++idx, warehouse.w_street_1);
+          whsePrepStmt.setString(++idx, warehouse.w_street_2);
+          whsePrepStmt.setString(++idx, warehouse.w_city);
+          whsePrepStmt.setString(++idx, warehouse.w_state);
+          whsePrepStmt.setString(++idx, warehouse.w_zip);
+          whsePrepStmt.addBatch();
+        }
 
-        performInsertsWithRetries(conn, whsePrepStmt);
+        performInsertsWithRetries(conn, whsePrepStmts);
       } catch (Exception ex) {
         LOG.error("Failed to load data for TPC-C", ex);
         transRollback(conn);
@@ -298,7 +305,7 @@ public class Loader {
     private void loadStock(Connection conn, int w_id) {
       int k = 0;
       try {
-        PreparedStatement stckPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_STOCK);
+        ArrayList<PreparedStatement> stckPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_STOCK);
         Stock stock = new Stock();
         for (int i = 1; i <= TPCCConfig.configItemCount; i++) {
           stock.s_i_id = i;
@@ -326,30 +333,32 @@ public class Loader {
           }
 
           k++;
-          int idx = 0;
-          stckPrepStmt.setLong(++idx, stock.s_w_id);
-          stckPrepStmt.setLong(++idx, stock.s_i_id);
-          stckPrepStmt.setLong(++idx, stock.s_quantity);
-          stckPrepStmt.setDouble(++idx, stock.s_ytd);
-          stckPrepStmt.setLong(++idx, stock.s_order_cnt);
-          stckPrepStmt.setLong(++idx, stock.s_remote_cnt);
-          stckPrepStmt.setString(++idx, stock.s_data);
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-          stckPrepStmt.addBatch();
+          for (PreparedStatement stckPrepStmt : stckPrepStmts) {
+            int idx = 0;
+            stckPrepStmt.setLong(++idx, stock.s_w_id);
+            stckPrepStmt.setLong(++idx, stock.s_i_id);
+            stckPrepStmt.setLong(++idx, stock.s_quantity);
+            stckPrepStmt.setDouble(++idx, stock.s_ytd);
+            stckPrepStmt.setLong(++idx, stock.s_order_cnt);
+            stckPrepStmt.setLong(++idx, stock.s_remote_cnt);
+            stckPrepStmt.setString(++idx, stock.s_data);
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.addBatch();
+          }
           if ((k % workConf.getBatchSize()) == 0) {
-            performInsertsWithRetries(conn, stckPrepStmt);
+            performInsertsWithRetries(conn, stckPrepStmts);
           }
         } // end for [i]
-        performInsertsWithRetries(conn, stckPrepStmt);
+        performInsertsWithRetries(conn, stckPrepStmts);
       } catch (Exception ex) {
         LOG.error("Failed to load data for TPC-C", ex);
         transRollback(conn);
@@ -358,7 +367,7 @@ public class Loader {
 
     private void loadDistricts(Connection conn, int w_id) {
       try {
-        PreparedStatement distPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_DISTRICT);
+        ArrayList<PreparedStatement> distPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_DISTRICT);
         District district = new District();
 
         for (int d = 1; d <= TPCCConfig.configDistPerWhse; d++) {
@@ -377,21 +386,23 @@ public class Loader {
           district.d_state = TPCCUtil.randomStr(2).toUpperCase();
           district.d_zip = TPCCUtil.randomNStr(4) + "11111";
 
-          int idx = 0;
-          distPrepStmt.setLong(++idx, district.d_w_id);
-          distPrepStmt.setLong(++idx, district.d_id);
-          distPrepStmt.setDouble(++idx, district.d_ytd);
-          distPrepStmt.setDouble(++idx, district.d_tax);
-          distPrepStmt.setLong(++idx, district.d_next_o_id);
-          distPrepStmt.setString(++idx, district.d_name);
-          distPrepStmt.setString(++idx, district.d_street_1);
-          distPrepStmt.setString(++idx, district.d_street_2);
-          distPrepStmt.setString(++idx, district.d_city);
-          distPrepStmt.setString(++idx, district.d_state);
-          distPrepStmt.setString(++idx, district.d_zip);
-          distPrepStmt.addBatch();
+          for (PreparedStatement distPrepStmt : distPrepStmts) {
+            int idx = 0;
+            distPrepStmt.setLong(++idx, district.d_w_id);
+            distPrepStmt.setLong(++idx, district.d_id);
+            distPrepStmt.setDouble(++idx, district.d_ytd);
+            distPrepStmt.setDouble(++idx, district.d_tax);
+            distPrepStmt.setLong(++idx, district.d_next_o_id);
+            distPrepStmt.setString(++idx, district.d_name);
+            distPrepStmt.setString(++idx, district.d_street_1);
+            distPrepStmt.setString(++idx, district.d_street_2);
+            distPrepStmt.setString(++idx, district.d_city);
+            distPrepStmt.setString(++idx, district.d_state);
+            distPrepStmt.setString(++idx, district.d_zip);
+            distPrepStmt.addBatch();
+          }
         } // end for [d]
-        performInsertsWithRetries(conn, distPrepStmt);
+        performInsertsWithRetries(conn, distPrepStmts);
       } catch (Exception e) {
         LOG.error("Failed to load data for TPC-C", e);
         transRollback(conn);
@@ -404,8 +415,8 @@ public class Loader {
       History history = new History();
 
       try {
-        PreparedStatement custPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_CUSTOMER);
-        PreparedStatement histPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_HISTORY);
+        ArrayList<PreparedStatement> custPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_CUSTOMER);
+        ArrayList<PreparedStatement> histPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_HISTORY);
 
         for (int d = 1; d <= TPCCConfig.configDistPerWhse; d++) {
           for (int c = 1; c <= TPCCConfig.configCustPerDist; c++) {
@@ -458,47 +469,51 @@ public class Loader {
                 .randomNumber(10, 24, benchmark.rng()));
 
             k = k + 2;
-            int idx = 0;
-            custPrepStmt.setLong(++idx, customer.c_w_id);
-            custPrepStmt.setLong(++idx, customer.c_d_id);
-            custPrepStmt.setLong(++idx, customer.c_id);
-            custPrepStmt.setDouble(++idx, customer.c_discount);
-            custPrepStmt.setString(++idx, customer.c_credit);
-            custPrepStmt.setString(++idx, customer.c_last);
-            custPrepStmt.setString(++idx, customer.c_first);
-            custPrepStmt.setDouble(++idx, customer.c_credit_lim);
-            custPrepStmt.setDouble(++idx, customer.c_balance);
-            custPrepStmt.setDouble(++idx, customer.c_ytd_payment);
-            custPrepStmt.setLong(++idx, customer.c_payment_cnt);
-            custPrepStmt.setLong(++idx, customer.c_delivery_cnt);
-            custPrepStmt.setString(++idx, customer.c_street_1);
-            custPrepStmt.setString(++idx, customer.c_street_2);
-            custPrepStmt.setString(++idx, customer.c_city);
-            custPrepStmt.setString(++idx, customer.c_state);
-            custPrepStmt.setString(++idx, customer.c_zip);
-            custPrepStmt.setString(++idx, customer.c_phone);
-            custPrepStmt.setTimestamp(++idx, customer.c_since);
-            custPrepStmt.setString(++idx, customer.c_middle);
-            custPrepStmt.setString(++idx, customer.c_data);
-            custPrepStmt.addBatch();
+            for (PreparedStatement custPrepStmt : custPrepStmts) {
+              int idx = 0;
+              custPrepStmt.setLong(++idx, customer.c_w_id);
+              custPrepStmt.setLong(++idx, customer.c_d_id);
+              custPrepStmt.setLong(++idx, customer.c_id);
+              custPrepStmt.setDouble(++idx, customer.c_discount);
+              custPrepStmt.setString(++idx, customer.c_credit);
+              custPrepStmt.setString(++idx, customer.c_last);
+              custPrepStmt.setString(++idx, customer.c_first);
+              custPrepStmt.setDouble(++idx, customer.c_credit_lim);
+              custPrepStmt.setDouble(++idx, customer.c_balance);
+              custPrepStmt.setDouble(++idx, customer.c_ytd_payment);
+              custPrepStmt.setLong(++idx, customer.c_payment_cnt);
+              custPrepStmt.setLong(++idx, customer.c_delivery_cnt);
+              custPrepStmt.setString(++idx, customer.c_street_1);
+              custPrepStmt.setString(++idx, customer.c_street_2);
+              custPrepStmt.setString(++idx, customer.c_city);
+              custPrepStmt.setString(++idx, customer.c_state);
+              custPrepStmt.setString(++idx, customer.c_zip);
+              custPrepStmt.setString(++idx, customer.c_phone);
+              custPrepStmt.setTimestamp(++idx, customer.c_since);
+              custPrepStmt.setString(++idx, customer.c_middle);
+              custPrepStmt.setString(++idx, customer.c_data);
+              custPrepStmt.addBatch();
+            }
 
-            idx = 0;
-            histPrepStmt.setInt(++idx, history.h_c_id);
-            histPrepStmt.setInt(++idx, history.h_c_d_id);
-            histPrepStmt.setInt(++idx, history.h_c_w_id);
-            histPrepStmt.setInt(++idx, history.h_d_id);
-            histPrepStmt.setInt(++idx, history.h_w_id);
-            histPrepStmt.setTimestamp(++idx, history.h_date);
-            histPrepStmt.setDouble(++idx, history.h_amount);
-            histPrepStmt.setString(++idx, history.h_data);
-            histPrepStmt.addBatch();
+            for (PreparedStatement histPrepStmt : histPrepStmts) {
+              int idx = 0;
+              histPrepStmt.setInt(++idx, history.h_c_id);
+              histPrepStmt.setInt(++idx, history.h_c_d_id);
+              histPrepStmt.setInt(++idx, history.h_c_w_id);
+              histPrepStmt.setInt(++idx, history.h_d_id);
+              histPrepStmt.setInt(++idx, history.h_w_id);
+              histPrepStmt.setTimestamp(++idx, history.h_date);
+              histPrepStmt.setDouble(++idx, history.h_amount);
+              histPrepStmt.setString(++idx, history.h_data);
+              histPrepStmt.addBatch();
+            }
 
             if ((k % workConf.getBatchSize()) == 0) {
-              performInsertsWithRetries(conn, custPrepStmt, histPrepStmt);
+              performInsertsWithRetries(conn, custPrepStmts, histPrepStmts);
             }
           } // end for [c]
         } // end for [d]
-        performInsertsWithRetries(conn, custPrepStmt, histPrepStmt);
+        performInsertsWithRetries(conn, custPrepStmts, histPrepStmts);
 
       } catch (Exception e) {
         LOG.error("Failed to load data for TPC-C", e);
@@ -511,9 +526,9 @@ public class Loader {
       int t = 0;
       int newOrderBatch = 0;
       try {
-        PreparedStatement ordrPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_OPENORDER);
-        PreparedStatement nworPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_NEWORDER);
-        PreparedStatement orlnPrepStmt = getInsertStatement(conn, TPCCConstants.TABLENAME_ORDERLINE);
+        ArrayList<PreparedStatement> ordrPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_OPENORDER);
+        ArrayList<PreparedStatement> nworPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_NEWORDER);
+        ArrayList<PreparedStatement> orlnPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_ORDERLINE);
 
         Oorder oorder = new Oorder();
         NewOrder new_order = new NewOrder();
@@ -553,20 +568,22 @@ public class Loader {
             oorder.o_entry_d = this.benchmark.getTimestamp(System.currentTimeMillis());
 
             k++;
-            int idx = 0;
-            ordrPrepStmt.setInt(++idx, oorder.o_w_id);
-            ordrPrepStmt.setInt(++idx, oorder.o_d_id);
-            ordrPrepStmt.setInt(++idx, oorder.o_id);
-            ordrPrepStmt.setInt(++idx, oorder.o_c_id);
-            if (oorder.o_carrier_id != null) {
+            for (PreparedStatement ordrPrepStmt : ordrPrepStmts) {
+              int idx = 0;
+              ordrPrepStmt.setInt(++idx, oorder.o_w_id);
+              ordrPrepStmt.setInt(++idx, oorder.o_d_id);
+              ordrPrepStmt.setInt(++idx, oorder.o_id);
+              ordrPrepStmt.setInt(++idx, oorder.o_c_id);
+              if (oorder.o_carrier_id != null) {
                 ordrPrepStmt.setInt(++idx, oorder.o_carrier_id);
-            } else {
+              } else {
                 ordrPrepStmt.setNull(++idx, Types.INTEGER);
+              }
+              ordrPrepStmt.setInt(++idx, oorder.o_ol_cnt);
+              ordrPrepStmt.setInt(++idx, oorder.o_all_local);
+              ordrPrepStmt.setTimestamp(++idx, oorder.o_entry_d);
+              ordrPrepStmt.addBatch();
             }
-            ordrPrepStmt.setInt(++idx, oorder.o_ol_cnt);
-            ordrPrepStmt.setInt(++idx, oorder.o_all_local);
-            ordrPrepStmt.setTimestamp(++idx, oorder.o_entry_d);
-            ordrPrepStmt.addBatch();
 
             // 900 rows in the NEW-ORDER table corresponding to the last
             // 900 rows in the ORDER table for that district (i.e.,
@@ -577,11 +594,13 @@ public class Loader {
               new_order.no_o_id = c;
 
               k++;
-              idx = 0;
-              nworPrepStmt.setInt(++idx, new_order.no_w_id);
-              nworPrepStmt.setInt(++idx, new_order.no_d_id);
-              nworPrepStmt.setInt(++idx, new_order.no_o_id);
-              nworPrepStmt.addBatch();
+              for (PreparedStatement nworPrepStmt : nworPrepStmts) {
+                int idx = 0;
+                nworPrepStmt.setInt(++idx, new_order.no_w_id);
+                nworPrepStmt.setInt(++idx, new_order.no_d_id);
+                nworPrepStmt.setInt(++idx, new_order.no_o_id);
+                nworPrepStmt.addBatch();
+              }
               newOrderBatch++;
             } // end new order
 
@@ -606,29 +625,31 @@ public class Loader {
               order_line.ol_dist_info = TPCCUtil.randomStr(24);
 
               k++;
-              idx = 0;
-              orlnPrepStmt.setInt(++idx, order_line.ol_w_id);
-              orlnPrepStmt.setInt(++idx, order_line.ol_d_id);
-              orlnPrepStmt.setInt(++idx, order_line.ol_o_id);
-              orlnPrepStmt.setInt(++idx, order_line.ol_number);
-              orlnPrepStmt.setLong(++idx, order_line.ol_i_id);
-              if (order_line.ol_delivery_d != null) {
+              for (PreparedStatement orlnPrepStmt : orlnPrepStmts) {
+                int idx = 0;
+                orlnPrepStmt.setInt(++idx, order_line.ol_w_id);
+                orlnPrepStmt.setInt(++idx, order_line.ol_d_id);
+                orlnPrepStmt.setInt(++idx, order_line.ol_o_id);
+                orlnPrepStmt.setInt(++idx, order_line.ol_number);
+                orlnPrepStmt.setLong(++idx, order_line.ol_i_id);
+                if (order_line.ol_delivery_d != null) {
                   orlnPrepStmt.setTimestamp(++idx, order_line.ol_delivery_d);
-              } else {
+                } else {
                   orlnPrepStmt.setNull(++idx, 0);
+                }
+                orlnPrepStmt.setDouble(++idx, order_line.ol_amount);
+                orlnPrepStmt.setLong(++idx, order_line.ol_supply_w_id);
+                orlnPrepStmt.setDouble(++idx, order_line.ol_quantity);
+                orlnPrepStmt.setString(++idx, order_line.ol_dist_info);
+                orlnPrepStmt.addBatch();
               }
-              orlnPrepStmt.setDouble(++idx, order_line.ol_amount);
-              orlnPrepStmt.setLong(++idx, order_line.ol_supply_w_id);
-              orlnPrepStmt.setDouble(++idx, order_line.ol_quantity);
-              orlnPrepStmt.setString(++idx, order_line.ol_dist_info);
-              orlnPrepStmt.addBatch();
 
               if ((k % workConf.getBatchSize()) == 0) {
                 if (newOrderBatch > 0) {
-                  performInsertsWithRetries(conn, ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
+                  performInsertsWithRetries(conn, ordrPrepStmts, nworPrepStmts, orlnPrepStmts);
                   newOrderBatch = 0;
                 } else {
-                  performInsertsWithRetries(conn, ordrPrepStmt, orlnPrepStmt);
+                  performInsertsWithRetries(conn, ordrPrepStmts, orlnPrepStmts);
                 }
               }
             } // end for [l]
@@ -637,7 +658,7 @@ public class Loader {
 
         if (LOG.isDebugEnabled())
           LOG.debug("  Writing final records " + k + " of " + t);
-        performInsertsWithRetries(conn, ordrPrepStmt, nworPrepStmt, orlnPrepStmt);
+        performInsertsWithRetries(conn, ordrPrepStmts, nworPrepStmts, orlnPrepStmts);
       } catch (Exception e) {
         LOG.error("Failed to load data for TPC-C", e);
         transRollback(conn);

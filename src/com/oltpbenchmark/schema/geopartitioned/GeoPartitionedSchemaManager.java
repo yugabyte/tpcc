@@ -24,8 +24,8 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
         super(conn);
         this.geoPartitionPolicy = geoPartitioningPolicy;
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
-            tables.put(t.name(), 
-                       t.name().equals(TPCCConstants.TABLENAME_ITEM) ? new DefaultTable(t, geoPartitioningPolicy.getTablespaceForItemTable()) 
+            tables.put(t.name(),
+                       t.name().equals(TPCCConstants.TABLENAME_ITEM) ? new DefaultTable(t, geoPartitioningPolicy.getTablespaceForItemTable())
                                                                      : new PartitionedTable(t, geoPartitionPolicy));
         }
     }
@@ -41,6 +41,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
         }
 
         createTablespaces();
+        createTablegroups();
 
         for (Table t : tables.values()) {
             execute(t.getCreateDdl());
@@ -70,6 +71,16 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
             // Get the placement policy associated with this tablespace.
             final String placementJson = geoPartitionPolicy.getTablespaceCreationJson(tablespace);
             execute(String.format("CREATE TABLESPACE %s WITH (replica_placement='%s')", tablespace, placementJson));
+        }
+    }
+
+    private void createTablegroups() throws SQLException {
+        if (!geoPartitionPolicy.shouldUseTablegroups()) {
+            return;
+        }
+        for (Map.Entry<String, String> entry : geoPartitionPolicy.getTablegroups().entrySet()) {
+            // execute(String.format("DROP TABLEGROUP IF EXISTS %s", entry.getKey()));
+            execute(String.format("CREATE TABLEGROUP %s TABLESPACE %s", entry.getKey(), entry.getValue()));
         }
     }
 
@@ -116,7 +127,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
                     "(OL_SUPPLY_W_ID, OL_I_ID) REFERENCES STOCK%d (S_W_ID, S_I_ID) NOT VALID", idx, idx, idx));
         }
     }
-    
+
     @Override
     public void createSqlProcedures() throws Exception {
         try (Statement st = db_connection.createStatement()) {

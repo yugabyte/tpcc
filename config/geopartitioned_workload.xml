@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <parameters>
-    <enableGeoPartitionedWorkload>false</enableGeoPartitionedWorkload>
+    <enableGeoPartitionedWorkload>true</enableGeoPartitionedWorkload>
+    <useTablegroups>true</useTablegroups>
     <numberOfPartitions>2</numberOfPartitions>
     <tablespaces>
         <tablespace>
@@ -45,4 +46,20 @@
             </placementPolicy>
         </tablespace>
     </tablespaces>
+    <tablegroups>
+        <tablegroup>
+            <name>tablegroup0</name>
+            <tablespace>tablespace0</tablespace>
+        </tablegroup>
+        <tablegroup>
+            <name>tablegroup1</name>
+            <tablespace>tablespace1</tablespace>
+            <storePartitions>true</storePartitions>
+        </tablegroup>
+        <tablegroup>
+            <name>tablegroup2</name>
+            <tablespace>tablespace2</tablespace>
+            <storePartitions>true</storePartitions>
+        </tablegroup>
+    </tablegroups>
 </parameters>

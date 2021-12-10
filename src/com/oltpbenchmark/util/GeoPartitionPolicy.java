@@ -18,30 +18,43 @@ import com.google.gson.Gson;
  * be replicated and placed.
  */
 public class GeoPartitionPolicy {
-    private final Map<String, PlacementPolicy> tablespaceToPlacementPolicy = new HashMap<String, PlacementPolicy>();;
+    private final Map<String, PlacementPolicy> tablespaceToPlacementPolicy = new HashMap<>();
+    private final Map<String, String> tablegroupToTablespace = new HashMap<>();
 
     private String tablespaceForPartitionedTables;
 
     private String tablespaceForItemTable;
 
-    private final List<String> tablespacesForPartitions = new ArrayList<String>();
+    private final List<String> tablespacesForPartitions = new ArrayList<>();
+    private final List<String> tablegroupsForPartitions = new ArrayList<>();
 
     private final int numWarehouses;
 
     private final int numPartitions;
 
-    public GeoPartitionPolicy(int numPartitions, int numWarehouses) {
+    private final boolean useTablegroups;
+
+    public GeoPartitionPolicy(int numPartitions, int numWarehouses, boolean useTablegroups) {
         this.numPartitions = numPartitions;
         this.numWarehouses = numWarehouses;
+        this.useTablegroups = useTablegroups;
     }
 
     public int getNumPartitions() {
         return numPartitions;
     }
 
+    public boolean shouldUseTablegroups() {
+        return useTablegroups;
+    }
+
     // Getters and setters.
     public Map<String, PlacementPolicy> getTablespaceToPlacementPolicy() {
         return tablespaceToPlacementPolicy;
+    }
+
+    public Map<String, String> getTablegroups() {
+        return tablegroupToTablespace;
     }
 
     public String getTablespaceForPartitionedTables() {
@@ -63,6 +76,9 @@ public class GeoPartitionPolicy {
     public List<String> getTablespacesForPartitions() {
         return tablespacesForPartitions;
     }
+    public List<String> getTablegroupsForPartitions() {
+        return tablegroupsForPartitions;
+    }
 
     public int getNumWarehouses() {
         return numWarehouses;
@@ -72,8 +88,16 @@ public class GeoPartitionPolicy {
         tablespaceToPlacementPolicy.put(tablespace, policy);
     }
 
+    public void addTablegroup(String tablegroup, String tablespace) {
+        tablegroupToTablespace.put(tablegroup, tablespace);
+    }
+
     public void addTablespaceForPartition(String tablespace) {
         tablespacesForPartitions.add(tablespace);
+    }
+
+    public void addTablegroupForPartition(String tablegroup) {
+        tablegroupsForPartitions.add(tablegroup);
     }
 
     public String getTablespaceCreationJson(String tablespace) {
@@ -85,6 +109,10 @@ public class GeoPartitionPolicy {
 
     public String getTablespaceForPartition(int idx) {
         return tablespacesForPartitions.get(idx);
+    }
+
+    public String getTablegroupForPartition(int idx) {
+        return tablegroupsForPartitions.get(idx);
     }
 
     public int getStartWarehouseForPartition(int idx) {

@@ -43,7 +43,7 @@ public class GeoPartitionedConfigFileOptions extends ConfigFileOptionsBase {
         }
 
         // Verify that the current TPCC client can access only a single partition.
-        GeoPartitionPolicy policy = new GeoPartitionPolicy(numPartitions, totalWarehousesAcrossShards);
+        GeoPartitionPolicy policy = new GeoPartitionPolicy(numPartitions, totalWarehousesAcrossShards, isFlagSet("useTablegroups"));
         int partitionForStartWarehouse = policy.getPartitionForWarehouse(startWarehouseIdForShard);
         int partitionForEndWarehouse = policy.getPartitionForWarehouse(startWarehouseIdForShard + numWarehouses - 1);
 
@@ -51,6 +51,21 @@ public class GeoPartitionedConfigFileOptions extends ConfigFileOptionsBase {
             throw new InvalidUserConfiguration(String.format("Invalid values for numPartitions (%d), numWarehouses (%d) " +
                     "startWarehouseId (%d) and totalWarehouses (%d). A client should access only a single partition.",
                     numPartitions, numWarehouses, startWarehouseIdForShard, totalWarehousesAcrossShards));
+        }
+
+        // Iterate through all the tablegroups in the config.
+        // The lists in XMLConfiguration are 1-based, so start the
+        // loop from 1.
+        for (int ii = 1; ii <= getNumTablespaces(); ++ii) {
+            final String tablegroupPath = String.format("tablegroups/tablegroup[%d]/", ii);
+            final String tablegroupName = getRequiredStringOpt(tablegroupPath + "name");
+            final String tablespaceName = getRequiredStringOpt(tablegroupPath + "tablespace");
+
+            if (isFlagSet(tablegroupPath + "storePartitions")) {
+                policy.addTablegroupForPartition(tablegroupName);
+            }
+
+            policy.addTablegroup(tablegroupName, tablespaceName);
         }
 
         // Iterate through all the tablespaces in the config.

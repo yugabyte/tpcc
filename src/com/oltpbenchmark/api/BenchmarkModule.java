@@ -202,9 +202,6 @@ public class BenchmarkModule {
 
     /**
      * Invoke this benchmark's database loader.
-     * We return the handle to Loader object that we created to do this.
-     * You probably don't need it and can simply ignore. There are some
-     * test cases that use it. That's why it's here.
      */
     public final void loadDatabase() {
         Loader loader = this.makeLoaderImpl();

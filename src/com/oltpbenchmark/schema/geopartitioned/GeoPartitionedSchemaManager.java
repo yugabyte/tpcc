@@ -79,7 +79,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
             return;
         }
         for (Map.Entry<String, String> entry : geoPartitionPolicy.getTablegroups().entrySet()) {
-            // execute(String.format("DROP TABLEGROUP IF EXISTS %s", entry.getKey()));
+            execute(String.format("DROP TABLEGROUP IF EXISTS %s", entry.getKey()));
             execute(String.format("CREATE TABLEGROUP %s TABLESPACE %s", entry.getKey(), entry.getValue()));
         }
     }

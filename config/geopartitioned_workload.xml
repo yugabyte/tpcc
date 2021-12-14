@@ -14,7 +14,7 @@
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a0</zone>
+                    <zone>us-west-2a</zone>
                     <minReplicationFactor>1</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
@@ -27,7 +27,7 @@
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a1</zone>
+                    <zone>us-west-2b</zone>
                     <minReplicationFactor>1</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
@@ -40,7 +40,7 @@
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a2</zone>
+                    <zone>us-west-2c</zone>
                     <minReplicationFactor>1</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>

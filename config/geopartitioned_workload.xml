@@ -2,7 +2,7 @@
 <parameters>
     <enableGeoPartitionedWorkload>true</enableGeoPartitionedWorkload>
     <useTablegroups>false</useTablegroups>
-    <numberOfPartitions>2</numberOfPartitions>
+    <numberOfPartitions>1</numberOfPartitions>
     <tablespaces>
         <tablespace>
             <name>tablespace0</name>

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <parameters>
     <enableGeoPartitionedWorkload>true</enableGeoPartitionedWorkload>
-    <useTablegroups>true</useTablegroups>
-    <numberOfPartitions>1</numberOfPartitions>
+    <useTablegroups>false</useTablegroups>
+    <numberOfPartitions>2</numberOfPartitions>
     <tablespaces>
         <tablespace>
             <name>tablespace0</name>

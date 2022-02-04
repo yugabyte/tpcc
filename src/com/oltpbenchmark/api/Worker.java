@@ -528,25 +528,7 @@ public class Worker implements Runnable {
                     if (!conn.getAutoCommit()) {
                         conn.rollback();
                     }
-
-                    if (ex.getSQLState() != null) {
-                        if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
-                            // Postgres serialization
-                            status = TransactionStatus.RETRY;
-                        } else if (
-                                ex.getErrorCode() == 0 &&
-                                ex.getSQLState() != null &&
-                                Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
-                            // 53200 - Postgres OOM error
-                            // XX000 - Postgres no pinned buffers available
-                            throw ex;
-                        } else {
-                            // UNKNOWN: In this case .. Retry as well!
-                            LOG.warn("The DBMS rejected the transaction without an error code", ex);
-                            // FIXME Disable this for now
-                            // throw ex;
-                        }
-                    }
+                    status = TransactionStatus.RETRY;
                 // Assertion Error
                 } catch (Error ex) {
                     LOG.error("Fatal error when invoking " + next, ex);

@@ -80,8 +80,8 @@
           <dependency>
             <groupId>com.yugabyte</groupId>
             <artifactId>jdbc-yugabytedb</artifactId>
-            <version>42.2.7-yb-3</version>
-        </dependency>
+              <version>42.3.0</version>
+          </dependency>
         <dependency>
             <groupId>org.hsqldb</groupId>
             <artifactId>hsqldb-j5</artifactId>

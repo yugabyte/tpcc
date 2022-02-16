@@ -89,7 +89,7 @@ public class BenchmarkModule {
                 ThreadUtil.sleep(5000);
             }
             Properties props = new Properties();
-            props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
+            props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
             props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
             props.setProperty("dataSource.user", workConf.getDBUsername());
@@ -99,11 +99,13 @@ public class BenchmarkModule {
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
             props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
+
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
               assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
               props.put("dataSource.sslmode", "require");
               props.put("dataSource.sslcert", workConf.getSslCert());
               props.put("dataSource.sslkey", workConf.getSslKey());
+
             }
             HikariConfig config = new HikariConfig(props);
             if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
@@ -119,6 +121,8 @@ public class BenchmarkModule {
         props.put("user", workConf.getDBUsername());
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
+        props.put("load-balance", "true");
+
         if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
           assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
           props.put("sslmode", "require");

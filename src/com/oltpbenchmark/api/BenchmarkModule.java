@@ -90,7 +90,8 @@ public class BenchmarkModule {
             }
             Properties props = new Properties();
             props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
-            props.setProperty("dataSource.serverName", ip);
+	    //props.setProperty("dataSource.serverNames", ip);
+	    props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
             props.setProperty("dataSource.user", workConf.getDBUsername());
             props.setProperty("dataSource.password", workConf.getDBPassword());
@@ -121,7 +122,6 @@ public class BenchmarkModule {
         props.put("user", workConf.getDBUsername());
         props.put("password", workConf.getDBPassword());
         props.put("reWriteBatchedInserts", "true");
-        props.put("load-balance", "true");
 
         if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
           assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";

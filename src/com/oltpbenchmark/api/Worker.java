@@ -524,10 +524,12 @@ public class Worker implements Runnable {
                                            "[Message='%s', ErrorCode='%d', SQLState='%s']",
                                            ex.getClass().getSimpleName(), next, this.toString(),
                                            ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
-
-                    if (!conn.getAutoCommit()) {
-                        conn.rollback();
-                    }
+                    try {
+                    	if (!conn.getAutoCommit()) {
+                        	conn.rollback();
+                    	}
+		    } catch (Throwable t) {
+		    }
                     status = TransactionStatus.RETRY;
                 // Assertion Error
                 } catch (Error ex) {

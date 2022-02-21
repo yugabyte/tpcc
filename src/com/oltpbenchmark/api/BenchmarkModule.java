@@ -135,7 +135,7 @@ public class BenchmarkModule {
         if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
             connectStr=workConf.getJdbcURL();
         } else {
-            connectStr = String.format("jdbc:postgresql://%s:%d/%s",
+            connectStr = String.format("jdbc:yugabytedb://%s:%d/%s",
                 workConf.getNodes().get(r),
                 workConf.getPort(),
                 workConf.getDBName());

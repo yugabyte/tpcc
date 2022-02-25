@@ -1,0 +1,36 @@
+<assembly>
+
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+
+    <fileSets>
+
+        <fileSet>
+            <directory>config</directory>
+            <outputDirectory>config</outputDirectory>
+            <includes>
+                <include>*.xml</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <includes>
+                <include>tpccbenchmark</include>
+                <include>LICENSE</include>
+                <include>README.md</include>
+                <include>log4j.properties</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>target</directory>
+            <outputDirectory>libs</outputDirectory>
+            <includes>
+                <include>lib/*.jar</include>
+                <include>oltpbench-*.jar</include>
+            </includes>
+        </fileSet>
+
+    </fileSets>
+</assembly>

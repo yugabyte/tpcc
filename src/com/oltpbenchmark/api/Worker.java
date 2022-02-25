@@ -59,6 +59,7 @@ public class Worker implements Runnable {
 
     private final int id;
     private final BenchmarkModule benchmarkModule;
+    private final TPCCUtil tpccUtil;
     protected final HikariDataSource dataSource;
     protected static WorkloadConfiguration wrkld;
     protected TransactionTypes transactionTypes;
@@ -92,8 +93,9 @@ public class Worker implements Runnable {
         assert terminalDistrictLowerID >= 1;
         assert terminalDistrictUpperID <= TPCCConfig.configDistPerWhse;
         assert terminalDistrictLowerID <= terminalDistrictUpperID;
+        this.tpccUtil = new TPCCUtil();
         this.terminalDistrictID =
-                TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
+                this.tpccUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
     }
 
     public final void InitializeProcedures() {
@@ -149,6 +151,9 @@ public class Worker implements Runnable {
         return workerTaskLatencyRecord;
     }
 
+    public TPCCUtil getTpccUtil() {
+        return this.tpccUtil;
+    }
     @SuppressWarnings("unchecked")
     public final <P extends Procedure> P getProcedure(Class<P> procClass) {
         return (P) (this.class_procedures.get(procClass));

@@ -190,7 +190,7 @@ public class NewOrder extends Procedure {
     }
     // We create 11 statements that insert into `ORDERLINE`. Each string looks like:
     // INSERT INTO ORDERLINE
-    // (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT,
+    // (OL_O_ID, OL_D_ID  , OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT,
     //  OL_DIST_INFO)
     // VALUES (?,?,?,?,?,?,?,?,?), (?,?,?,?,?,?,?,?,?) ..
     sb = new StringBuilder();
@@ -213,31 +213,31 @@ public class NewOrder extends Procedure {
                   int terminalWarehouseID, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
-    int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
-    int customerID = TPCCUtil.getCustomerID(gen);
-    int numItems = TPCCUtil.randomNumber(5, 15, gen);
+    int districtID = w.getTpccUtil().randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
+    int customerID = w.getTpccUtil().getCustomerID(gen);
+    int numItems = w.getTpccUtil().randomNumber(5, 15, gen);
     int[] itemIDs = new int[numItems];
     int[] supplierWarehouseIDs = new int[numItems];
     int[] orderQuantities = new int[numItems];
     int allLocal = 1;
     for (int i = 0; i < numItems; i++) {
-      itemIDs[i] = TPCCUtil.getItemID(gen);
-      if (TPCCUtil.randomNumber(1, 100, gen) > 1) {
+      itemIDs[i] = w.getTpccUtil().getItemID(gen);
+      if (w.getTpccUtil().randomNumber(1, 100, gen) > 1) {
         supplierWarehouseIDs[i] = terminalWarehouseID;
       } else {
         do {
-          supplierWarehouseIDs[i] = TPCCUtil.getRandomWarehouseId(w, terminalWarehouseID, numWarehouses, gen);
+          supplierWarehouseIDs[i] = w.getTpccUtil().getRandomWarehouseId(w, terminalWarehouseID, numWarehouses, gen);
         } while (supplierWarehouseIDs[i] == terminalWarehouseID
             && numWarehouses > 1);
         allLocal = 0;
       }
-      orderQuantities[i] = TPCCUtil.randomNumber(1, 10, gen);
+      orderQuantities[i] = w.getTpccUtil().randomNumber(1, 10, gen);
     }
 
     // we need to cause 1% of the new orders to be rolled back.
     // TODO -- in this case, lets make sure our retry/failure bookkeeping is smart enough to distinguish between this
     // vs. unexpected failures.
-    if (TPCCUtil.randomNumber(1, 100, gen) == 1)
+    if (w.getTpccUtil().randomNumber(1, 100, gen) == 1)
       itemIDs[numItems - 1] = TPCCConfig.INVALID_ITEM_ID;
 
     // Initializing all prepared statements.

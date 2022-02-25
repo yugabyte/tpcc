@@ -4,8 +4,11 @@
         <format>tar.gz</format>
     </formats>
 
+    <includeBaseDirectory>false</includeBaseDirectory>
+
     <fileSets>
 
+<!--        configs -->
         <fileSet>
             <directory>config</directory>
             <outputDirectory>config</outputDirectory>
@@ -14,6 +17,7 @@
             </includes>
         </fileSet>
 
+<!--        execute file, LICENSE, README.md and log4j.properies file-->
         <fileSet>
             <includes>
                 <include>tpccbenchmark</include>
@@ -23,12 +27,21 @@
             </includes>
         </fileSet>
 
+<!--        oltbenchmark jar file-->
         <fileSet>
             <directory>target</directory>
             <outputDirectory>libs</outputDirectory>
             <includes>
-                <include>lib/*.jar</include>
                 <include>oltpbench-*.jar</include>
+            </includes>
+        </fileSet>
+
+<!--        dependencies except hsqldb (provided scope, excluded from assembly) -->
+        <fileSet>
+            <directory>target/libs</directory>
+            <outputDirectory>libs</outputDirectory>
+            <includes>
+                <include>*.jar</include>
             </includes>
         </fileSet>
 

@@ -110,7 +110,7 @@ public class Delivery extends Procedure {
                   Worker w) throws SQLException {
 
     boolean trace = LOG.isDebugEnabled();
-    int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);
+    int o_carrier_id = w.getTpccUtil().randomNumber(1, 10, gen);
     Timestamp timestamp = w.getBenchmarkModule().getTimestamp(System.currentTimeMillis());
     delivGetOrderId = this.getPreparedStatement(conn, delivGetOrderIdSQL);
     delivDeleteNewOrder =  this.getPreparedStatement(conn, delivDeleteNewOrderSQL);
@@ -244,7 +244,7 @@ public class Delivery extends Procedure {
       terminalMessage
               .append("\n+---------------------------- DELIVERY ---------------------------+\n");
       terminalMessage.append(" Date: ");
-      terminalMessage.append(TPCCUtil.getCurrentTime());
+      terminalMessage.append(w.getTpccUtil().getCurrentTime());
       terminalMessage.append("\n\n Warehouse: ");
       terminalMessage.append(w_id);
       terminalMessage.append("\n Carrier:   ");

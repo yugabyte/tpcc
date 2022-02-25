@@ -96,16 +96,16 @@ public class OrderStatus extends Procedure {
     ordStatGetNewestOrd = this.getPreparedStatement(conn, ordStatGetNewestOrdSQL);
     ordStatGetOrderLines = this.getPreparedStatement(conn, ordStatGetOrderLinesSQL);
 
-    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
+    int d_id = w.getTpccUtil().randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
     boolean c_by_name = false;
-    int y = TPCCUtil.randomNumber(1, 100, gen);
+    int y = w.getTpccUtil().randomNumber(1, 100, gen);
     Customer c;
     if (y <= 60) {
-      String c_last = TPCCUtil.getNonUniformRandomLastNameForRun(gen);
-      c = getCustomerByName(w_id, d_id, c_last);
+      String c_last = w.getTpccUtil().getNonUniformRandomLastNameForRun(gen);
+      c = getCustomerByName(w_id, d_id, c_last, w);
     } else {
-      int c_id = TPCCUtil.getCustomerID(gen);
-      c = getCustomerById(w_id, d_id, c_id);
+      int c_id = w.getTpccUtil().getCustomerID(gen);
+      c = getCustomerById(w_id, d_id, c_id, w);
     }
 
     int o_id, o_carrier_id;
@@ -150,7 +150,7 @@ public class OrderStatus extends Procedure {
       sb.append(" - ");
       sb.append(rs.getLong("OL_QUANTITY"));
       sb.append(" - ");
-      sb.append(TPCCUtil.formattedDouble(rs.getDouble("OL_AMOUNT")));
+      sb.append(w.getTpccUtil().formattedDouble(rs.getDouble("OL_AMOUNT")));
       sb.append(" - ");
       if (rs.getTimestamp("OL_DELIVERY_D") != null)
           sb.append(rs.getTimestamp("OL_DELIVERY_D"));
@@ -175,7 +175,7 @@ public class OrderStatus extends Procedure {
       sb.append("\n");
       sb.append("+-------------------------- ORDER-STATUS -------------------------+\n");
       sb.append(" Date: ");
-      sb.append(TPCCUtil.getCurrentTime());
+      sb.append(w.getTpccUtil().getCurrentTime());
       sb.append("\n\n Warehouse: ");
       sb.append(w_id);
       sb.append("\n District:  ");
@@ -220,7 +220,7 @@ public class OrderStatus extends Procedure {
 
   // attention duplicated code across trans... ok for now to maintain separate
   // prepared statements
-  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id) throws SQLException {
+  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id, Worker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
 
     payGetCust.setInt(1, c_w_id);
@@ -236,7 +236,7 @@ public class OrderStatus extends Procedure {
       throw new RuntimeException(msg);
     }
 
-    Customer c = TPCCUtil.newCustomerFromResults(rs);
+    Customer c = w.getTpccUtil().newCustomerFromResults(rs);
     c.c_id = c_id;
     c.c_last = rs.getString("C_LAST");
     rs.close();
@@ -245,7 +245,7 @@ public class OrderStatus extends Procedure {
 
   // attention this code is repeated in other transacitons... ok for now to
   // allow for separate statements.
-  public Customer getCustomerByName(int c_w_id, int c_d_id, String c_last) throws SQLException {
+  public Customer getCustomerByName(int c_w_id, int c_d_id, String c_last, Worker w) throws SQLException {
     ArrayList<Customer> customers = new ArrayList<>();
     boolean trace = LOG.isDebugEnabled();
 
@@ -257,7 +257,7 @@ public class OrderStatus extends Procedure {
     if (trace) LOG.trace("customerByName END");
 
     while (rs.next()) {
-      Customer c = TPCCUtil.newCustomerFromResults(rs);
+      Customer c = w.getTpccUtil().newCustomerFromResults(rs);
       c.c_id = rs.getInt("C_ID");
       c.c_last = c_last;
       customers.add(c);

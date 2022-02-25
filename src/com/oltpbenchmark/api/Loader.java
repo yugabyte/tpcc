@@ -102,7 +102,7 @@ public class Loader {
             EnableForeignKeyConstraints(conn);
           }
           if (workConf.getStartWarehouseIdForShard() == 1) {
-            loadItems(conn);
+            loadItems(conn, new TPCCUtil());
           }
         }
       });
@@ -118,22 +118,24 @@ public class Loader {
         LoaderThread t = new LoaderThread() {
           @Override
           public void load(Connection conn) {
+            TPCCUtil tpccUtil = new TPCCUtil();
+
             if (LOG.isDebugEnabled()) LOG.debug("Starting to load WAREHOUSE " + w_id);
 
             // WAREHOUSE
-            loadWarehouse(conn, w_id);
+            loadWarehouse(conn, w_id, tpccUtil);
 
             // STOCK
-            loadStock(conn, w_id);
+            loadStock(conn, w_id, tpccUtil);
 
             // DISTRICT
-            loadDistricts(conn, w_id);
+            loadDistricts(conn, w_id, tpccUtil);
 
             // CUSTOMER
-            loadCustomers(conn, w_id);
+            loadCustomers(conn, w_id, tpccUtil);
 
             // ORDERS
-            loadOrders(conn, w_id);
+            loadOrders(conn, w_id, tpccUtil);
 
             warehouseLatch.countDown();
           }
@@ -217,30 +219,30 @@ public class Loader {
       }
     }
 
-    protected void loadItems(Connection conn) {
+    protected void loadItems(Connection conn, TPCCUtil tpccUtil) {
       try {
         ArrayList<PreparedStatement> itemPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_ITEM);
         Item item = new Item();
         int batchSize = 0;
         for (int i = 1; i <= TPCCConfig.configItemCount; i++) {
           item.i_id = i;
-          item.i_name = TPCCUtil.randomStr(TPCCUtil.randomNumber(14, 24, benchmark.rng()));
-          item.i_price = TPCCUtil.randomNumber(100, 10000, benchmark.rng()) / 100.0;
+          item.i_name = tpccUtil.randomStr(tpccUtil.randomNumber(14, 24, benchmark.rng()));
+          item.i_price = tpccUtil.randomNumber(100, 10000, benchmark.rng()) / 100.0;
           // i_data
-          int randPct = TPCCUtil.randomNumber(1, 100, benchmark.rng());
-          int len = TPCCUtil.randomNumber(26, 50, benchmark.rng());
+          int randPct = tpccUtil.randomNumber(1, 100, benchmark.rng());
+          int len = tpccUtil.randomNumber(26, 50, benchmark.rng());
           if (randPct > 10) {
             // 90% of time i_data isa random string of length [26 .. 50]
-            item.i_data = TPCCUtil.randomStr(len);
+            item.i_data = tpccUtil.randomStr(len);
           } else {
             // 10% of time i_data has "ORIGINAL" crammed somewhere in
             // middle
-            int startORIGINAL = TPCCUtil.randomNumber(2, (len - 8), benchmark.rng());
-            item.i_data = TPCCUtil.randomStr(startORIGINAL - 1) + "ORIGINAL" +
-                          TPCCUtil.randomStr(len - startORIGINAL - 9);
+            int startORIGINAL = tpccUtil.randomNumber(2, (len - 8), benchmark.rng());
+            item.i_data = tpccUtil.randomStr(startORIGINAL - 1) + "ORIGINAL" +
+                    tpccUtil.randomStr(len - startORIGINAL - 9);
           }
 
-          item.i_im_id = TPCCUtil.randomNumber(1, 10000, benchmark.rng());
+          item.i_im_id = tpccUtil.randomNumber(1, 10000, benchmark.rng());
 
           for (PreparedStatement itemPrepStmt : itemPrepStmts) {
             int idx = 0;
@@ -268,7 +270,7 @@ public class Loader {
 
     } // end loadItem()
 
-    protected void loadWarehouse(Connection conn, int w_id) {
+    protected void loadWarehouse(Connection conn, int w_id, TPCCUtil tpccUtil) {
       try {
         ArrayList<PreparedStatement> whsePrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_WAREHOUSE);
         Warehouse warehouse = new Warehouse();
@@ -277,13 +279,13 @@ public class Loader {
         warehouse.w_ytd = 300000;
 
         // random within [0.0000 .. 0.2000]
-        warehouse.w_tax = TPCCUtil.randomNumber(0, 2000, benchmark.rng()) / 10000.0;
-        warehouse.w_name = TPCCUtil.randomStr(TPCCUtil.randomNumber(6, 10, benchmark.rng()));
-        warehouse.w_street_1 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-        warehouse.w_street_2 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-        warehouse.w_city = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-        warehouse.w_state = TPCCUtil.randomStr(2).toUpperCase();
-        warehouse.w_zip = TPCCUtil.randomNStr(4) + "11111";
+        warehouse.w_tax = tpccUtil.randomNumber(0, 2000, benchmark.rng()) / 10000.0;
+        warehouse.w_name = tpccUtil.randomStr(tpccUtil.randomNumber(6, 10, benchmark.rng()));
+        warehouse.w_street_1 = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+        warehouse.w_street_2 = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+        warehouse.w_city = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+        warehouse.w_state = tpccUtil.randomStr(2).toUpperCase();
+        warehouse.w_zip = tpccUtil.randomNStr(4) + "11111";
 
         for (PreparedStatement whsePrepStmt : whsePrepStmts) {
           int idx = 0;
@@ -306,7 +308,7 @@ public class Loader {
       }
     } // end loadWhse()
 
-    private void loadStock(Connection conn, int w_id) {
+    private void loadStock(Connection conn, int w_id, TPCCUtil tpccUtil) {
       int k = 0;
       try {
         ArrayList<PreparedStatement> stckPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_STOCK);
@@ -314,26 +316,26 @@ public class Loader {
         for (int i = 1; i <= TPCCConfig.configItemCount; i++) {
           stock.s_i_id = i;
           stock.s_w_id = w_id;
-          stock.s_quantity = TPCCUtil.randomNumber(10, 100, benchmark.rng());
+          stock.s_quantity = tpccUtil.randomNumber(10, 100, benchmark.rng());
           stock.s_ytd = 0;
           stock.s_order_cnt = 0;
           stock.s_remote_cnt = 0;
 
           // s_data
-          int randPct = TPCCUtil.randomNumber(1, 100, benchmark.rng());
-          int len = TPCCUtil.randomNumber(26, 50, benchmark.rng());
+          int randPct = tpccUtil.randomNumber(1, 100, benchmark.rng());
+          int len = tpccUtil.randomNumber(26, 50, benchmark.rng());
           if (randPct > 10) {
             // 90% of time i_data isa random string of length [26 ..
             // 50]
-            stock.s_data = TPCCUtil.randomStr(len);
+            stock.s_data = tpccUtil.randomStr(len);
           } else {
             // 10% of time i_data has "ORIGINAL" crammed somewhere
             // in middle
-            int startORIGINAL = TPCCUtil
+            int startORIGINAL = tpccUtil
                 .randomNumber(2, (len - 8), benchmark.rng());
-            stock.s_data = TPCCUtil.randomStr(startORIGINAL - 1)
+            stock.s_data = tpccUtil.randomStr(startORIGINAL - 1)
                 + "ORIGINAL"
-                + TPCCUtil.randomStr(len - startORIGINAL - 9);
+                + tpccUtil.randomStr(len - startORIGINAL - 9);
           }
 
           k++;
@@ -346,16 +348,16 @@ public class Loader {
             stckPrepStmt.setLong(++idx, stock.s_order_cnt);
             stckPrepStmt.setLong(++idx, stock.s_remote_cnt);
             stckPrepStmt.setString(++idx, stock.s_data);
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
-            stckPrepStmt.setString(++idx, TPCCUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
+            stckPrepStmt.setString(++idx, tpccUtil.randomStr(24));
             stckPrepStmt.addBatch();
           }
           if ((k % workConf.getBatchSize()) == 0) {
@@ -369,7 +371,7 @@ public class Loader {
       }
     } // end loadStock()
 
-    private void loadDistricts(Connection conn, int w_id) {
+    private void loadDistricts(Connection conn, int w_id, TPCCUtil tpccUtil) {
       try {
         ArrayList<PreparedStatement> distPrepStmts = getInsertStatement(conn, TPCCConstants.TABLENAME_DISTRICT);
         District district = new District();
@@ -380,15 +382,15 @@ public class Loader {
           district.d_ytd = 30000;
 
           // random within [0.0000 .. 0.2000]
-          district.d_tax = (float) ((TPCCUtil.randomNumber(0, 2000, benchmark.rng())) / 10000.0);
+          district.d_tax = (float) ((tpccUtil.randomNumber(0, 2000, benchmark.rng())) / 10000.0);
 
           district.d_next_o_id = TPCCConfig.configCustPerDist + 1;
-          district.d_name = TPCCUtil.randomStr(TPCCUtil.randomNumber(6, 10, benchmark.rng()));
-          district.d_street_1 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-          district.d_street_2 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-          district.d_city = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-          district.d_state = TPCCUtil.randomStr(2).toUpperCase();
-          district.d_zip = TPCCUtil.randomNStr(4) + "11111";
+          district.d_name = tpccUtil.randomStr(tpccUtil.randomNumber(6, 10, benchmark.rng()));
+          district.d_street_1 = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+          district.d_street_2 = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+          district.d_city = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+          district.d_state = tpccUtil.randomStr(2).toUpperCase();
+          district.d_zip = tpccUtil.randomNStr(4) + "11111";
 
           for (PreparedStatement distPrepStmt : distPrepStmts) {
             int idx = 0;
@@ -413,7 +415,7 @@ public class Loader {
       }
     } // end loadDist()
 
-    private void loadCustomers(Connection conn, int w_id) {
+    private void loadCustomers(Connection conn, int w_id, TPCCUtil tpccUtil) {
       int k = 0;
       Customer customer = new Customer();
       History history = new History();
@@ -431,19 +433,19 @@ public class Loader {
             customer.c_w_id = w_id;
 
             // discount is random between [0.0000 ... 0.5000]
-            customer.c_discount = (float) (TPCCUtil.randomNumber(0, 5000, benchmark.rng()) / 10000.0);
+            customer.c_discount = (float) (tpccUtil.randomNumber(0, 5000, benchmark.rng()) / 10000.0);
 
-            if (TPCCUtil.randomNumber(1, 100, benchmark.rng()) <= 10) {
+            if (tpccUtil.randomNumber(1, 100, benchmark.rng()) <= 10) {
               customer.c_credit = "BC"; // 10% Bad Credit
             } else {
               customer.c_credit = "GC"; // 90% Good Credit
             }
             if (c <= 1000) {
-              customer.c_last = TPCCUtil.getLastName(c - 1);
+              customer.c_last = tpccUtil.getLastName(c - 1);
             } else {
-              customer.c_last = TPCCUtil.getNonUniformRandomLastNameForLoad(benchmark.rng());
+              customer.c_last = tpccUtil.getNonUniformRandomLastNameForLoad(benchmark.rng());
             }
-            customer.c_first = TPCCUtil.randomStr(TPCCUtil.randomNumber(8, 16, benchmark.rng()));
+            customer.c_first = tpccUtil.randomStr(tpccUtil.randomNumber(8, 16, benchmark.rng()));
             customer.c_credit_lim = (float)50000.0;
 
             customer.c_balance = (float)-10.0;
@@ -451,16 +453,16 @@ public class Loader {
             customer.c_payment_cnt = 1;
             customer.c_delivery_cnt = 0;
 
-            customer.c_street_1 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-            customer.c_street_2 = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-            customer.c_city = TPCCUtil.randomStr(TPCCUtil.randomNumber(10, 20, benchmark.rng()));
-            customer.c_state = TPCCUtil.randomStr(2).toUpperCase();
+            customer.c_street_1 = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+            customer.c_street_2 = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+            customer.c_city = tpccUtil.randomStr(tpccUtil.randomNumber(10, 20, benchmark.rng()));
+            customer.c_state = tpccUtil.randomStr(2).toUpperCase();
             // TPC-C 4.3.2.7: 4 random digits + "11111"
-            customer.c_zip = TPCCUtil.randomNStr(4) + "11111";
-            customer.c_phone = TPCCUtil.randomNStr(16);
+            customer.c_zip = tpccUtil.randomNStr(4) + "11111";
+            customer.c_phone = tpccUtil.randomNStr(16);
             customer.c_since = sysdate;
             customer.c_middle = "OE";
-            customer.c_data = TPCCUtil.randomStr(TPCCUtil.randomNumber(300, 500, benchmark.rng()));
+            customer.c_data = tpccUtil.randomStr(tpccUtil.randomNumber(300, 500, benchmark.rng()));
 
             history.h_c_id = c;
             history.h_c_d_id = d;
@@ -469,7 +471,7 @@ public class Loader {
             history.h_w_id = w_id;
             history.h_date = sysdate;
             history.h_amount = (float)10.0;
-            history.h_data = TPCCUtil.randomStr(TPCCUtil
+            history.h_data = tpccUtil.randomStr(tpccUtil
                 .randomNumber(10, 24, benchmark.rng()));
 
             k = k + 2;
@@ -525,7 +527,7 @@ public class Loader {
       }
     } // end loadCust()
 
-    private void loadOrders(Connection conn, int w_id) {
+    private void loadOrders(Connection conn, int w_id, TPCCUtil tpccUtil) {
       int k = 0;
       int t = 0;
       int newOrderBatch = 0;
@@ -563,11 +565,11 @@ public class Loader {
             // o_carrier_id is set *only* for orders with ids < 2101
             // [4.3.3.1]
             if (oorder.o_id < FIRST_UNPROCESSED_O_ID) {
-              oorder.o_carrier_id = TPCCUtil.randomNumber(1, 10, benchmark.rng());
+              oorder.o_carrier_id = tpccUtil.randomNumber(1, 10, benchmark.rng());
             } else {
               oorder.o_carrier_id = null;
             }
-            oorder.o_ol_cnt = TPCCUtil.randomNumber(5, 15, benchmark.rng());
+            oorder.o_ol_cnt = tpccUtil.randomNumber(5, 15, benchmark.rng());
             oorder.o_all_local = 1;
             oorder.o_entry_d = this.benchmark.getTimestamp(System.currentTimeMillis());
 
@@ -613,7 +615,7 @@ public class Loader {
               order_line.ol_d_id = d;
               order_line.ol_o_id = c;
               order_line.ol_number = l; // ol_number
-              order_line.ol_i_id = TPCCUtil.randomNumber(1,
+              order_line.ol_i_id = tpccUtil.randomNumber(1,
                       TPCCConfig.configItemCount, benchmark.rng());
               if (order_line.ol_o_id < FIRST_UNPROCESSED_O_ID) {
                 order_line.ol_delivery_d = oorder.o_entry_d;
@@ -622,11 +624,11 @@ public class Loader {
                 order_line.ol_delivery_d = null;
                 // random within [0.01 .. 9,999.99]
                 order_line.ol_amount =
-                  (float) (TPCCUtil.randomNumber(1, 999999, benchmark.rng()) / 100.0);
+                  (float) (tpccUtil.randomNumber(1, 999999, benchmark.rng()) / 100.0);
               }
               order_line.ol_supply_w_id = order_line.ol_w_id;
               order_line.ol_quantity = 5;
-              order_line.ol_dist_info = TPCCUtil.randomStr(24);
+              order_line.ol_dist_info = tpccUtil.randomStr(24);
 
               k++;
               for (PreparedStatement orlnPrepStmt : orlnPrepStmts) {

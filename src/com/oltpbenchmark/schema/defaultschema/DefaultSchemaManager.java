@@ -90,7 +90,7 @@ public class DefaultSchemaManager extends SchemaManager {
             // Below, we create 15 procedures, each taking 'i' number of
             // arguments and 'i' update statements. Thus, the number of
             // arguments being built in 'argsSb' and number of updates
-            // in 'updateStmt' increases in every iteration.
+            // in 'updateStmt' increases in every iteration.deliv
             argsSb.append("wid int");
             for (int i = 1; i <= 15; ++i) {
                 argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));

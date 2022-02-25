@@ -88,8 +88,8 @@ public class StockLevel extends Procedure {
                                                                stockGetCountStockFuncLatency);
 
 
-    int threshold = TPCCUtil.randomNumber(10, 20, gen);
-    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
+    int threshold = w.getTpccUtil().randomNumber(10, 20, gen);
+    int d_id = w.getTpccUtil().randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
 
     stockGetDistOrderId.setInt(1, w_id);
     stockGetDistOrderId.setInt(2, d_id);

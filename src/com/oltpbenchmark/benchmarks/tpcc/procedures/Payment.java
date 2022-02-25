@@ -150,34 +150,34 @@ public class Payment extends Procedure {
     payInsertHist = this.getPreparedStatement(conn, payInsertHistSQL);
     customerByName = this.getPreparedStatement(conn, customerByNameSQL);
 
-    int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
+    int districtID = w.getTpccUtil().randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
 
-    int x = TPCCUtil.randomNumber(1, 100, gen);
+    int x = w.getTpccUtil().randomNumber(1, 100, gen);
     int customerDistrictID;
     int customerWarehouseID;
     if (x <= 85) {
       customerDistrictID = districtID;
       customerWarehouseID = w_id;
     } else {
-      customerDistrictID = TPCCUtil.randomNumber(1, TPCCConfig.configDistPerWhse, gen);
+      customerDistrictID = w.getTpccUtil().randomNumber(1, TPCCConfig.configDistPerWhse, gen);
       do {
-          customerWarehouseID = TPCCUtil.getRandomWarehouseId(w, w_id, numWarehouses, gen);
+          customerWarehouseID = w.getTpccUtil().getRandomWarehouseId(w, w_id, numWarehouses, gen);
       } while (customerWarehouseID == w_id && numWarehouses > 1);
     }
 
-    long y = TPCCUtil.randomNumber(1, 100, gen);
+    long y = w.getTpccUtil().randomNumber(1, 100, gen);
     Customer c;
     if (y <= 60) {
       // 60% lookups by last name
-      String customerLastName = TPCCUtil.getNonUniformRandomLastNameForRun(gen);
-      c = getCustomerByName(customerWarehouseID, customerDistrictID, customerLastName);
+      String customerLastName = w.getTpccUtil().getNonUniformRandomLastNameForRun(gen);
+      c = getCustomerByName(customerWarehouseID, customerDistrictID, customerLastName, w);
     } else {
       // 40% lookups by customer ID
-      int customerID = TPCCUtil.getCustomerID(gen);
-      c = getCustomerById(customerWarehouseID, customerDistrictID, customerID);
+      int customerID = w.getTpccUtil().getCustomerID(gen);
+      c = getCustomerById(customerWarehouseID, customerDistrictID, customerID, w);
     }
 
-    float paymentAmount = (float) (TPCCUtil.randomNumber(100, 500000, gen) / 100.0);
+    float paymentAmount = (float) (w.getTpccUtil().randomNumber(100, 500000, gen) / 100.0);
 
     String w_street_1, w_street_2, w_city, w_state, w_zip, w_name;
     String d_street_1, d_street_2, d_city, d_state, d_zip, d_name;
@@ -289,7 +289,7 @@ public class Payment extends Procedure {
     if (LOG.isTraceEnabled()) {
       StringBuilder terminalMessage = new StringBuilder();
       terminalMessage.append("\n+---------------------------- PAYMENT ----------------------------+");
-      terminalMessage.append("\n Date: ").append(TPCCUtil.getCurrentTime());
+      terminalMessage.append("\n Date: ").append(w.getTpccUtil().getCurrentTime());
       terminalMessage.append("\n\n Warehouse: ");
       terminalMessage.append(w_id);
       terminalMessage.append("\n   Street:  ");
@@ -366,7 +366,7 @@ public class Payment extends Procedure {
 
   // attention duplicated code across trans... ok for now to maintain separate
   // prepared statements
-  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id) throws SQLException {
+  public Customer getCustomerById(int c_w_id, int c_d_id, int c_id, Worker w) throws SQLException {
     payGetCust.setInt(1, c_w_id);
     payGetCust.setInt(2, c_d_id);
     payGetCust.setInt(3, c_id);
@@ -376,7 +376,7 @@ public class Payment extends Procedure {
                                  " not found!");
     }
 
-    Customer c = TPCCUtil.newCustomerFromResults(rs);
+    Customer c = w.getTpccUtil().newCustomerFromResults(rs);
     c.c_id = c_id;
     c.c_last = rs.getString("C_LAST");
     rs.close();
@@ -386,7 +386,7 @@ public class Payment extends Procedure {
   // attention this code is repeated in other transacitons... ok for now to
   // allow for separate statements.
   public Customer getCustomerByName(int c_w_id, int c_d_id,
-                                    String customerLastName) throws SQLException {
+                                    String customerLastName, Worker w) throws SQLException {
     ArrayList<Customer> customers = new ArrayList<>();
     customerByName.setInt(1, c_w_id);
     customerByName.setInt(2, c_d_id);
@@ -396,7 +396,7 @@ public class Payment extends Procedure {
       LOG.trace("C_LAST=" + customerLastName + " C_D_ID=" + c_d_id + " C_W_ID=" + c_w_id);
 
     while (rs.next()) {
-      Customer c = TPCCUtil.newCustomerFromResults(rs);
+      Customer c = w.getTpccUtil().newCustomerFromResults(rs);
       c.c_id = rs.getInt("C_ID");
       c.c_last = customerLastName;
       customers.add(c);

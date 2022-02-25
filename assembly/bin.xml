@@ -11,7 +11,7 @@
 <!--        configs -->
         <fileSet>
             <directory>config</directory>
-            <outputDirectory>config</outputDirectory>
+            <outputDirectory>tpcc/config</outputDirectory>
             <includes>
                 <include>*.xml</include>
             </includes>
@@ -19,6 +19,7 @@
 
 <!--        execute file, LICENSE, README.md and log4j.properies file-->
         <fileSet>
+            <outputDirectory>tpcc</outputDirectory>
             <includes>
                 <include>tpccbenchmark</include>
                 <include>LICENSE</include>
@@ -30,7 +31,7 @@
 <!--        oltbenchmark jar file-->
         <fileSet>
             <directory>target</directory>
-            <outputDirectory>libs</outputDirectory>
+            <outputDirectory>tpcc/libs</outputDirectory>
             <includes>
                 <include>oltpbench-*.jar</include>
             </includes>
@@ -39,7 +40,7 @@
 <!--        dependencies except hsqldb (provided scope, excluded from assembly) -->
         <fileSet>
             <directory>target/libs</directory>
-            <outputDirectory>libs</outputDirectory>
+            <outputDirectory>tpcc/libs</outputDirectory>
             <includes>
                 <include>*.jar</include>
             </includes>

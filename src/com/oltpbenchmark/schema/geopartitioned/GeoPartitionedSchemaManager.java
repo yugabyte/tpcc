@@ -60,6 +60,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
                     i, i, geoPartitionPolicy.getTablespaceForPartition(i - 1)));
             execute(String.format("CREATE UNIQUE INDEX idx_order%d ON oorder%d ((o_w_id,o_d_id) HASH,o_c_id,o_id DESC) TABLESPACE %s",
                     i, i, geoPartitionPolicy.getTablespaceForPartition(i - 1)));
+            execute(String.format("CREATE UNIQUE INDEX item_idx%d ON %s(i_id ASC) INCLUDE (i_name, i_price, i_data, i_im_id) TABLESPACE %s", i, TPCCConstants.TABLENAME_ITEM, geoPartitionPolicy.getTablespaceForPartition(i - 1)));
 
         }
     }

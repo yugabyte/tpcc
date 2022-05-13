@@ -1,46 +1,33 @@
 <?xml version="1.0"?>
 <parameters>
-    <enableGeoPartitionedWorkload>false</enableGeoPartitionedWorkload>
+    <enableGeoPartitionedWorkload>true</enableGeoPartitionedWorkload>
     <numberOfPartitions>2</numberOfPartitions>
     <tablespaces>
         <tablespace>
             <name>tablespace0</name>
             <storeItemTable>true</storeItemTable>
             <storePartitionedTables>true</storePartitionedTables>
-            <storePartitions>false</storePartitions>
-            <replicationFactor>1</replicationFactor>
+            <storePartitions>true</storePartitions>
+            <replicationFactor>3</replicationFactor>
             <placementPolicy>
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a0</zone>
-                    <minReplicationFactor>1</minReplicationFactor>
+                    <zone>us-west-2a</zone>
+                    <minReplicationFactor>3</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
         </tablespace>
         <tablespace>
             <name>tablespace1</name>
-            <replicationFactor>1</replicationFactor>
+            <replicationFactor>3</replicationFactor>
             <storePartitions>true</storePartitions>
             <placementPolicy>
                 <placementBlock>
                     <cloud>aws</cloud>
-                    <region>us-west-2</region>
-                    <zone>us-west-2a1</zone>
-                    <minReplicationFactor>1</minReplicationFactor>
-                </placementBlock>
-            </placementPolicy>
-        </tablespace>
-        <tablespace>
-            <name>tablespace2</name>
-            <storePartitions>true</storePartitions>
-            <replicationFactor>1</replicationFactor>
-            <placementPolicy>
-                <placementBlock>
-                    <cloud>aws</cloud>
-                    <region>us-west-2</region>
-                    <zone>us-west-2a2</zone>
-                    <minReplicationFactor>1</minReplicationFactor>
+                    <region>us-east-1</region>
+                    <zone>us-east-1a</zone>
+                    <minReplicationFactor>3</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
         </tablespace>

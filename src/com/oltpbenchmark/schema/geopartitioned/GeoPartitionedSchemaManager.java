@@ -24,8 +24,8 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
         super(conn);
         this.geoPartitionPolicy = geoPartitioningPolicy;
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
-            tables.put(t.name(), 
-                       t.name().equals(TPCCConstants.TABLENAME_ITEM) ? new DefaultTable(t, geoPartitioningPolicy.getTablespaceForItemTable()) 
+            tables.put(t.name(),
+                       t.name().equals(TPCCConstants.TABLENAME_ITEM) ? new DefaultTable(t, geoPartitioningPolicy.getTablespaceForItemTable())
                                                                      : new PartitionedTable(t, geoPartitionPolicy));
         }
     }
@@ -116,7 +116,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
                     "(OL_SUPPLY_W_ID, OL_I_ID) REFERENCES STOCK%d (S_W_ID, S_I_ID) NOT VALID", idx, idx, idx));
         }
     }
-    
+
     @Override
     public void createSqlProcedures() throws Exception {
         try (Statement st = db_connection.createStatement()) {
@@ -132,12 +132,18 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
                 // Create functions that update the partition tables themselves.
                 for (int i = 1; i <= 15; ++i) {
                     argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));
+                    if (i == 1) {
+                        updateStatements.append("WITH ");
+                    } else {
+                        updateStatements.append(", ");
+                    }
                     updateStatements.append(String.format(
-                            "UPDATE STOCK%d SET S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
-                                    "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d;",
-                                    partition, i, i, i, i));
+                            "update_cte%d AS (UPDATE STOCK%d SET " +
+                                    "S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
+                                    "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d)",
+                                    i, partition, i, i, i, i));
                     String updateStmt =
-                            String.format("CREATE PROCEDURE updatestock%d_%d (%s) AS '%s' LANGUAGE SQL;",
+                            String.format("CREATE PROCEDURE updatestock%d_%d (%s) AS '%s SELECT 1' LANGUAGE SQL;",
                                     i, partition, argsSb.toString(), updateStatements.toString());
 
                     st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d_%d", i, partition));

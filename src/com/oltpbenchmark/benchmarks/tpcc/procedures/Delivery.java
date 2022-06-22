@@ -50,18 +50,13 @@ public class Delivery extends Procedure {
       "   AND NO_D_ID = ?" +
       "   AND NO_W_ID = ?");
 
-  public static final InstrumentedSQLStmt delivGetCustIdSQL = new InstrumentedSQLStmt(
-      "SELECT O_C_ID FROM " + TPCCConstants.TABLENAME_OPENORDER +
-      " WHERE O_ID = ? " +
-      "   AND O_D_ID = ? " +
-      "   AND O_W_ID = ?");
-
   public static final InstrumentedSQLStmt delivUpdateCarrierIdSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_OPENORDER +
       "   SET O_CARRIER_ID = ? " +
       " WHERE O_ID = ? " +
       "   AND O_D_ID = ?" +
-      "   AND O_W_ID = ?");
+      "   AND O_W_ID = ?" +
+      "   RETURNING O_C_ID");
 
   public static final InstrumentedSQLStmt delivUpdateDeliveryDateSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_ORDERLINE +
@@ -88,7 +83,6 @@ public class Delivery extends Procedure {
   // Delivery Txn
   private InstrumentedPreparedStatement delivGetOrderId = null;
   private InstrumentedPreparedStatement delivDeleteNewOrder = null;
-  private InstrumentedPreparedStatement delivGetCustId = null;
   private InstrumentedPreparedStatement delivUpdateCarrierId = null;
   private InstrumentedPreparedStatement delivUpdateDeliveryDate = null;
   private InstrumentedPreparedStatement delivSumOrderAmount = null;
@@ -98,7 +92,6 @@ public class Delivery extends Procedure {
     LOG.info("Delivery : ");
     LOG.info("latency GetOrderId " + delivGetOrderIdSQL.getStats());
     LOG.info("latency DeleteNewOrder " + delivDeleteNewOrderSQL.getStats());
-    LOG.info("latency GetCustId " + delivGetCustIdSQL.getStats());
     LOG.info("latency UpdateCarrierId " + delivUpdateCarrierIdSQL.getStats());
     LOG.info("latency UpdateDeliveryDate " + delivUpdateDeliveryDateSQL.getStats());
     LOG.info("latency SumOrderAmount " + delivSumOrderAmountSQL.getStats());
@@ -114,7 +107,6 @@ public class Delivery extends Procedure {
     Timestamp timestamp = w.getBenchmarkModule().getTimestamp(System.currentTimeMillis());
     delivGetOrderId = this.getPreparedStatement(conn, delivGetOrderIdSQL);
     delivDeleteNewOrder =  this.getPreparedStatement(conn, delivDeleteNewOrderSQL);
-    delivGetCustId = this.getPreparedStatement(conn, delivGetCustIdSQL);
     delivUpdateCarrierId = this.getPreparedStatement(conn, delivUpdateCarrierIdSQL);
     delivUpdateDeliveryDate = this.getPreparedStatement(conn, delivUpdateDeliveryDateSQL);
     delivSumOrderAmount = this.getPreparedStatement(conn, delivSumOrderAmountSQL);
@@ -159,36 +151,22 @@ public class Delivery extends Procedure {
         throw new RuntimeException(msg);
       }
 
-      delivGetCustId.setInt(1, no_o_id);
-      delivGetCustId.setInt(2, d_id);
-      delivGetCustId.setInt(3, w_id);
-      if (trace) LOG.trace("delivGetCustId START");
-      rs = delivGetCustId.executeQuery();
-      if (trace) LOG.trace("delivGetCustId END");
+      delivUpdateCarrierId.setInt(1, o_carrier_id);
+      delivUpdateCarrierId.setInt(2, no_o_id);
+      delivUpdateCarrierId.setInt(3, d_id);
+      delivUpdateCarrierId.setInt(4, w_id);
+      if (trace) LOG.trace("delivUpdateCarrierId START");
+      rs = delivUpdateCarrierId.executeQuery();
+      if (trace) LOG.trace("delivUpdateCarrierId END");
 
       if (!rs.next()) {
-        String msg = String.format("Failed to retrieve ORDER record [W_ID=%d, D_ID=%d, O_ID=%d]",
+        String msg = String.format("Failed to update ORDER record [W_ID=%d, D_ID=%d, O_ID=%d]",
                                    w_id, d_id, no_o_id);
         if (trace) LOG.warn(msg);
         throw new RuntimeException(msg);
       }
       c_id = rs.getInt("O_C_ID");
       rs.close();
-
-      delivUpdateCarrierId.setInt(1, o_carrier_id);
-      delivUpdateCarrierId.setInt(2, no_o_id);
-      delivUpdateCarrierId.setInt(3, d_id);
-      delivUpdateCarrierId.setInt(4, w_id);
-      if (trace) LOG.trace("delivUpdateCarrierId START");
-      result = delivUpdateCarrierId.executeUpdate();
-      if (trace) LOG.trace("delivUpdateCarrierId END");
-
-      if (result != 1) {
-        String msg = String.format("Failed to update ORDER record [W_ID=%d, D_ID=%d, O_ID=%d]",
-                                   w_id, d_id, no_o_id);
-        if (trace) LOG.warn(msg);
-        throw new RuntimeException(msg);
-      }
 
       delivUpdateDeliveryDate.setTimestamp(1, timestamp);
       delivUpdateDeliveryDate.setInt(2, no_o_id);

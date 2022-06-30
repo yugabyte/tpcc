@@ -20,7 +20,7 @@
 	</publications>
 	<dependencies>
       <!-- JDBC Drivers -->
-		<dependency org="com.yugabyte" name="jdbc-yugabytedb" rev="42.3.3" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
+		<dependency org="com.yugabyte" name="jdbc-yugabytedb" rev="42.3.4" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<dependency org="org.hsqldb" name="hsqldb" rev="2.4.1" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 
 		<dependency org="com.zaxxer" name="HikariCP" rev="3.4.5" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>

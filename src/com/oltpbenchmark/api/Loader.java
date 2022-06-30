@@ -167,6 +167,9 @@ public class Loader {
 
     private ArrayList<PreparedStatement> getInsertStatement(Connection conn, String tableName) throws SQLException {
       int attempts = workConf.getMaxLoaderRetries() + 1;
+      // Number prepared statements for every insert statement should be equal to number of retries.
+      // If there is an exception in insert, same prepared statement cannot be used to retry in certain cases.
+      // Exceptions are thrown. So for every retry we will use a different prepared statement.
       ArrayList<PreparedStatement> statements = new ArrayList<>();
       for (int i = 0; i < attempts; ++i) {
         statements.add(conn.prepareStatement(Table.getInsertDml(tableName)));
@@ -185,6 +188,11 @@ public class Loader {
     private void performInsertsWithRetries(Connection conn, ArrayList<PreparedStatement>... stmts) throws Exception {
       int attempts = workConf.getMaxLoaderRetries() + 1;
       SQLException failure = null;
+      // If there is an exception in insert, same prepared statement
+      // cannot be used to retry in certain cases. So for every retry we will use a
+      // different prepared statement. Clear all the prepared statement after one is successful.
+      // Not the best way to solve the problem but lot of re-organizing would be
+      // needed if we want a different approach
       for (int i = 0; i < attempts; ++i) {
         try {
           for (ArrayList<PreparedStatement> stmt : stmts) {

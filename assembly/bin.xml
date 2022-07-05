@@ -1,0 +1,50 @@
+<assembly>
+
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <fileSets>
+
+<!--        configs -->
+        <fileSet>
+            <directory>config</directory>
+            <outputDirectory>tpcc/config</outputDirectory>
+            <includes>
+                <include>*.xml</include>
+            </includes>
+        </fileSet>
+
+<!--        execute file, LICENSE, README.md and log4j.properies file-->
+        <fileSet>
+            <outputDirectory>tpcc</outputDirectory>
+            <includes>
+                <include>tpccbenchmark</include>
+                <include>LICENSE</include>
+                <include>README.md</include>
+                <include>log4j.properties</include>
+            </includes>
+        </fileSet>
+
+<!--        oltbenchmark jar file-->
+        <fileSet>
+            <directory>target</directory>
+            <outputDirectory>tpcc/libs</outputDirectory>
+            <includes>
+                <include>oltpbench-*.jar</include>
+            </includes>
+        </fileSet>
+
+<!--        dependencies except hsqldb (provided scope, excluded from assembly) -->
+        <fileSet>
+            <directory>target/libs</directory>
+            <outputDirectory>tpcc/libs</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
+
+    </fileSets>
+</assembly>

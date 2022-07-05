@@ -21,10 +21,9 @@ features, e.g., per-transaction-type latency and throughput logs.
   ```
 + Run the following commands to build:
   ```bash
-  ant bootstrap
-  ant resolve
-  ant build
+  mvn clean install
   ```
++ Copy and unpack `target/tpcc.tar.gz` file on client machine
 
 ## Setup of the Database
 The DB connection details should be as follows:
@@ -45,38 +44,63 @@ The workload descriptor works the same way as it does in the upstream branch and
 
 
 ## Running the Benchmark
-A utility script (./tpccbenchmark) is provided for running the benchmark. The options are
+A utility script `./tpccbenchmark` is provided for running the benchmark. The options are
 
 ```
--c,--config <arg>            [required] Workload configuration file
-   --clear <arg>             Clear all records in the database for this
-                             benchmark
-   --create <arg>            Initialize the database for this benchmark
-   --execute <arg>           Execute the benchmark workload
--h,--help                    Print this help
-   --histograms              Print txn histograms
-   --load <arg>              Load data using the benchmark's data loader
--o,--output <arg>            Output file (default System.out)
-   --runscript <arg>         Run an SQL script
--s,--sample <arg>            Sampling window
--v,--verbose                 Display Messages
+ -c,--config <arg>                    Workload configuration file
+                                      [default: config/workload_all.xml]
+    --clear <arg>                     Clear all records in the database
+                                      for this benchmark
+    --create <arg>                    Initialize the database for this
+                                      benchmark
+    --create-sql-procedures <arg>     Creates the SQL procedures
+    --dir <arg>                       Directory containing the csv files
+    --enable-foreign-keys <arg>       Whether to enable foregin keys
+    --execute <arg>                   Execute the benchmark workload
+ -gpc,--geopartitioned-config <arg>   GeoPartitioning configuration file
+                                      [default:
+                                      config/geopartitioned_workload.xml]
+ -h,--help                            Print this help
+    --histograms                      Print txn histograms
+ -im,--interval-monitor <arg>         Throughput Monitoring Interval in
+                                      milliseconds
+    --initial-delay-secs <arg>        Delay in seconds for starting the
+                                      benchmark
+    --load <arg>                      Load data using the benchmark's data
+                                      loader
+    --loaderthreads <arg>             Number of loader threads (default
+                                      10)
+    --merge-results <arg>             Merge results from various output
+                                      files
+    --nodes <arg>                     comma separated list of nodes
+                                      (default 127.0.0.1)
+    --num-connections <arg>           Number of connections used
+    --output-raw <arg>                Output raw data
+    --output-samples <arg>            Output sample data
+    --start-warehouse-id <arg>        Start warehouse id
+    --total-warehouses <arg>          Total number of warehouses across
+                                      all executions
+    --vv                              Output verbose execute results
+    --warehouses <arg>                Number of warehouses (default 10)
+    --warmup-time-secs <arg>          Warmup time in seconds for the
+                                      benchmark
 ```
 
 ## Example
-The following command for example initiates a tpcc database (--create=true --load=true) and a then run a workload as described in config/workload_all.xml file. The results (latency, throughput) are summarized and written into two files: outputfile.res (aggregated) and outputfile.raw (detailed):
+First step is to create tables and indexes, can be done by calling following command
 
 ```
-./tpccbenchmark -c config/workload_all.xml --create=true --load=true --execute=true -s 300 -o outputfile
+./tpccbenchmark --nodes $COMMA_SEPARATED_IPS --create true --vv
 ```
 
-Since data loading can be a lengthy process, one could first create a and populate a database which can be reused for multiple experiments:
+Since data loading can be a lengthy process,one can be used to populate a database which can be reused for multiple experiments:
 
 ```
-./tpccbenchmark -c config/workload_all.xml --create=true --load=true
+./tpccbenchmark --nodes $COMMA_SEPARATED_IPS --load true --warehouses $WAREHOUSES --loaderthreads $LOADER_THREADS --vv
 ```
 
 Then running an experiment could be simply done with the following command on a fresh or used database.
 
 ```
-./tpccbenchmark -c config/workload_all.xml --execute=true -s 300 -o outputfile
+./tpccbenchmark--nodes $COMMA_SEPARATED_IPS --execute true --warehouses $WAREHOUSES --warmup-time-secs 30 --vv
 ```

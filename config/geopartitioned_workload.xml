@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <parameters>
-    <enableGeoPartitionedWorkload>false</enableGeoPartitionedWorkload>
-    <numberOfPartitions>2</numberOfPartitions>
+    <enableGeoPartitionedWorkload>true</enableGeoPartitionedWorkload>
+    <useTablegroups>true</useTablegroups>
+    <numberOfPartitions>1</numberOfPartitions>
     <tablespaces>
         <tablespace>
             <name>tablespace0</name>
@@ -13,7 +14,7 @@
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a0</zone>
+                    <zone>us-west-2a</zone>
                     <minReplicationFactor>1</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
@@ -26,7 +27,7 @@
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a1</zone>
+                    <zone>us-west-2b</zone>
                     <minReplicationFactor>1</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
@@ -39,10 +40,26 @@
                 <placementBlock>
                     <cloud>aws</cloud>
                     <region>us-west-2</region>
-                    <zone>us-west-2a2</zone>
+                    <zone>us-west-2c</zone>
                     <minReplicationFactor>1</minReplicationFactor>
                 </placementBlock>
             </placementPolicy>
         </tablespace>
     </tablespaces>
+    <tablegroups>
+        <tablegroup>
+            <name>tablegroup0</name>
+            <tablespace>tablespace0</tablespace>
+        </tablegroup>
+        <tablegroup>
+            <name>tablegroup1</name>
+            <tablespace>tablespace1</tablespace>
+            <storePartitions>true</storePartitions>
+        </tablegroup>
+        <tablegroup>
+            <name>tablegroup2</name>
+            <tablespace>tablespace2</tablespace>
+            <storePartitions>true</storePartitions>
+        </tablegroup>
+    </tablegroups>
 </parameters>

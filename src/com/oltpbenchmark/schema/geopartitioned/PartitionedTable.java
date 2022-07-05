@@ -25,6 +25,10 @@ public class PartitionedTable extends Table {
         return policy.getTablespaceForPartition(idx);
     }
 
+    private String tablegroupForPartition(int idx) {
+        return policy.getTablegroupForPartition(idx);
+    }
+
     @Override
     public String getCreateDdl() {
         StringBuilder sb = new StringBuilder();
@@ -38,9 +42,9 @@ public class PartitionedTable extends Table {
     private String createPartitionedTable() {
         StringBuilder sb = new StringBuilder();
         sb.append("CREATE TABLE ").append(schema.name()).append(" ( ");
- 
+
         addColDescForCreateDDL(sb);
-       
+
         // Append the partition key.
         sb.append(")\n PARTITION BY RANGE ").append(schema.getPartitionKey());
         // Append the tablespace name.
@@ -63,7 +67,7 @@ public class PartitionedTable extends Table {
             // While creating partitions, skip the column declaration.
             sb.append("\n").append(c.getName()).append(',');
         }
-        
+
         // Remove trailing comma added after the last column in above loop.
         sb.setLength(sb.length() - 1);
 
@@ -71,7 +75,11 @@ public class PartitionedTable extends Table {
             sb.append(String.format(",\n PRIMARY KEY %s", schema.getPrimaryKey()));
         }
         sb.append(String.format(")\n FOR VALUES FROM (%d) TO (%d)", start, end));
-        sb.append(String.format(" TABLESPACE %s;", tablespaceForPartition(idx - 1)));
+        if (policy.shouldUseTablegroups()) {
+            sb.append(String.format(" TABLEGROUP %s;", tablegroupForPartition(idx - 1)));
+        } else {
+            sb.append(String.format(" TABLESPACE %s;", tablespaceForPartition(idx - 1)));
+        }
 
         return sb.toString();
     }

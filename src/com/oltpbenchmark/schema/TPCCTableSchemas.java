@@ -20,14 +20,14 @@ public class TPCCTableSchemas {
                 .column("ol_supply_w_id", "int NOT NULL")
                 .column("ol_quantity", "decimal(2,0) NOT NULL")
                 .column("ol_dist_info", "char(24) NOT NULL")
-                .primaryKey("((ol_w_id,ol_d_id) HASH,ol_o_id,ol_number)")
+                .primaryKey("(ol_w_id,ol_d_id,ol_o_id,ol_number)")
                 .partitionKey("(ol_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_NEWORDER)
                 .column("no_w_id", "int NOT NULL")
                 .column("no_d_id", "int NOT NULL")
                 .column("no_o_id", "int NOT NULL")
-                .primaryKey("((no_w_id,no_d_id) HASH,no_o_id)")
+                .primaryKey("(no_w_id,no_d_id,no_o_id)")
                 .partitionKey("(no_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_STOCK)
@@ -48,7 +48,7 @@ public class TPCCTableSchemas {
                 .column("s_dist_08", "char(24) NOT NULL")
                 .column("s_dist_09", "char(24) NOT NULL")
                 .column("s_dist_10", "char(24) NOT NULL")
-                .primaryKey("(s_w_id HASH, s_i_id ASC)")
+                .primaryKey("(s_w_id, s_i_id ASC)")
                 .partitionKey("(s_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_OPENORDER)
@@ -60,7 +60,7 @@ public class TPCCTableSchemas {
                 .column("o_ol_cnt", "decimal(2,0) NOT NULL")
                 .column("o_all_local", "decimal(1,0) NOT NULL")
                 .column("o_entry_d", "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP")
-                .primaryKey("((o_w_id,o_d_id) HASH,o_id)")
+                .primaryKey("(o_w_id,o_d_id,o_id)")
                 .partitionKey("(o_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_HISTORY)
@@ -96,7 +96,7 @@ public class TPCCTableSchemas {
                 .column("c_since", "timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP")
                 .column("c_middle", "char(2) NOT NULL")
                 .column("c_data", "varchar(500) NOT NULL")
-                .primaryKey("((c_w_id,c_d_id) HASH,c_id)")
+                .primaryKey("(c_w_id,c_d_id,c_id)")
                 .partitionKey("(c_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_DISTRICT)
@@ -111,7 +111,7 @@ public class TPCCTableSchemas {
                 .column("d_city", "varchar(20) NOT NULL")
                 .column("d_state", "char(2) NOT NULL")
                 .column("d_zip", "char(9) NOT NULL")
-                .primaryKey("((d_w_id,d_id) HASH)")
+                .primaryKey("(d_w_id,d_id)")
                 .partitionKey("(d_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_ITEM)
@@ -136,7 +136,7 @@ public class TPCCTableSchemas {
                 .partitionKey("(w_id)")
                 .build()
             ).collect(Collectors.toMap(TableSchema::name, e -> e)));
-    
+
     public static TableSchema getTableSchema(String tablename) {
         return tables.get(tablename);
     }

@@ -481,7 +481,7 @@ public class Worker implements Runnable {
             startConnection = System.nanoTime();
 
             conn = dataSource.getConnection();
-            conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+            // conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
             if (next.getProcedureClass() != StockLevel.class) {
                 // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
                 // Isolation.

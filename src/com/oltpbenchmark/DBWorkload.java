@@ -92,6 +92,13 @@ public class DBWorkload {
       return;
     }
 
+    if (options.getMode() == CommandLineOptions.Mode.MERGE_JSON_RESULTS) {
+      String dirPath = options.getDirPath().orElseThrow(() ->
+              new RuntimeException("Must specify directory with json results to merge with --dir={directory path}"));
+      JsonMetricsHelper.mergeJsonResults(dirPath);
+      return;
+    }
+
     if (options.getMode() == CommandLineOptions.Mode.MERGE_RESULTS) {
       String dirPath = options.getDirPath().orElseThrow(() ->
               new RuntimeException("Must specify directory with results to merge with --dir={directory path}"));
@@ -298,7 +305,7 @@ public class DBWorkload {
                     terminals,
                     Phase.Arrival.REGULAR);
 
-      jsonMetricsHelper.setTestConfig(nodes.size(),numWarehouses, numDBConnections,
+      jsonMetricsHelper.setTestConfig(nodes.size(), totalWarehousesAcrossShards, numWarehouses, numDBConnections,
               warmupTime, time, wrkld.getMaxRetriesPerTransaction());
       // CHECKING INPUT PHASES
       int j = 0;
@@ -847,7 +854,6 @@ public class DBWorkload {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
                                          list_latencies.get(i)));
     }
-    JsonMetricsHelper.mergeJsonResults(dirPath);
   }
 
   public static String getAssertWarning() {

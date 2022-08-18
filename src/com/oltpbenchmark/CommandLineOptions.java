@@ -77,6 +77,7 @@ public class CommandLineOptions {
         LOAD,
         EXECUTE,
         MERGE_RESULTS,
+        MERGE_JSON_RESULTS,
         ENABLE_FOREIGN_KEYS,
         CREATE_SQL_PROCEDURES,
     }
@@ -102,6 +103,7 @@ public class CommandLineOptions {
         if (isBooleanOptionSet("execute")) return Mode.EXECUTE;
         if (isBooleanOptionSet("enable-foreign-keys")) return Mode.ENABLE_FOREIGN_KEYS;
         if (isBooleanOptionSet("create-sql-procedures")) return Mode.CREATE_SQL_PROCEDURES;
+        if (isBooleanOptionSet("merge-json-results")) return Mode.MERGE_JSON_RESULTS;
         assert isBooleanOptionSet("merge-results");
         return Mode.MERGE_RESULTS;
     }

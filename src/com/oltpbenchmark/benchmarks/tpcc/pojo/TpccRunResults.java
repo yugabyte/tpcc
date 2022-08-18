@@ -33,6 +33,7 @@ public class TpccRunResults {
 
     public class TestConf {
         public int numNodes;
+        public int totalWarehouses;
         public int numWarehouses;
         public int numDBConnections;
         public int warmupTimeInSecs;

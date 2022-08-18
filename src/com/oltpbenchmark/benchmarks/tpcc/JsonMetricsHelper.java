@@ -42,11 +42,11 @@ public class JsonMetricsHelper {
     }
 
     public void addLatency(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        tpccRunResults.Latencies.put(op,getLatencyValueList(op, latencyList, connLatencyList));
+        tpccRunResults.Latencies.put(op,getLatencyValueList(null, latencyList, connLatencyList));
     }
 
     public void addFailureLatency(String op, List<Integer> latencyList, List<Integer> connLatencyList) {
-        tpccRunResults.FailureLatencies.put(op,getLatencyValueList(op, latencyList, connLatencyList));
+        tpccRunResults.FailureLatencies.put(op,getLatencyValueList(null, latencyList, connLatencyList));
     }
 
     public void addWorkerTaskLatency(String op, String task, List<Integer> latencyList) {
@@ -63,13 +63,13 @@ public class JsonMetricsHelper {
         tpccRunResults.RetryAttempts.put(op, retryObj);
     }
 
-    private TpccRunResults.LatencyList getLatencyValueList(String op, List<Integer> latencyList,
+    private TpccRunResults.LatencyList getLatencyValueList(String task, List<Integer> latencyList,
                                                            List<Integer> connAcqLatencyList) {
         DecimalFormat df = new DecimalFormat();
         df.setMaximumFractionDigits(2);
         df.setGroupingUsed(false);
         TpccRunResults.LatencyList valueList = tpccRunResults.new LatencyList();
-        //valueList.Transaction = op;
+        valueList.WorkerTask = task;
         valueList.Count = latencyList.size();
         valueList.avgLatency = Double.parseDouble(df.format(LatencyMetricsUtil.getAverageLatency(latencyList)));
         valueList.P99Latency = Double.parseDouble(df.format(LatencyMetricsUtil.getP99Latency(latencyList)));
@@ -78,6 +78,7 @@ public class JsonMetricsHelper {
                     Double.parseDouble(df.format(LatencyMetricsUtil.getAverageLatency(connAcqLatencyList)));
         return valueList;
     }
+
 
     /* Writes the Json object to a JSON file */
     public void writeMetricsToJSONFile() {
@@ -185,7 +186,7 @@ public class JsonMetricsHelper {
                             opLatency.avgLatency : latency.minLatency;
                     latency.maxLatency = latency.maxLatency < opLatency.avgLatency ?
                             opLatency.avgLatency : latency.maxLatency;
-                    latency.P99Latency = latency.P99Latency > opLatency.P99Latency ?
+                    latency.P99Latency = latency.P99Latency < opLatency.P99Latency ?
                             opLatency.P99Latency : latency.P99Latency;
                     latency.minConnAcqLatency = latency.minConnAcqLatency > opLatency.connectionAcqLatency ?
                             opLatency.connectionAcqLatency : latency.minConnAcqLatency;
@@ -215,7 +216,7 @@ public class JsonMetricsHelper {
                             opLatency.avgLatency : failureLat.minLatency;
                     failureLat.maxLatency = failureLat.maxLatency < opLatency.avgLatency ?
                             opLatency.avgLatency : failureLat.maxLatency;
-                    failureLat.P99Latency = failureLat.P99Latency > opLatency.P99Latency ?
+                    failureLat.P99Latency = failureLat.P99Latency < opLatency.P99Latency ?
                             opLatency.P99Latency : failureLat.P99Latency;
                     failureLat.minConnAcqLatency = failureLat.minConnAcqLatency > opLatency.connectionAcqLatency ?
                             opLatency.connectionAcqLatency : failureLat.minConnAcqLatency;

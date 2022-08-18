@@ -20,7 +20,7 @@ public class TpccRunResults {
     public Map<String, RetryAttemptsData> RetryAttempts = new LinkedHashMap<>();
 
     public class LatencyList {
-        //public String Transaction;
+        public String WorkerTask;
         public int Count;
         public Double avgLatency;
         public Double minLatency;

@@ -176,7 +176,7 @@ public class JsonMetricsHelper {
                             opLatency.avgLatency : latency.minLatency;
                     latency.maxLatency = latency.maxLatency < opLatency.avgLatency ?
                             opLatency.avgLatency : latency.maxLatency;
-                    latency.P99Latency = latency.P99Latency > opLatency.P99Latency ?
+                    latency.P99Latency = latency.P99Latency < opLatency.P99Latency ?
                             opLatency.P99Latency : latency.P99Latency;
                     latency.minConnAcqLatency = latency.minConnAcqLatency > opLatency.connectionAcqLatency ?
                             opLatency.connectionAcqLatency : latency.minConnAcqLatency;
@@ -209,7 +209,7 @@ public class JsonMetricsHelper {
                             opLatency.avgLatency : failureLat.minLatency;
                     failureLat.maxLatency = failureLat.maxLatency < opLatency.avgLatency ?
                             opLatency.avgLatency : failureLat.maxLatency;
-                    failureLat.P99Latency = failureLat.P99Latency > opLatency.P99Latency ?
+                    failureLat.P99Latency = failureLat.P99Latency < opLatency.P99Latency ?
                             opLatency.P99Latency : failureLat.P99Latency;
                     failureLat.minConnAcqLatency = failureLat.minConnAcqLatency > opLatency.connectionAcqLatency ?
                             opLatency.connectionAcqLatency : failureLat.minConnAcqLatency;

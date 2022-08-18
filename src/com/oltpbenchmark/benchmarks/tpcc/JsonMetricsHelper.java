@@ -24,8 +24,9 @@ public class JsonMetricsHelper {
         tpccRunResults = new TpccRunResults();
     }
 
-    public void setTestConfig(int numNodes, int numWH, int numDBConn, int warmuptime, int runtime, int numRetries) {
+    public void setTestConfig(int numNodes, int totalWH, int numWH, int numDBConn, int warmuptime, int runtime, int numRetries ) {
         tpccRunResults.TestConfiguration.numNodes = numNodes;
+        tpccRunResults.TestConfiguration.totalWarehouses = totalWH;
         tpccRunResults.TestConfiguration.numWarehouses = numWH;
         tpccRunResults.TestConfiguration.numDBConnections = numDBConn;
         tpccRunResults.TestConfiguration.warmupTimeInSecs = warmuptime;
@@ -102,7 +103,10 @@ public class JsonMetricsHelper {
     }
 
     private static double computeAverage(double old_value, double newValue, int count) {
-        return ((old_value * count) + newValue) / (count + 1);
+        DecimalFormat df = new DecimalFormat();
+        df.setMaximumFractionDigits(2);
+        df.setGroupingUsed(false);
+        return Double.parseDouble(df.format(((old_value * count) + newValue) / (count + 1)));
     }
 
     /*
@@ -119,8 +123,11 @@ public class JsonMetricsHelper {
                 continue;
             }
             try {
-                listTpccRunResults.add(gson.fromJson(
-                        new String(Files.readAllBytes(Paths.get(file))), TpccRunResults.class));
+                file = dirPath + File.separator + file;
+                if (new File(file).isFile()) {
+                    listTpccRunResults.add(gson.fromJson(
+                            new String(Files.readAllBytes(Paths.get(file))), TpccRunResults.class));
+                }
             } catch (IOException ie) {
                 LOG.error("Got exception while reading json file - " + file + " : ", ie);
                 return;
@@ -129,8 +136,12 @@ public class JsonMetricsHelper {
         int numNewOrder = 0;
 
         int filesMergedIdx = 0;
+        boolean firstFile = true;
         for (TpccRunResults tpccResult : listTpccRunResults) {
-            mergedTpccResults.TestConfiguration = tpccResult.TestConfiguration;
+            if(firstFile){
+                mergedTpccResults.TestConfiguration = tpccResult.TestConfiguration;
+                firstFile = false;
+            }
 
             if(filesMergedIdx == 0) {
                 mergedTpccResults.Results.throughputMin = tpccResult.Results.throughput;
@@ -217,7 +228,7 @@ public class JsonMetricsHelper {
         JsonMetricsHelper jsonHelper = new JsonMetricsHelper();
         jsonHelper.tpccRunResults = mergedTpccResults;
         double tpmc = 1.0 * numNewOrder * 60 / mergedTpccResults.TestConfiguration.runTimeInSecs;
-        mergedTpccResults.Results.efficiency = 1.0 * tpmc * 100 / mergedTpccResults.TestConfiguration.numWarehouses / 12.86;
+        mergedTpccResults.Results.efficiency = 1.0 * tpmc * 100 / mergedTpccResults.TestConfiguration.totalWarehouses / 12.86;
         mergedTpccResults.Results.tpmc = tpmc;
 
         jsonHelper.writeMetricsToJSONFile();

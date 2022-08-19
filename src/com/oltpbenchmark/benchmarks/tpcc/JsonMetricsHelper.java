@@ -227,12 +227,10 @@ public class JsonMetricsHelper {
                     retryAttemptsData = mergedTpccResults.RetryAttempts.get(op);
                     retryAttemptsData.count += retryAttemp.count;
                     List retryFailures = (List<Double>)retryAttemptsData.retriesFailureCount.get(0);
-                    LOG.info(retryFailures);
-//                    for(int i=0; i < retryFailures.size(); i++) {
-//                        LOG.info(((List<Double>)retryAttemptsData.retriesFailureCount.get(0)).get(i) + ((List<Double>)retryAttemp.retriesFailureCount.get(0)).get(i));
-//                        retryFailures.set(i, ((List<Double>)retryAttemptsData.retriesFailureCount.get(0)).get(i) + ((List<Double>)retryAttemp.retriesFailureCount.get(0)).get(i));
-//                        retryAttemptsData.retriesFailureCount.set(i, retryFailures);
-//                    }
+                    for(int i=0; i < retryFailures.size(); i++) {
+                        retryFailures.set(i, (((List<Double>)retryAttemptsData.retriesFailureCount.get(0)).get(i)) + (((List<Double>)retryAttemp.retriesFailureCount.get(0)).get(i)));
+                    }
+                    retryAttemptsData.retriesFailureCount.set(0, retryFailures);
                     mergedTpccResults.RetryAttempts.put(op, retryAttemptsData);
                 }
             }

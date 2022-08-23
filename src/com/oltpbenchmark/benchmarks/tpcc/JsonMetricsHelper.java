@@ -139,16 +139,12 @@ public class JsonMetricsHelper {
         int filesMergedIdx = 0;
         boolean firstFile = true;
         for (TpccRunResults tpccResult : listTpccRunResults) {
-            if(firstFile){
+
+            if(filesMergedIdx == 0) {
                 mergedTpccResults.TestConfiguration = tpccResult.TestConfiguration;
-                firstFile = false;
-            }
-
-            if (filesMergedIdx == 0) {
-                mergedTpccResults.Results.throughputMin = tpccResult.Results.throughput;
-                mergedTpccResults.Results.throughputMax = tpccResult.Results.throughput;
+                mergedTpccResults.Results.throughputMin =
+                        mergedTpccResults.Results.throughputMax = tpccResult.Results.throughput;
                 mergedTpccResults.Results.throughput = tpccResult.Results.throughput;
-
             } else {
                 if (mergedTpccResults.Results.throughputMin > tpccResult.Results.throughput)
                     mergedTpccResults.Results.throughputMin = tpccResult.Results.throughput;
@@ -192,9 +188,13 @@ public class JsonMetricsHelper {
                             opLatency.connectionAcqLatency : latency.minConnAcqLatency;
                     latency.maxConnAcqLatency = latency.maxConnAcqLatency < opLatency.connectionAcqLatency ?
                             opLatency.connectionAcqLatency : latency.maxConnAcqLatency;
+                    latency.avgLatency = computeAverage(latency.avgLatency, opLatency.avgLatency, filesMergedIdx);
+                    latency.connectionAcqLatency = computeAverage(latency.connectionAcqLatency,
+                            opLatency.connectionAcqLatency, filesMergedIdx);
                 }
                 latency.Count += opLatency.Count;
                 mergedTpccResults.Latencies.put(op, latency);
+
             }
 
             Map<String, TpccRunResults.LatencyList> failureLatList = tpccResult.FailureLatencies;
@@ -222,6 +222,10 @@ public class JsonMetricsHelper {
                             opLatency.connectionAcqLatency : failureLat.minConnAcqLatency;
                     failureLat.maxConnAcqLatency = failureLat.maxConnAcqLatency < opLatency.connectionAcqLatency ?
                             opLatency.connectionAcqLatency : failureLat.maxConnAcqLatency;
+                    failureLat.Count += opLatency.Count;
+                    failureLat.avgLatency = computeAverage(failureLat.avgLatency, opLatency.avgLatency, filesMergedIdx);
+                    failureLat.connectionAcqLatency = computeAverage(failureLat.connectionAcqLatency,
+                            opLatency.connectionAcqLatency, filesMergedIdx);
                 }
 
                 failureLat.Count += opLatency.Count;
@@ -234,6 +238,28 @@ public class JsonMetricsHelper {
                             opLatency.connectionAcqLatency, filesMergedIdx);
                 } else failureLat.connectionAcqLatency = opLatency.connectionAcqLatency;
                 mergedTpccResults.FailureLatencies.put(op, failureLat);
+            }
+
+            Map<String, TpccRunResults.RetryAttemptsData> retryAttempts = tpccResult.RetryAttempts;
+            for (Map.Entry<String, TpccRunResults.RetryAttemptsData> entry : retryAttempts.entrySet()) {
+                String op = entry.getKey();
+                TpccRunResults.RetryAttemptsData retryAttemp = entry.getValue();
+                TpccRunResults.RetryAttemptsData retryAttemptsData;
+                if (filesMergedIdx == 0) {
+                    retryAttemptsData = mergedTpccResults. new RetryAttemptsData();
+                    retryAttemptsData.count = retryAttemp.count;
+                    retryAttemptsData.retriesFailureCount = retryAttemp.retriesFailureCount;
+                    mergedTpccResults.RetryAttempts.put(op, retryAttemptsData);
+                } else {
+                    retryAttemptsData = mergedTpccResults.RetryAttempts.get(op);
+                    retryAttemptsData.count += retryAttemp.count;
+                    List retryFailures = (List<Double>)retryAttemptsData.retriesFailureCount.get(0);
+                    for(int i=0; i < retryFailures.size(); i++) {
+                        retryFailures.set(i, (((List<Double>)retryAttemptsData.retriesFailureCount.get(0)).get(i)) + (((List<Double>)retryAttemp.retriesFailureCount.get(0)).get(i)));
+                    }
+                    retryAttemptsData.retriesFailureCount.set(0, retryFailures);
+                    mergedTpccResults.RetryAttempts.put(op, retryAttemptsData);
+                }
             }
             filesMergedIdx++;
         }

@@ -64,6 +64,7 @@ public class CommandLineOptions {
                 "Delay in seconds for starting the benchmark");
         COMMAND_LINE_OPTS.addOption(null, "num-connections", true, "Number of connections used");
         COMMAND_LINE_OPTS.addOption(null, "merge-results", true, "Merge results from various output files");
+        COMMAND_LINE_OPTS.addOption(null, "merge-json-results", true, "Merge results from various json output files");
         COMMAND_LINE_OPTS.addOption(null, "dir", true, "Directory containing the csv files");
         COMMAND_LINE_OPTS.addOption(null, "vv", false, "Output verbose execute results");
     }
@@ -77,6 +78,7 @@ public class CommandLineOptions {
         LOAD,
         EXECUTE,
         MERGE_RESULTS,
+        MERGE_JSON_RESULTS,
         ENABLE_FOREIGN_KEYS,
         CREATE_SQL_PROCEDURES,
     }
@@ -102,6 +104,7 @@ public class CommandLineOptions {
         if (isBooleanOptionSet("execute")) return Mode.EXECUTE;
         if (isBooleanOptionSet("enable-foreign-keys")) return Mode.ENABLE_FOREIGN_KEYS;
         if (isBooleanOptionSet("create-sql-procedures")) return Mode.CREATE_SQL_PROCEDURES;
+        if (isBooleanOptionSet("merge-json-results")) return Mode.MERGE_JSON_RESULTS;
         assert isBooleanOptionSet("merge-results");
         return Mode.MERGE_RESULTS;
     }

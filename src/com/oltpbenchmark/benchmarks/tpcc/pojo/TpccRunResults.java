@@ -22,17 +22,18 @@ public class TpccRunResults {
     public class LatencyList {
         public String Transaction;
         public int Count;
-        public double minLatency;
-        public double avgLatency;
-        public double maxLatency;
-        public double P99Latency;
-        public double connectionAcqLatency;
-        public double minConnAcqLatency;
-        public double maxConnAcqLatency;
+        public Double minLatency;
+        public Double avgLatency;
+        public Double maxLatency;
+        public Double P99Latency;
+        public Double connectionAcqLatency;
+        public Double minConnAcqLatency;
+        public Double maxConnAcqLatency;
     }
 
     public class TestConf {
         public int numNodes;
+        public int totalWarehouses;
         public int numWarehouses;
         public int numDBConnections;
         public int warmupTimeInSecs;
@@ -42,11 +43,11 @@ public class TpccRunResults {
     }
 
     public class RunResults {
-        public double tpmc;
-        public double efficiency;
-        public double throughput;
-        public double throughputMin;
-        public double throughputMax;
+        public Double tpmc;
+        public Double efficiency;
+        public Double throughput;
+        public Double throughputMin;
+        public Double throughputMax;
     }
 
     public class RetryAttemptsData {

@@ -87,6 +87,14 @@ public class DBWorkload {
     transactionTypes.put(4, "Delivery");
     transactionTypes.put(5, "StockLevel");
 
+    numWarehouses = options.getWarehouses().orElse(numWarehouses);
+
+    String configFile = options.getConfigFile().orElse("config/workload_all.xml");
+    ConfigFileOptions configOptions = new ConfigFileOptions(configFile);
+
+    time = configOptions.getRuntime()
+            .orElseThrow(() ->new RuntimeException("Must specify configuration value for runtime."));
+
     if (options.getMode() == CommandLineOptions.Mode.HELP) {
       options.printHelp();
       return;
@@ -113,8 +121,6 @@ public class DBWorkload {
 
     List<String> nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
 
-    numWarehouses = options.getWarehouses().orElse(numWarehouses);
-
     int startWarehouseIdForShard = options.getStartWarehouseId().orElse(1);
 
     int totalWarehousesAcrossShards = options.getTotalWarehouses().orElse(numWarehouses);
@@ -132,9 +138,6 @@ public class DBWorkload {
 
     // Use this list for filtering of the output
     List<TransactionType> activeTXTypes = new ArrayList<>();
-
-    String configFile = options.getConfigFile().orElse("config/workload_all.xml");
-    ConfigFileOptions configOptions = new ConfigFileOptions(configFile);
 
     // Load the configuration for each benchmark
     int lastTxnId = 0;
@@ -281,9 +284,6 @@ public class DBWorkload {
 
       int rate = configOptions.getRate()
           .orElseThrow(() ->new RuntimeException("Must specify configuration value for rate."));
-
-      time = configOptions.getRuntime()
-          .orElseThrow(() ->new RuntimeException("Must specify configuration value for runtime."));
 
       warmupTime = options.getWarmupTime().orElse(warmupTime);
 
@@ -848,6 +848,7 @@ public class DBWorkload {
     df.setMaximumFractionDigits(2);
 
     LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
+    LOG.info("Num WH : " + numWarehouses);
     LOG.info("TPM-C: " + df.format(tpmc));
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {

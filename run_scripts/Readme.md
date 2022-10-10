@@ -1,10 +1,10 @@
 ## Prerequisites:
-Yugabyte cluster is deployed and is reachable.
-TPCC client nodes are deployed and they can communicate with the Yugabyte cluster.
-A client-manager machine that can run this script and has access to the Yugabyte cluster and the TPCC client nodes.
+YugabyteDB cluster is deployed and is reachable.
+TPCC client nodes are deployed and they can communicate with the YugabyteDB cluster.
+A client-manager machine that can run this script and has access to the YugabyteDB cluster and the TPCC client nodes.
 
 ## Step 1. Create the Loader and execute scripts. 
-First create 2 text files for clients and yugabyte nodes named `clients.txt` and `yb_nodes.txt`.
+First create 2 text files for clients and YugabyteDB nodes named `clients.txt` and `yb_nodes.txt`.
 The file `yb_nodes.txt` needs the master node ips to be present first followed by the other ips.
 
 ## Step 2. Configure the client nodes.

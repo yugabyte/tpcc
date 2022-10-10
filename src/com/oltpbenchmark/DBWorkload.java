@@ -87,8 +87,23 @@ public class DBWorkload {
     transactionTypes.put(4, "Delivery");
     transactionTypes.put(5, "StockLevel");
 
+    numWarehouses = options.getWarehouses().orElse(numWarehouses);
+
+    String configFile = options.getConfigFile().orElse("config/workload_all.xml");
+    ConfigFileOptions configOptions = new ConfigFileOptions(configFile);
+
+    time = configOptions.getRuntime()
+            .orElseThrow(() ->new RuntimeException("Must specify configuration value for runtime."));
+
     if (options.getMode() == CommandLineOptions.Mode.HELP) {
       options.printHelp();
+      return;
+    }
+
+    if (options.getMode() == CommandLineOptions.Mode.MERGE_JSON_RESULTS) {
+      String dirPath = options.getDirPath().orElseThrow(() ->
+              new RuntimeException("Must specify directory with json results to merge with --dir={directory path}"));
+      JsonMetricsHelper.mergeJsonResults(dirPath);
       return;
     }
 
@@ -105,8 +120,6 @@ public class DBWorkload {
     int intervalMonitor = options.getIntervalMonitor().orElse(0);
 
     List<String> nodes = options.getNodes().orElse(Collections.singletonList("127.0.0.1"));
-
-    numWarehouses = options.getWarehouses().orElse(numWarehouses);
 
     int startWarehouseIdForShard = options.getStartWarehouseId().orElse(1);
 
@@ -125,9 +138,6 @@ public class DBWorkload {
 
     // Use this list for filtering of the output
     List<TransactionType> activeTXTypes = new ArrayList<>();
-
-    String configFile = options.getConfigFile().orElse("config/workload_all.xml");
-    ConfigFileOptions configOptions = new ConfigFileOptions(configFile);
 
     // Load the configuration for each benchmark
     int lastTxnId = 0;
@@ -275,9 +285,6 @@ public class DBWorkload {
       int rate = configOptions.getRate()
           .orElseThrow(() ->new RuntimeException("Must specify configuration value for rate."));
 
-      time = configOptions.getRuntime()
-          .orElseThrow(() ->new RuntimeException("Must specify configuration value for runtime."));
-
       warmupTime = options.getWarmupTime().orElse(warmupTime);
 
       boolean timed = (time > 0);
@@ -298,7 +305,7 @@ public class DBWorkload {
                     terminals,
                     Phase.Arrival.REGULAR);
 
-      jsonMetricsHelper.setTestConfig(nodes.size(),numWarehouses, numDBConnections,
+      jsonMetricsHelper.setTestConfig(nodes.size(), totalWarehousesAcrossShards, numWarehouses, numDBConnections,
               warmupTime, time, wrkld.getMaxRetriesPerTransaction());
       // CHECKING INPUT PHASES
       int j = 0;
@@ -841,13 +848,13 @@ public class DBWorkload {
     df.setMaximumFractionDigits(2);
 
     LOG.info("Num New Order transactions : " + numNewOrderTransactions + ", time seconds: " + time);
+    LOG.info("Num WH : " + numWarehouses);
     LOG.info("TPM-C: " + df.format(tpmc));
     LOG.info("Efficiency : " + df.format(efficiency) + "%");
     for (int i = 0; i < list_latencies.size(); ++i) {
       LOG.info(getOperationLatencyString(transactionTypes.get(i+1),
                                          list_latencies.get(i)));
     }
-    JsonMetricsHelper.mergeJsonResults(dirPath);
   }
 
   public static String getAssertWarning() {

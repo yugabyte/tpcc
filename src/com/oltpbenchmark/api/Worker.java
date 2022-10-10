@@ -524,9 +524,12 @@ public class Worker implements Runnable {
                                            "[Message='%s', ErrorCode='%d', SQLState='%s']",
                                            ex.getClass().getSimpleName(), next, this.toString(),
                                            ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
-
-                    if (!conn.getAutoCommit()) {
-                        conn.rollback();
+                    try {
+                        if (!conn.getAutoCommit()) {
+                            conn.rollback();
+                        }
+                    } catch (Throwable t) {
+                        // ignore if we are not able to rollback the transaction
                     }
 
                     if (ex.getSQLState() != null) {
@@ -539,7 +542,7 @@ public class Worker implements Runnable {
                                 Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
                             // 53200 - Postgres OOM error
                             // XX000 - Postgres no pinned buffers available
-                            throw ex;
+                            status = TransactionStatus.RETRY;
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
                             LOG.warn("The DBMS rejected the transaction without an error code", ex);

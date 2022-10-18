@@ -7,7 +7,7 @@ public class WorkerTaskLatencyRecord extends LatencyRecord {
         super(startNs);
     }
 
-    public void addLatency(int transType, long startNs, long fetchWorkNs,
+    public void addLatency(int workerId, int transType, long startNs, long fetchWorkNs,
                            long keyingTimeNs, long executeWorkNs, long thinkTimeNs) {
         assert fetchWorkNs >= startNs;
         if (nextIndex == ALLOC_SIZE) {
@@ -26,7 +26,7 @@ public class WorkerTaskLatencyRecord extends LatencyRecord {
         int thinkTimeUs = (int)((thinkTimeNs - executeWorkNs + 500) / 1000);
         assert thinkTimeUs >= 0;
 
-        chunk[nextIndex] = new Sample(transType, startNs, fetchWorkLatencyUs,
+        chunk[nextIndex] = new Sample(workerId, transType, startNs, fetchWorkLatencyUs,
                 keyingLatencyUs, aggregateExecuteUs, thinkTimeUs);
         ++nextIndex;
     }
@@ -42,9 +42,9 @@ public class WorkerTaskLatencyRecord extends LatencyRecord {
         public final int aggregateExecuteUs;
         public final int thinkTimeUs;
 
-        public Sample(int tranType, long startNs, int fetchWorkUs,
+        public Sample(int workerId, int tranType, long startNs, int fetchWorkUs,
                       int keyingLatencyUs, int aggregateExecuteUs, int thinkTimeUs) {
-            super(tranType, startNs);
+            super(workerId, tranType, startNs);
             this.fetchWorkUs = fetchWorkUs;
             this.keyingLatencyUs = keyingLatencyUs;
             this.aggregateExecuteUs = aggregateExecuteUs;

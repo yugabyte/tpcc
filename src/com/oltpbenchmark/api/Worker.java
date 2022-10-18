@@ -439,6 +439,7 @@ public class Worker implements Runnable {
                             attempt++;
                         }
                         workerTaskLatencyRecord.addLatency(
+                                id,
                                 pieceOfWork.getType(),
                                 beginNs, endFetchedWorkNs, endKeyingTimeNs, endExecuteTimeNs, endThinkTimeNs);
                         intervalRequests.incrementAndGet();

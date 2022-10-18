@@ -417,6 +417,7 @@ public class Worker implements Runnable {
                                     case SUCCESS:
                                     case USER_ABORTED:
                                         latencies.addLatency(
+                                                id,
                                                 executionState.first.getTransactionType().getId(),
                                                 executionState.first.getStartConnection(),
                                                 executionState.first.getEndConnection(),
@@ -427,7 +428,7 @@ public class Worker implements Runnable {
                                     case RETRY:
                                     case UNKNOWN:
                                         ++totalFailedTries[pieceOfWork.getType() - 1][attempt];
-                                        failureLatencies.addLatency(executionState.first.getTransactionType().getId(),
+                                        failureLatencies.addLatency(id, executionState.first.getTransactionType().getId(),
                                                 executionState.first.getStartConnection(),
                                                 executionState.first.getEndConnection(),
                                                 executionState.first.getStartOperation(),

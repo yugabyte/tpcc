@@ -7,7 +7,7 @@ public class TransactionLatencyRecord extends LatencyRecord {
         super(startNs);
     }
 
-    public void addLatency(int transType, long startNs, long endConnectionNs,
+    public void addLatency(int workerId, int transType, long startNs, long endConnectionNs,
                            long operationStartNs, long operationEndNs) {
         assert endConnectionNs >= startNs;
         if (nextIndex == ALLOC_SIZE) {
@@ -20,7 +20,7 @@ public class TransactionLatencyRecord extends LatencyRecord {
         int operationLatencyUs = (int)((operationEndNs - operationStartNs + 500) / 1000);
         assert operationLatencyUs >= 0;
 
-        chunk[nextIndex] = new Sample(transType, startNs, connlatencyUs, operationLatencyUs);
+        chunk[nextIndex] = new Sample(workerId, transType, startNs, connlatencyUs, operationLatencyUs);
         ++nextIndex;
     }
 
@@ -34,9 +34,9 @@ public class TransactionLatencyRecord extends LatencyRecord {
         public final int connLatencyUs;
         public final int operationLatencyUs;
 
-        public Sample(int tranType, long startNs, int latencyUs,
+        public Sample(int workerId, int tranType, long startNs, int latencyUs,
                       int operationLatencyUs) {
-            super(tranType, startNs);
+            super(workerId, tranType, startNs);
             this.connLatencyUs = latencyUs;
             this.operationLatencyUs = operationLatencyUs;
         }

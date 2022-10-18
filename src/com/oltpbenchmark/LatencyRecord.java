@@ -60,14 +60,19 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
 
   /** Stores the start time and latency for a single sample. Immutable. */
   public static class Sample implements Comparable<Sample> {
+    private final int workerId;
     public final int tranType;
     public final long startNs;
 
-    public Sample(int tranType, long startNs) {
+    public Sample(int workerId, int tranType, long startNs) {
+      this.workerId = workerId;
       this.tranType = tranType;
       this.startNs = startNs;
     }
 
+    public int getWorkerId(){
+      return this.workerId;
+    }
     @Override
     public int compareTo(Sample other) {
       long diff = this.startNs - other.startNs;

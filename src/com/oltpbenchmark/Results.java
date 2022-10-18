@@ -149,6 +149,7 @@ public final class Results {
     out.println("Start," + startTime);
     out.println("End," + endTime);
     String[] header = {
+        "Worker ID",
         "Transaction Name",
         "Start Time (nanoseconds)",
         "Connection Latency (microseconds)",
@@ -157,6 +158,7 @@ public final class Results {
     out.println(String.join(",", header));
     for (LatencyRecord.Sample s : latencySamples) {
       String[] row = {
+          Integer.toString(s.getWorkerId()),
           activeTXTypes.get(s.tranType-1).getName(),
           Long.toString(s.startNs),
           Integer.toString(((TransactionLatencyRecord.Sample)s).connLatencyUs),

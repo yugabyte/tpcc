@@ -73,6 +73,21 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
         }
     }
 
+    public void dropForeignKeyConstraints() throws SQLException {
+        for (int idx = 1; idx <= numPartitions(); ++idx) {
+            execute(String.format("ALTER TABLE DISTRICT%d DROP CONSTRAINT IF EXISTS D_FKEY_W%d", idx, idx));
+            execute(String.format("ALTER TABLE CUSTOMER%d DROP CONSTRAINT IF EXISTS C_FKEY_D%d", idx, idx));
+            execute(String.format("ALTER TABLE STOCK%d DROP CONSTRAINT IF EXISTS S_FKEY_W%d", idx, idx));
+            execute(String.format("ALTER TABLE STOCK%d DROP CONSTRAINT IF EXISTS S_FKEY_I%d", idx, idx));
+            execute(String.format("ALTER TABLE OORDER%d DROP CONSTRAINT IF EXISTS O_FKEY_C%d", idx, idx));
+            execute(String.format("ALTER TABLE NEW_ORDER%d DROP CONSTRAINT IF EXISTS NO_FKEY_O%d", idx, idx));
+            execute(String.format("ALTER TABLE HISTORY%d DROP CONSTRAINT IF EXISTS H_FKEY_C%d", idx, idx));
+            execute(String.format("ALTER TABLE HISTORY%d DROP CONSTRAINT IF EXISTS H_FKEY_D%d", idx, idx));
+            execute(String.format("ALTER TABLE ORDER_LINE%d DROP CONSTRAINT IF EXISTS OL_FKEY_O%d", idx, idx));
+            execute(String.format("ALTER TABLE ORDER_LINE%d DROP CONSTRAINT IF EXISTS OL_FKEY_S%d", idx, idx));
+        }
+    }
+
     @Override
     public void enableForeignKeyConstraints() throws SQLException {
         // Create foreign key relations among the partitions themselves, rather than between

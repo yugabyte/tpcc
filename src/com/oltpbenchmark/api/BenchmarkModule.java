@@ -27,6 +27,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.oltpbenchmark.schema.SchemaManager;
 import com.oltpbenchmark.schema.SchemaManagerFactory;
+import com.yugabyte.ysql.YBClusterAwareDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -89,8 +90,9 @@ public class BenchmarkModule {
                 ThreadUtil.sleep(5000);
             }
             Properties props = new Properties();
-            props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
-            props.setProperty("dataSource.serverName", ip);
+            props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
+	    //props.setProperty("dataSource.serverNames", ip);
+	    props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
             props.setProperty("dataSource.user", workConf.getDBUsername());
             props.setProperty("dataSource.password", workConf.getDBPassword());
@@ -99,11 +101,13 @@ public class BenchmarkModule {
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
             props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
+
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
               assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
               props.put("dataSource.sslmode", "require");
               props.put("dataSource.sslcert", workConf.getSslCert());
               props.put("dataSource.sslkey", workConf.getSslKey());
+
             }
             HikariConfig config = new HikariConfig(props);
             if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
@@ -115,15 +119,16 @@ public class BenchmarkModule {
     }
 
     public final Connection makeConnection() throws SQLException {
-        java.util.Properties props = new java.util.Properties();
-        props.put("user", workConf.getDBUsername());
-        props.put("password", workConf.getDBPassword());
-        props.put("reWriteBatchedInserts", "true");
+        YBClusterAwareDataSource ds = new YBClusterAwareDataSource();
+        ds.setProperty("user", workConf.getDBUsername());
+        ds.setProperty("password", workConf.getDBPassword());
+        ds.setProperty("reWriteBatchedInserts", "true");
+
         if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
           assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
-          props.put("sslmode", "require");
-          props.put("sslcert", workConf.getSslCert());
-          props.put("sslkey", workConf.getSslKey());
+          ds.setProperty("sslmode", "require");
+          ds.setProperty("sslcert", workConf.getSslCert());
+          ds.setProperty("sslkey", workConf.getSslKey());
         }
 
         int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
@@ -131,12 +136,13 @@ public class BenchmarkModule {
         if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
             connectStr=workConf.getJdbcURL();
         } else {
-            connectStr = String.format("jdbc:postgresql://%s:%d/%s",
+            connectStr = String.format("jdbc:yugabytedb://%s:%d/%s",
                 workConf.getNodes().get(r),
                 workConf.getPort(),
                 workConf.getDBName());
         }
-        return DriverManager.getConnection(connectStr, props);
+        ds.setUrl(connectStr);
+        return ds.getConnection();
     }
 
     private static final AtomicInteger dataSourceCounter = new AtomicInteger(0);

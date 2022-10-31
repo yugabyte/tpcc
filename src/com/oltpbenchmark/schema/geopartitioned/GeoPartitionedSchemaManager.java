@@ -73,43 +73,48 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
         }
     }
 
+    public void dropForeignKeyConstraints() throws SQLException {
+        for (int idx = 1; idx <= numPartitions(); ++idx) {
+            execute(String.format("ALTER TABLE DISTRICT%d DROP CONSTRAINT IF EXISTS D_FKEY_W%d", idx, idx));
+            execute(String.format("ALTER TABLE CUSTOMER%d DROP CONSTRAINT IF EXISTS C_FKEY_D%d", idx, idx));
+            execute(String.format("ALTER TABLE STOCK%d DROP CONSTRAINT IF EXISTS S_FKEY_W%d", idx, idx));
+            execute(String.format("ALTER TABLE STOCK%d DROP CONSTRAINT IF EXISTS S_FKEY_I%d", idx, idx));
+            execute(String.format("ALTER TABLE OORDER%d DROP CONSTRAINT IF EXISTS O_FKEY_C%d", idx, idx));
+            execute(String.format("ALTER TABLE NEW_ORDER%d DROP CONSTRAINT IF EXISTS NO_FKEY_O%d", idx, idx));
+            execute(String.format("ALTER TABLE HISTORY%d DROP CONSTRAINT IF EXISTS H_FKEY_C%d", idx, idx));
+            execute(String.format("ALTER TABLE HISTORY%d DROP CONSTRAINT IF EXISTS H_FKEY_D%d", idx, idx));
+            execute(String.format("ALTER TABLE ORDER_LINE%d DROP CONSTRAINT IF EXISTS OL_FKEY_O%d", idx, idx));
+            execute(String.format("ALTER TABLE ORDER_LINE%d DROP CONSTRAINT IF EXISTS OL_FKEY_S%d", idx, idx));
+        }
+    }
+
     @Override
     public void enableForeignKeyConstraints() throws SQLException {
         // Create foreign key relations among the partitions themselves, rather than between
         // the partitioned tables themselves.
         for (int idx = 1; idx <= numPartitions(); ++idx) {
-            execute(String.format("ALTER TABLE DISTRICT%d DROP CONSTRAINT IF EXISTS D_FKEY_W%d", idx, idx));
             execute(String.format("ALTER TABLE DISTRICT%d ADD CONSTRAINT D_FKEY_W%d FOREIGN KEY (D_W_ID) " +
                     "REFERENCES WAREHOUSE%d(W_ID) NOT VALID", idx, idx, idx));
 
-            execute(String.format("ALTER TABLE CUSTOMER%d DROP CONSTRAINT IF EXISTS C_FKEY_D%d", idx, idx));
             execute(String.format("ALTER TABLE CUSTOMER%d ADD CONSTRAINT C_FKEY_D%d FOREIGN KEY (C_W_ID, C_D_ID) " +
                     "REFERENCES DISTRICT%d (D_W_ID, D_ID) NOT VALID", idx, idx, idx));
 
-            execute(String.format("ALTER TABLE STOCK%d DROP CONSTRAINT IF EXISTS S_FKEY_W%d", idx, idx));
-            execute(String.format("ALTER TABLE STOCK%d DROP CONSTRAINT IF EXISTS S_FKEY_I%d", idx, idx));
             execute(String.format("ALTER TABLE STOCK%d ADD CONSTRAINT S_FKEY_W%d FOREIGN KEY(S_W_ID) " +
                     "REFERENCES WAREHOUSE%d(W_ID) NOT VALID", idx, idx, idx));
             execute(String.format("ALTER TABLE STOCK%d ADD CONSTRAINT S_FKEY_I%d FOREIGN KEY(S_I_ID)  " +
                     "REFERENCES ITEM(I_ID) NOT VALID", idx, idx));
 
-            execute(String.format("ALTER TABLE OORDER%d DROP CONSTRAINT IF EXISTS O_FKEY_C%d", idx, idx));
             execute(String.format("ALTER TABLE OORDER%d ADD CONSTRAINT O_FKEY_C%d FOREIGN KEY (O_W_ID, O_D_ID, O_C_ID) " +
                     "REFERENCES CUSTOMER%d (C_W_ID, C_D_ID, C_ID) NOT VALID", idx, idx, idx));
 
-            execute(String.format("ALTER TABLE NEW_ORDER%d DROP CONSTRAINT IF EXISTS NO_FKEY_O%d", idx, idx));
             execute(String.format("ALTER TABLE NEW_ORDER%d ADD CONSTRAINT NO_FKEY_O%d FOREIGN KEY " +
                     "(NO_W_ID, NO_D_ID, NO_O_ID) REFERENCES OORDER%d (O_W_ID, O_D_ID, O_ID) NOT VALID", idx, idx, idx));
 
-            execute(String.format("ALTER TABLE HISTORY%d DROP CONSTRAINT IF EXISTS H_FKEY_C%d", idx, idx));
-            execute(String.format("ALTER TABLE HISTORY%d DROP CONSTRAINT IF EXISTS H_FKEY_D%d", idx, idx));
             execute(String.format("ALTER TABLE HISTORY%d ADD CONSTRAINT H_FKEY_C%d FOREIGN KEY " +
                     "(H_C_W_ID, H_C_D_ID, H_C_ID) REFERENCES CUSTOMER%d (C_W_ID, C_D_ID, C_ID) NOT VALID", idx, idx, idx));
             execute(String.format("ALTER TABLE HISTORY%d ADD CONSTRAINT H_FKEY_D%d FOREIGN KEY " +
                     "(H_W_ID, H_D_ID) REFERENCES DISTRICT%d (D_W_ID, D_ID) NOT VALID", idx, idx, idx));
-
-            execute(String.format("ALTER TABLE ORDER_LINE%d DROP CONSTRAINT IF EXISTS OL_FKEY_O%d", idx, idx));
-            execute(String.format("ALTER TABLE ORDER_LINE%d DROP CONSTRAINT IF EXISTS OL_FKEY_S%d", idx, idx));
+            
             execute(String.format("ALTER TABLE ORDER_LINE%d ADD CONSTRAINT OL_FKEY_O%d FOREIGN KEY " +
                     "(OL_W_ID, OL_D_ID, OL_O_ID) REFERENCES OORDER%d (O_W_ID, O_D_ID, O_ID) NOT VALID", idx, idx, idx));
             execute(String.format("ALTER TABLE ORDER_LINE%d ADD CONSTRAINT OL_FKEY_S%d FOREIGN KEY " +

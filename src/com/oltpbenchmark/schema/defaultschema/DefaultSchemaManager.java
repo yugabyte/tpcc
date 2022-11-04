@@ -53,6 +53,7 @@ public class DefaultSchemaManager extends SchemaManager {
         execute("ALTER TABLE ORDER_LINE DROP CONSTRAINT IF EXISTS OL_FKEY_O");
         execute("ALTER TABLE ORDER_LINE DROP CONSTRAINT IF EXISTS OL_FKEY_S");
     }
+
     @Override
     public void enableForeignKeyConstraints() throws SQLException {
         execute("ALTER TABLE DISTRICT ADD CONSTRAINT D_FKEY_W FOREIGN KEY (D_W_ID) " +

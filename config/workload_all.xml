@@ -2,7 +2,7 @@
 <parameters>
     <dbtype>postgres</dbtype>
     <driver>com.yugabyte.Driver</driver>
-    <port>5433</port>
+    <port>6432</port>
     <username>yugabyte</username>
     <DBName>yugabyte</DBName>
     <password></password>

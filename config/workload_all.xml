@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <parameters>
     <dbtype>postgres</dbtype>
-    <driver>com.yugabyte.Driver</driver>
+    <driver>org.postgresql.Driver</driver>
     <port>6432</port>
     <username>yugabyte</username>
     <DBName>yugabyte</DBName>

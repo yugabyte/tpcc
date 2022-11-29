@@ -27,6 +27,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.*;
 import com.oltpbenchmark.schema.SchemaManager;
 import com.oltpbenchmark.schema.SchemaManagerFactory;
+import com.yugabyte.ds.PGSimpleDataSource;
 import com.yugabyte.ysql.YBClusterAwareDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -90,7 +91,7 @@ public class BenchmarkModule {
                 ThreadUtil.sleep(5000);
             }
             Properties props = new Properties();
-            props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
+            props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
 	    //props.setProperty("dataSource.serverNames", ip);
 	    props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
@@ -119,7 +120,7 @@ public class BenchmarkModule {
     }
 
     public final Connection makeConnection() throws SQLException {
-        YBClusterAwareDataSource ds = new YBClusterAwareDataSource();
+        PGSimpleDataSource ds = new PGSimpleDataSource();
         ds.setProperty("user", workConf.getDBUsername());
         ds.setProperty("password", workConf.getDBPassword());
         ds.setProperty("reWriteBatchedInserts", "true");

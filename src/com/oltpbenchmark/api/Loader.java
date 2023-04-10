@@ -216,8 +216,14 @@ public class Loader {
     }
 
     public void EnableForeignKeyConstraints(Connection conn) {
+      SchemaManager schemaManager = SchemaManagerFactory.getSchemaManager(workConf, conn);
       try {
-        SchemaManager schemaManager = SchemaManagerFactory.getSchemaManager(workConf, conn);
+        schemaManager.dropForeignKeyConstraints();
+      } catch (SQLException se) {
+        LOG.error("Could not drop foreign keys" + se.getMessage());
+        transRollback(conn);
+      }
+      try {
         schemaManager.enableForeignKeyConstraints();
       } catch (SQLException se) {
         LOG.error("Could not create foreign keys" + se.getMessage());

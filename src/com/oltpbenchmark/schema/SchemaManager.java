@@ -18,7 +18,9 @@ public abstract class SchemaManager {
     public abstract void create() throws SQLException;
 
     public abstract void enableForeignKeyConstraints() throws SQLException;
-    
+
+    public abstract void dropForeignKeyConstraints() throws SQLException;
+
     protected abstract void createIndexes() throws SQLException;
     
     public static Set<String> getTableNames() {

@@ -63,20 +63,10 @@ A utility script (./tpccbenchmark) is provided for running the benchmark. The op
 ```
 
 ## Example
-The following command for example initiates a tpcc database (--create=true --load=true) and a then run a workload as described in config/workload_all.xml file. The results (latency, throughput) are summarized and written into two files: outputfile.res (aggregated) and outputfile.raw (detailed):
+The following commands initialize a tpcc database (--create=true --load=true) and a then run a workload (--execute=true) as described in config/workload_all.xml file. The results (latency, throughput) are summarized and written to stdout:
 
 ```
-./tpccbenchmark -c config/workload_all.xml --create=true --load=true --execute=true -s 300 -o outputfile
-```
-
-Since data loading can be a lengthy process, one could first create a and populate a database which can be reused for multiple experiments:
-
-```
-./tpccbenchmark -c config/workload_all.xml --create=true --load=true
-```
-
-Then running an experiment could be simply done with the following command on a fresh or used database.
-
-```
-./tpccbenchmark -c config/workload_all.xml --execute=true -s 300 -o outputfile
+./tpccbenchmark -c config/workload_all.xml --create=true
+./tpccbenchmark -c config/workload_all.xml --load=true
+./tpccbenchmark -c config/workload_all.xml --execute=true
 ```

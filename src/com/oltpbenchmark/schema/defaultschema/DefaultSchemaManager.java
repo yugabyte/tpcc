@@ -83,7 +83,7 @@ public class DefaultSchemaManager extends SchemaManager {
         execute("ALTER TABLE ORDER_LINE ADD CONSTRAINT OL_FKEY_S FOREIGN KEY " +
                 "(OL_SUPPLY_W_ID, OL_I_ID) REFERENCES STOCK (S_W_ID, S_I_ID) NOT VALID");
     }
-    
+
     @Override
     public void createSqlProcedures() throws Exception {
         try (Statement st = db_connection.createStatement()) {
@@ -97,12 +97,19 @@ public class DefaultSchemaManager extends SchemaManager {
             argsSb.append("wid int");
             for (int i = 1; i <= 15; ++i) {
                 argsSb.append(String.format(", i%d int, q%d int, y%d int, r%d int", i, i, i, i));
+
+                if (i == 1) {
+                    updateStatements.append("WITH ");
+                } else {
+                    updateStatements.append(", ");
+                }
                 updateStatements.append(String.format(
-                        "UPDATE STOCK SET S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
-                                "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d;",
-                                i, i, i, i));
+                        "update_cte%d AS (UPDATE STOCK SET " +
+                                "S_QUANTITY = q%d, S_YTD = y%d, S_ORDER_CNT = S_ORDER_CNT + 1, " +
+                                "S_REMOTE_CNT = r%d WHERE S_W_ID = wid AND S_I_ID = i%d)",
+                                i, i, i, i, i));
                 String updateStmt =
-                        String.format("CREATE PROCEDURE updatestock%d (%s) AS '%s' LANGUAGE SQL;",
+                        String.format("CREATE PROCEDURE updatestock%d (%s) AS '%s SELECT 1' LANGUAGE SQL;",
                                 i, argsSb.toString(), updateStatements.toString());
 
                 st.execute(String.format("DROP PROCEDURE IF EXISTS updatestock%d", i));

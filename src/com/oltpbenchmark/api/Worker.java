@@ -599,7 +599,8 @@ public class Worker implements Runnable {
         int highDistrictId = terminalDistrictID;
         if (nextTransaction.getName().equals("NewOrder") ||
             nextTransaction.getName().equals("Payment") ||
-            nextTransaction.getName().equals("OrderStatus")) {
+            nextTransaction.getName().equals("OrderStatus") ||
+            nextTransaction.getName().equals("Delivery")) {
           lowDistrictId = 1;
           highDistrictId = TPCCConfig.configDistPerWhse;
         }

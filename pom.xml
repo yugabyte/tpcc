@@ -10,8 +10,11 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>1.10</maven.compiler.source>
-        <maven.compiler.target>1.10</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <buildDirectory>${project.basedir}/target</buildDirectory>
     </properties>
 
     <!-- *************************************** BUILDING *************************************** -->

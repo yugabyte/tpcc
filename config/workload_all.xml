@@ -44,7 +44,7 @@
         </transaction>
    	</transactiontypes>
 
-    <runtime>1800</runtime>
+    <runtime>4</runtime>
     <rate>10000</rate>
     <!--
       Set the number of retries to 0 as retrying when the number of warehouses is

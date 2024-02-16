@@ -46,12 +46,14 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   private final List<WorkloadState> workStates;
   final ArrayList<TransactionLatencyRecord.Sample> samples = new ArrayList<>();
   private int intervalMonitor = 0;
+  private boolean useVirtualThreads = false;
 
-  public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs) {
+  public ThreadBench(List<? extends Worker> workers, List<WorkloadConfiguration> workConfs, boolean useVirtualThreads) {
       this.workers = workers;
       this.workConfs = workConfs;
       this.workerThreads = new ArrayList<>(workers.size());
       this.workStates = new ArrayList<>();
+      this.useVirtualThreads = useVirtualThreads;
   }
 
   public static final class TimeBucketIterable implements Iterable<DistributionStatistics> {
@@ -164,7 +166,15 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   private void createWorkerThreads() {
       for (Worker worker : workers) {
           worker.initializeState();
-          Thread thread = Thread.ofVirtual().unstarted(worker);
+          Thread thread;
+          if(useVirtualThreads) {
+            thread = Thread.ofVirtual().unstarted(worker);
+            LOG.info("starting a virtual thread!");
+          }
+          else{
+            LOG.info("starting a phyiscal thread!");
+            thread = new Thread(worker);
+          }
           thread.setUncaughtExceptionHandler(this);
           // LOG.info("starting a new virtual thread!");
           thread.start();
@@ -277,8 +287,8 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       }
   } // CLASS
 
-  public static Results runRateLimitedBenchmark(List<Worker> workers, List<WorkloadConfiguration> workConfs, int intervalMonitoring) {
-      ThreadBench bench = new ThreadBench(workers, workConfs);
+  public static Results runRateLimitedBenchmark(List<Worker> workers, List<WorkloadConfiguration> workConfs, int intervalMonitoring, boolean useVirtualThreads) {
+      ThreadBench bench = new ThreadBench(workers, workConfs, useVirtualThreads);
       bench.intervalMonitor = intervalMonitoring;
       return bench.runRateLimitedMultiPhase();
   }

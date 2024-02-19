@@ -164,22 +164,25 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
   }
 
   private void createWorkerThreads() {
-      for (Worker worker : workers) {
-          worker.initializeState();
-          Thread thread;
-          if(useVirtualThreads) {
-            thread = Thread.ofVirtual().unstarted(worker);
-            LOG.info("starting a virtual thread!");
-          }
-          else{
-            LOG.info("starting a phyiscal thread!");
-            thread = new Thread(worker);
-          }
-          thread.setUncaughtExceptionHandler(this);
-          // LOG.info("starting a new virtual thread!");
-          thread.start();
-          this.workerThreads.add(thread);
-      }
+    if(useVirtualThreads) {
+      LOG.info("creating virtual threads as workers...");
+    }
+    else {
+      LOG.info("creating real threads as workers...");
+    }
+    for (Worker worker : workers) {
+        worker.initializeState();
+        Thread thread;
+        if(useVirtualThreads) {
+          thread = Thread.ofVirtual().unstarted(worker);
+        }
+        else{
+          thread = new Thread(worker);
+        }
+        thread.setUncaughtExceptionHandler(this);
+        thread.start();
+        this.workerThreads.add(thread);
+    }
   }
 
   private void interruptWorkers() {

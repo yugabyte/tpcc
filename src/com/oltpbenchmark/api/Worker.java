@@ -93,7 +93,7 @@ public class Worker implements Runnable {
         assert terminalDistrictUpperID <= TPCCConfig.configDistPerWhse;
         assert terminalDistrictLowerID <= terminalDistrictUpperID;
         this.terminalDistrictID =
-                TPCCUtil.randomNumber(terminalDistrictLowerID,terminalDistrictUpperID, gen);
+                TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
     }
 
     public final void InitializeProcedures() {
@@ -120,13 +120,13 @@ public class Worker implements Runnable {
     }
 
     public final int[][] getTotalFailedTries() {
-      return totalFailedTries;
+        return totalFailedTries;
     }
 
     @Override
     public String toString() {
         return String.format("%s<%03d>",
-                             this.getClass().getSimpleName(), this.getId());
+                this.getClass().getSimpleName(), this.getId());
     }
 
     public final int getRequests() {
@@ -157,19 +157,19 @@ public class Worker implements Runnable {
     private long getKeyingTimeInMillis(TransactionType type) {
         // TPC-C 5.2.5.2: For keying times for each type of transaction.
         if (type.getName().equals("NewOrder")) {
-          return 18000;
+            return 18000;
         }
         if (type.getName().equals("Payment")) {
-          return 3000;
+            return 3000;
         }
         if (type.getName().equals("OrderStatus")) {
-          return 2000;
+            return 2000;
         }
         if (type.getName().equals("Delivery")) {
-          return 2000;
+            return 2000;
         }
         if (type.getName().equals("StockLevel")) {
-          return 2000;
+            return 2000;
         }
         LOG.error("returning -1 " + type.getName());
         return -1;
@@ -196,9 +196,9 @@ public class Worker implements Runnable {
         }
 
         float c = this.benchmarkModule.rng().nextFloat();
-        long thinkTime = (long)(-1 * Math.log(c) * mean);
+        long thinkTime = (long) (-1 * Math.log(c) * mean);
         if (thinkTime > 10 * mean) {
-          thinkTime = 10 * mean;
+            thinkTime = 10 * mean;
         }
         return thinkTime;
     }
@@ -216,63 +216,63 @@ public class Worker implements Runnable {
     }
 
     public void test(Connection conn) throws Exception {
-      Procedure proc = this.getProcedure(
-          this.transactionTypes.getType("NewOrder").getProcedureClass());
-      proc.test(conn, this);
+        Procedure proc = this.getProcedure(
+                this.transactionTypes.getType("NewOrder").getProcedureClass());
+        proc.test(conn, this);
     }
 
     static class TransactionExecutionState {
-      private final long startOperation;
-      private long endOperation;
-      private final long startConnection;
-      private long endConnection;
-      private final TransactionType type;
+        private final long startOperation;
+        private long endOperation;
+        private final long startConnection;
+        private long endConnection;
+        private final TransactionType type;
 
-      public TransactionExecutionState() {
-        this.startOperation = 0;
-        this.endOperation = 0;
-        this.startConnection = 0;
-        this.endConnection = 0;
-        this.type = TransactionType.INVALID;
-      }
+        public TransactionExecutionState() {
+            this.startOperation = 0;
+            this.endOperation = 0;
+            this.startConnection = 0;
+            this.endConnection = 0;
+            this.type = TransactionType.INVALID;
+        }
 
-      public TransactionExecutionState(long startOperation, long endOperation,
-                                       long startConnection, long endConnection,
-                                       TransactionType type) {
-        this.startOperation = startOperation;
-        this.endOperation = endOperation;
-        this.startConnection = startConnection;
-        this.endConnection = endConnection;
-        this.type = type;
-      }
+        public TransactionExecutionState(long startOperation, long endOperation,
+                                         long startConnection, long endConnection,
+                                         TransactionType type) {
+            this.startOperation = startOperation;
+            this.endOperation = endOperation;
+            this.startConnection = startConnection;
+            this.endConnection = endConnection;
+            this.type = type;
+        }
 
-      public long getStartOperation() {
-        return startOperation;
-      }
+        public long getStartOperation() {
+            return startOperation;
+        }
 
-      public long getEndOperation() {
-        return endOperation;
-      }
+        public long getEndOperation() {
+            return endOperation;
+        }
 
-      public long getStartConnection() {
-        return startConnection;
-      }
+        public long getStartConnection() {
+            return startConnection;
+        }
 
-      public long getEndConnection() {
-        return endConnection;
-      }
+        public long getEndConnection() {
+            return endConnection;
+        }
 
-      public TransactionType getTransactionType() {
-        return type;
-      }
+        public TransactionType getTransactionType() {
+            return type;
+        }
 
-      public void setEndOperation(long endOperation) {
-        this.endOperation = endOperation;
-      }
+        public void setEndOperation(long endOperation) {
+            this.endOperation = endOperation;
+        }
 
-      public void setEndConnection(long endConnection) {
-        this.endConnection = endConnection;
-      }
+        public void setEndConnection(long endConnection) {
+            this.endConnection = endConnection;
+        }
     }
 
     @Override
@@ -290,7 +290,8 @@ public class Worker implements Runnable {
         wrkldState.blockForStart();
         State preState, postState;
         Phase phase;
-        work: while (true) {
+        work:
+        while (true) {
             // PART 1: Init and check if done
             preState = Worker.wrkldState.getGlobalState();
 
@@ -409,9 +410,9 @@ public class Worker implements Runnable {
                     // completion was MEASURE. We're recording results for operations
                     // that completed in the MEASURE phase
                     if ((preState == State.MEASURE || preState == State.WARMUP) &&
-                        Worker.wrkldState.getCurrentPhase().id == phase.id) {
+                            Worker.wrkldState.getCurrentPhase().id == phase.id) {
                         int attempt = 0;
-                        for (Pair<TransactionExecutionState, TransactionStatus>  executionState : executionStates) {
+                        for (Pair<TransactionExecutionState, TransactionStatus> executionState : executionStates) {
                             if (executionState.first.getTransactionType() != null) {
                                 switch (executionState.second) {
                                     case SUCCESS:
@@ -496,18 +497,18 @@ public class Worker implements Runnable {
             int attempt = 0;
 
             while (status == TransactionStatus.RETRY &&
-                   wrkldState.getGlobalState() != State.DONE &&
-                   ++attempt <= totalAttemptsPerTransaction) {
+                    wrkldState.getGlobalState() != State.DONE &&
+                    ++attempt <= totalAttemptsPerTransaction) {
                 try {
                     status = TransactionStatus.UNKNOWN;
                     startOperation = System.nanoTime();
                     status = this.executeWork(conn, next);
-                // User Abort Handling
-                // These are not errors
+                    // User Abort Handling
+                    // These are not errors
                 } catch (UserAbortException ex) {
                     // UserAbortException should represent an expected NewOrder failure and will be recorded as a
                     // success. No other procedure class should hit this branch.
-                    assert(next.getProcedureClass() == NewOrder.class);
+                    assert (next.getProcedureClass() == NewOrder.class);
                     if (!conn.getAutoCommit()) {
                         conn.rollback();
                     }
@@ -516,12 +517,12 @@ public class Worker implements Runnable {
                     // NewOrder
                     endOperation = System.nanoTime();
                     break;
-                // Database System Specific Exception Handling
+                    // Database System Specific Exception Handling
                 } catch (SQLException ex) {
                     LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
-                                           "[Message='%s', ErrorCode='%d', SQLState='%s']",
-                                           ex.getClass().getSimpleName(), next, this.toString(),
-                                           ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
+                                    "[Message='%s', ErrorCode='%d', SQLState='%s']",
+                            ex.getClass().getSimpleName(), next, this.toString(),
+                            ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
                     try {
                         if (!conn.getAutoCommit()) {
                             conn.rollback();
@@ -536,8 +537,8 @@ public class Worker implements Runnable {
                             status = TransactionStatus.RETRY;
                         } else if (
                                 ex.getErrorCode() == 0 &&
-                                ex.getSQLState() != null &&
-                                Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
+                                        ex.getSQLState() != null &&
+                                        Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
                             // 53200 - Postgres OOM error
                             // XX000 - Postgres no pinned buffers available
                             status = TransactionStatus.RETRY;
@@ -548,11 +549,11 @@ public class Worker implements Runnable {
                             // throw ex;
                         }
                     }
-                // Assertion Error
+                    // Assertion Error
                 } catch (Error ex) {
                     LOG.error("Fatal error when invoking " + next, ex);
                     throw ex;
-                 // Random Error
+                    // Random Error
                 } catch (Exception ex) {
                     LOG.error("Fatal error when invoking " + next, ex);
                     throw new RuntimeException(ex);
@@ -581,7 +582,7 @@ public class Worker implements Runnable {
             conn.close();
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
-                                       this, next);
+                    this, next);
             throw new RuntimeException(msg, ex);
         }
         return listExecutionStates;
@@ -591,33 +592,33 @@ public class Worker implements Runnable {
      * Executes a single TPCC transaction of type transactionType.
      */
     protected TransactionStatus executeWork(Connection conn, TransactionType nextTransaction) throws SQLException {
-      try {
-        Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());
+        try {
+            Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());
 
-        // The districts should be chosen randomly from [1,10] for the following transactions:
-        // 1. NewOrder    TPC-C 2.4.1.2
-        // 2. Payment     TPC-C 2.5.1.2
-        // 3. OrderStatus TPC-C 2.6.1.2
-        // The 'StockLevel' transaction has a fixed districtId for the whole terminal.
-        int lowDistrictId = terminalDistrictID;
-        int highDistrictId = terminalDistrictID;
-        if (nextTransaction.getName().equals("NewOrder") ||
-            nextTransaction.getName().equals("Payment") ||
-            nextTransaction.getName().equals("OrderStatus")) {
-          lowDistrictId = 1;
-          highDistrictId = TPCCConfig.configDistPerWhse;
+            // The districts should be chosen randomly from [1,10] for the following transactions:
+            // 1. NewOrder    TPC-C 2.4.1.2
+            // 2. Payment     TPC-C 2.5.1.2
+            // 3. OrderStatus TPC-C 2.6.1.2
+            // The 'StockLevel' transaction has a fixed districtId for the whole terminal.
+            int lowDistrictId = terminalDistrictID;
+            int highDistrictId = terminalDistrictID;
+            if (nextTransaction.getName().equals("NewOrder") ||
+                    nextTransaction.getName().equals("Payment") ||
+                    nextTransaction.getName().equals("OrderStatus")) {
+                lowDistrictId = 1;
+                highDistrictId = TPCCConfig.configDistPerWhse;
+            }
+            proc.run(conn, gen, terminalWarehouseID, wrkld.getTotalWarehousesAcrossShards(),
+                    lowDistrictId, highDistrictId, this);
+        } catch (ClassCastException ex) {
+            //fail gracefully
+            LOG.error("We have been invoked with an INVALID transactionType?!");
+            throw new RuntimeException("Bad transaction type = " + nextTransaction);
         }
-        proc.run(conn, gen, terminalWarehouseID, wrkld.getTotalWarehousesAcrossShards(),
-                lowDistrictId, highDistrictId, this);
-      } catch (ClassCastException ex){
-        //fail gracefully
-        LOG.error("We have been invoked with an INVALID transactionType?!");
-        throw new RuntimeException("Bad transaction type = "+ nextTransaction);
-      }
-      if (!conn.getAutoCommit()) {
-        conn.commit();
-      }
-      return (TransactionStatus.SUCCESS);
+        if (!conn.getAutoCommit()) {
+            conn.commit();
+        }
+        return (TransactionStatus.SUCCESS);
     }
 
     public void initializeState() {

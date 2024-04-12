@@ -1,3 +1,3 @@
 #!/bin/bash
-memory='12G'
+memory='8G'
 java -Xmx$memory -cp `./classpath.sh bin` -Dlog4j.configuration=log4j.properties com.oltpbenchmark.DBWorkload $@

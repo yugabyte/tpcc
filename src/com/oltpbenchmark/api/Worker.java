@@ -550,11 +550,11 @@ public class Worker implements Runnable {
                     }
                 // Assertion Error
                 } catch (Error ex) {
-                    LOG.error("Fatal error when invoking " + next, ex);
+                    LOG.error("Fatal error when invoking :" + ex.getMessage());
                     status = TransactionStatus.RETRY;
                  // Random Error
                 } catch (Exception ex) {
-                    LOG.error("Fatal error when invoking " + next, ex);
+                    LOG.error("Fatal error when invoking :" + ex.getMessage());
                     status = TransactionStatus.RETRY;
 
                 } finally {

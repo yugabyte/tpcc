@@ -545,6 +545,7 @@ public class Worker implements Runnable {
                             // UNKNOWN: In this case .. Retry as well!
                             LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage());
                             // FIXME Disable this for now
+                            status = TransactionStatus.RETRY;
                             // throw ex;
                         }
                     }

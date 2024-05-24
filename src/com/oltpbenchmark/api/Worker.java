@@ -546,6 +546,7 @@ public class Worker implements Runnable {
                             LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage());
                             // FIXME Disable this for now
                             // throw ex;
+                            status = TransactionStatus.RETRY;
                         }
                     }
                 // Assertion Error
@@ -554,7 +555,7 @@ public class Worker implements Runnable {
                     status = TransactionStatus.RETRY;
                  // Random Error
                 } catch (Exception ex) {
-                    LOG.error("Fatal error when invoking :" + ex.getMessage());
+                    LOG.error("Fatal error when invoking :" + ex);
                     status = TransactionStatus.RETRY;
 
                 } finally {

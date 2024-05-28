@@ -555,7 +555,7 @@ public class Worker implements Runnable {
                     status = TransactionStatus.RETRY;
                  // Random Error
                 } catch (Exception ex) {
-                    LOG.error("Fatal error when invoking :" + ex);
+                    LOG.error("Fatal error when invoking :" + ex.getStackTrace());
                     status = TransactionStatus.RETRY;
 
                 } finally {

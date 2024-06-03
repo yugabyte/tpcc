@@ -51,7 +51,7 @@ public class DBWorkload {
   private static int warmupTime = 0;
   private static final Map<Integer, String> transactionTypes = new HashMap<>();
   private static JsonMetricsHelper jsonMetricsHelper = new JsonMetricsHelper();
-
+  private static Boolean useVirtualThreads = false;
   /**
    * Returns true if asserts are enabled. This assumes that
    * we're always using the default system ClassLoader
@@ -88,6 +88,9 @@ public class DBWorkload {
     transactionTypes.put(5, "StockLevel");
 
     numWarehouses = options.getWarehouses().orElse(numWarehouses);
+    if(options.getUseVirtualThreads()) {
+      useVirtualThreads = true;
+    }
 
     String configFile = options.getConfigFile().orElse("config/workload_all.xml");
     ConfigFileOptions configOptions = new ConfigFileOptions(configFile);
@@ -482,7 +485,7 @@ public class DBWorkload {
               bench.getBenchmarkName().toUpperCase(), num_phases, (num_phases > 1 ? "s" : "")));
       workConfs.add(bench.getWorkloadConfiguration());
     }
-    Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, intervalMonitor);
+    Results r = ThreadBench.runRateLimitedBenchmark(workers, workConfs, intervalMonitor, useVirtualThreads);
     r.startTime = start;
     r.endTime = end;
 

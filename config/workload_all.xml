@@ -50,7 +50,7 @@
       Set the number of retries to 0 as retrying when the number of warehouses is
       high is pointless as it just leads to more failures.
     -->
-    <maxRetriesPerTransaction>3</maxRetriesPerTransaction>
+    <maxRetriesPerTransaction>2</maxRetriesPerTransaction>
     <maxLoaderRetries>2</maxLoaderRetries>
 
 </parameters>

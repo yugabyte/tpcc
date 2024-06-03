@@ -543,7 +543,11 @@ public class Worker implements Runnable {
                             status = TransactionStatus.RETRY;
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
-                            LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage());
+                            if(attempt == totalAttemptsPerTransaction) {
+                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getStackTrace());
+                            } else {
+                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage());
+                            }
                             // FIXME Disable this for now
                             // throw ex;
                             status = TransactionStatus.RETRY;
@@ -551,11 +555,19 @@ public class Worker implements Runnable {
                     }
                 // Assertion Error
                 } catch (Error ex) {
-                    LOG.error("Fatal error when invoking :" + ex.getMessage());
+                    if (attempt == totalAttemptsPerTransaction) {
+                        LOG.error("Fatal error when invoking :" + ex.getStackTrace());
+                    } else {
+                        LOG.error("Fatal error when invoking :" + ex.getMessage());
+                    }
                     status = TransactionStatus.RETRY;
                  // Random Error
                 } catch (Exception ex) {
-                    LOG.error("Fatal error when invoking :" + ex.getStackTrace());
+                    if (attempt == totalAttemptsPerTransaction) {
+                        LOG.error("Fatal error when invoking :" + ex.getStackTrace());
+                    } else {
+                        LOG.error("Fatal error when invoking :" + ex.getMessage());
+                    }
                     status = TransactionStatus.RETRY;
 
                 } finally {

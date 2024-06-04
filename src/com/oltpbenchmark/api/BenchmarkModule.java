@@ -136,7 +136,7 @@ public class BenchmarkModule {
         if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
             connectStr=workConf.getJdbcURL();
         } else {
-            connectStr = String.format("jdbc:yugabytedb://%s:%d/%s?load_balance=true&yb_servers_refresh_interval=240",
+            connectStr = String.format("jdbc:yugabytedb://%s:%d/%s?load_balance=true&yb_servers_refresh_interval=10",
                 workConf.getNodes().get(r),
                 workConf.getPort(),
                 workConf.getDBName());

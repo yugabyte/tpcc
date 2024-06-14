@@ -232,7 +232,7 @@ public class DBWorkload {
       // ----------------------------------------------------------------
       // CREATE BENCHMARK MODULE
       // ----------------------------------------------------------------
-      BenchmarkModule bench = new BenchmarkModule(wrkld);
+      BenchmarkModule bench = new BenchmarkModule(wrkld, options);
       Map<String, Object> initDebug = new ListOrderedMap<>();
       initDebug.put("Benchmark", String.format("%s {%s}", plugin.toUpperCase(), "BenchmarkModule"));
       initDebug.put("Configuration", configFile);

@@ -146,11 +146,14 @@ public class DBWorkload {
       // BEGIN LOADING WORKLOAD CONFIGURATION
       // ----------------------------------------------------------------
 
-      String geopartitionedConfigFile = options.getGeoPartitionedConfigFile().orElse("config/geopartitioned_workload.xml");
-      GeoPartitionedConfigFileOptions geopartitionedConfigOptions = new GeoPartitionedConfigFileOptions(geopartitionedConfigFile);
-      GeoPartitionPolicy geoPartitionPolicy = geopartitionedConfigOptions.getGeoPartitionPlacement(totalWarehousesAcrossShards, numWarehouses, startWarehouseIdForShard);
-      
+      String geopartitionedConfigFile = options.getGeoPartitionedConfigFile().orElse("");
+      GeoPartitionPolicy geoPartitionPolicy = null;
+      if (!geopartitionedConfigFile.isEmpty()) {
+          GeoPartitionedConfigFileOptions geopartitionedConfigOptions = new GeoPartitionedConfigFileOptions(geopartitionedConfigFile);
+          geoPartitionPolicy = geopartitionedConfigOptions.getGeoPartitionPlacement(totalWarehousesAcrossShards, numWarehouses, startWarehouseIdForShard);
+      }
       WorkloadConfiguration wrkld = new WorkloadConfiguration(geoPartitionPolicy);
+      
       wrkld.setBenchmarkName(plugin);
 
       // Pull in database configuration

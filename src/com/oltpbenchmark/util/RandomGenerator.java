@@ -18,6 +18,7 @@
 package com.oltpbenchmark.util;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomGenerator extends Random {
 
@@ -41,6 +42,22 @@ public class RandomGenerator extends Random {
         return value;
     }
 
+    /**
+     * Returns a random int value between minimum and maximum (inclusive).
+     * Uses an implementation that will not have the same thread contention
+     * issues as the default Random.nextInt() method.
+     * @return an int in the range [minimum, maximum]. Note that this is inclusive.
+     */
+    public int fastNumber(int minimum, int maximum) {
+        assert minimum <= maximum : String.format("%d <= %d", minimum, maximum);
+        int range_size = maximum - minimum + 1;
+        int value = ThreadLocalRandom.current().nextInt(range_size);
+        //int value = this.nextInt(range_size);
+        value += minimum;
+        assert minimum <= value && value <= maximum;
+        return value;
+    }
+
     /** @return a random alphabetic string with length in range [minimum_length, maximum_length].
      */
     public String astring(int minimum_length, int maximum_length) {
@@ -55,11 +72,11 @@ public class RandomGenerator extends Random {
     }
 
     private String randomString(int minimum_length, int maximum_length, char base, int numCharacters) {
-        int length = number(minimum_length, maximum_length);
+        int length = fastNumber(minimum_length, maximum_length);
         byte baseByte = (byte) base;
         byte[] bytes = new byte[length];
         for (int i = 0; i < length; ++i) {
-            bytes[i] = (byte)(baseByte + number(0, numCharacters-1));
+            bytes[i] = (byte)(baseByte + fastNumber(0, numCharacters-1));
         }
         return new String(bytes);
     }

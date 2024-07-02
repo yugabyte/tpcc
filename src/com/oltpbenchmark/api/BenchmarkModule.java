@@ -132,11 +132,17 @@ public class BenchmarkModule {
         }
 
         int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
+        String url_db = "";
+        if(workConf.getDBName()=="yugabyte")
+            url_db = "yugabytedb";
+        else if(workConf.getDBName()=="postgres")
+            url_db = "postgresql";
         String connectStr;
         if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
             connectStr=workConf.getJdbcURL();
         } else {
-            connectStr = String.format("jdbc:yugabytedb://%s:%d/%s",
+            connectStr = String.format("jdbc:%s://%s:%d/%s",
+                workConf.getDBName(),
                 workConf.getNodes().get(r),
                 workConf.getPort(),
                 workConf.getDBName());

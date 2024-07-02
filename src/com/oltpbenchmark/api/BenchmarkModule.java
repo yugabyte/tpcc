@@ -90,9 +90,13 @@ public class BenchmarkModule {
                 ThreadUtil.sleep(5000);
             }
             Properties props = new Properties();
-            props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
-	    //props.setProperty("dataSource.serverNames", ip);
-	    props.setProperty("dataSource.serverName", ip);
+            if(workConf.getDBType().equals("yugabyte")){
+                props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
+            } else {
+                props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
+            }
+	        //props.setProperty("dataSource.serverNames", ip);
+	        props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
             props.setProperty("dataSource.user", workConf.getDBUsername());
             props.setProperty("dataSource.password", workConf.getDBPassword());
@@ -119,36 +123,57 @@ public class BenchmarkModule {
     }
 
     public final Connection makeConnection() throws SQLException {
-        YBClusterAwareDataSource ds = new YBClusterAwareDataSource();
-        ds.setProperty("user", workConf.getDBUsername());
-        ds.setProperty("password", workConf.getDBPassword());
-        ds.setProperty("reWriteBatchedInserts", "true");
+        Connection conn =  null;
+        if(workConf.getDBType().equals("yugabyte")) {
+            YBClusterAwareDataSource ds = new YBClusterAwareDataSource();
+            ds.setProperty("user", workConf.getDBUsername());
+            ds.setProperty("password", workConf.getDBPassword());
+            ds.setProperty("reWriteBatchedInserts", "true");
 
-        if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
-          assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
-          ds.setProperty("sslmode", "require");
-          ds.setProperty("sslcert", workConf.getSslCert());
-          ds.setProperty("sslkey", workConf.getSslKey());
+            if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
+                assert (workConf.getSslKey().length() > 0) : "The SSL key is empty.";
+                ds.setProperty("sslmode", "require");
+                ds.setProperty("sslcert", workConf.getSslCert());
+                ds.setProperty("sslkey", workConf.getSslKey());
+            }
+            int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
+            String connectStr;
+            if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length() > 0) {
+                connectStr = workConf.getJdbcURL();
+            } else {
+                connectStr = String.format("jdbc:yugabytedb://%s:%d/%s",
+                        workConf.getNodes().get(r),
+                        workConf.getPort(),
+                        workConf.getDBName());
+            }
+            ds.setUrl(connectStr);
+            conn = ds.getConnection();
         }
+        else {
+            java.util.Properties props = new java.util.Properties();
+            props.put("user", workConf.getDBUsername());
+            props.put("password", workConf.getDBPassword());
+            props.put("reWriteBatchedInserts", "true");
 
-        int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
-        String url_db = "";
-        if(workConf.getDBType().equals("yugabyte"))
-            url_db = "yugabytedb";
-        else if(workConf.getDBType().equals("postgres"))
-            url_db = "postgresql";
-        String connectStr;
-        if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {
-            connectStr=workConf.getJdbcURL();
-        } else {
-            connectStr = String.format("jdbc:%s://%s:%d/%s",
-                url_db,
-                workConf.getNodes().get(r),
-                workConf.getPort(),
-                workConf.getDBName());
+            if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
+                assert (workConf.getSslKey().length() > 0) : "The SSL key is empty.";
+                props.put("sslmode", "require");
+                props.put("sslcert", workConf.getSslCert());
+                props.put("sslkey", workConf.getSslKey());
+            }
+            int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
+            String connectStr;
+            if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length() > 0) {
+                connectStr = workConf.getJdbcURL();
+            } else {
+                connectStr = String.format("jdbc:postgresql://%s:%d/%s",
+                        workConf.getNodes().get(r),
+                        workConf.getPort(),
+                        workConf.getDBName());
+            }
+            conn = DriverManager.getConnection(connectStr, props);
         }
-        ds.setUrl(connectStr);
-        return ds.getConnection();
+        return conn;
     }
 
     private static final AtomicInteger dataSourceCounter = new AtomicInteger(0);

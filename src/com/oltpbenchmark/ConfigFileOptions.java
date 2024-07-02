@@ -9,6 +9,10 @@ public class ConfigFileOptions extends ConfigFileOptionsBase {
         super(filePath);
     }
 
+    public String getDbType() {
+        return xmlConfig.getString("dbtype");
+    }
+
     public String getDbDriver() {
         return xmlConfig.getString("driver");
     }

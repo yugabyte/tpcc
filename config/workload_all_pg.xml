@@ -5,7 +5,7 @@
     <port>5432</port>
     <username>postgres</username>
     <DBName>postgres</DBName>
-    <password></password>
+    <password>Password321</password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
     <sslCert></sslCert>

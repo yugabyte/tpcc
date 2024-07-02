@@ -133,9 +133,9 @@ public class BenchmarkModule {
 
         int r = dataSourceCounter.getAndIncrement() % workConf.getNodes().size();
         String url_db = "";
-        if(workConf.getDBName().equals("yugabyte"))
+        if(workConf.getDBType().equals("yugabyte"))
             url_db = "yugabytedb";
-        else if(workConf.getDBName().equals("postgres"))
+        else if(workConf.getDBType().equals("postgres"))
             url_db = "postgresql";
         String connectStr;
         if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {

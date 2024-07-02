@@ -159,6 +159,7 @@ public class DBWorkload {
       wrkld.setNodes(nodes);
 
       wrkld.setDBName(configOptions.getDbName());
+      wrkld.setDBType(configOptions.getDbType());
       wrkld.setDBUsername(configOptions.getDbUsername());
       wrkld.setDBPassword(configOptions.getDbPassword());
 

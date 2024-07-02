@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<parameters>
+    <dbtype>postgres</dbtype>
+    <driver>org.postgresql.Driver</driver>
+    <port>5432</port>
+    <username>postgres</username>
+    <DBName>postgres</DBName>
+    <password></password>
+    <isolation>TRANSACTION_REPEATABLE_READ</isolation>
+
+    <sslCert></sslCert>
+    <sslKey></sslKey>
+    <jdbcURL></jdbcURL>
+
+    <batchSize>128</batchSize>
+    <useKeyingTime>true</useKeyingTime>
+    <useThinkTime>true</useThinkTime>
+    <enableForeignKeysAfterLoad>true</enableForeignKeysAfterLoad>
+    <hikariConnectionTimeoutMs>180000</hikariConnectionTimeoutMs>
+    <useStoredProcedures>true</useStoredProcedures>
+    <displayEnhancedLatencyMetrics>false</displayEnhancedLatencyMetrics>
+    <trackPerSQLStmtLatencies>false</trackPerSQLStmtLatencies>
+
+   	<transactiontypes>
+        <transaction>
+            <name>NewOrder</name>
+            <weight>45</weight>
+        </transaction>
+        <transaction>
+            <name>Payment</name>
+            <weight>43</weight>
+        </transaction>
+        <transaction>
+            <name>OrderStatus</name>
+            <weight>4</weight>
+        </transaction>
+        <transaction>
+            <name>Delivery</name>
+            <weight>4</weight>
+        </transaction>
+        <transaction>
+            <name>StockLevel</name>
+            <weight>4</weight>
+        </transaction>
+   	</transactiontypes>
+
+    <runtime>1800</runtime>
+    <rate>10000</rate>
+    <!--
+      Set the number of retries to 0 as retrying when the number of warehouses is
+      high is pointless as it just leads to more failures.
+    -->
+    <maxRetriesPerTransaction>2</maxRetriesPerTransaction>
+    <maxLoaderRetries>2</maxLoaderRetries>
+
+</parameters>

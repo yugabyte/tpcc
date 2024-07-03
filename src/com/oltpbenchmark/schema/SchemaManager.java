@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Set;
 
+import com.oltpbenchmark.WorkloadConfiguration;
 import org.apache.log4j.Logger;
 
 public abstract class SchemaManager {
@@ -15,13 +16,12 @@ public abstract class SchemaManager {
         this.db_connection = db_connection;
     }
 
-    public abstract void create() throws SQLException;
-
+    public abstract void create(WorkloadConfiguration workConf) throws SQLException;
     public abstract void enableForeignKeyConstraints() throws SQLException;
 
     public abstract void dropForeignKeyConstraints() throws SQLException;
 
-    protected abstract void createIndexes() throws SQLException;
+    protected abstract void createIndexes(WorkloadConfiguration workConf) throws SQLException;
     
     public static Set<String> getTableNames() {
         return TPCCTableSchemas.tables.keySet();

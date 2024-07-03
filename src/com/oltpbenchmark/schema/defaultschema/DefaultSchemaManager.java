@@ -1,5 +1,6 @@
 package com.oltpbenchmark.schema.defaultschema;
 
+import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.oltpbenchmark.schema.SchemaManager;
 import com.oltpbenchmark.schema.TPCCTableSchemas;
@@ -22,24 +23,28 @@ public class DefaultSchemaManager extends SchemaManager {
         }
     }
 
-    @Override
-    public void create() throws SQLException {
+    public void create(WorkloadConfiguration workconf) throws SQLException {
         for (Table t : tables.values()) {
             execute(t.getDropDdl());
             execute(t.getCreateDdl());
         }
         // TODO -- can we defer this until after load as well?
-        execute("CREATE INDEX idx_customer_name ON customer ((c_w_id,c_d_id) HASH,c_last,c_first)");
-        execute("CREATE UNIQUE INDEX idx_order ON oorder ((o_w_id,o_d_id) HASH,o_c_id,o_id DESC)");
+        createIndexes(workconf);
 
         if (!db_connection.getAutoCommit()) {
             db_connection.commit();
         }
     }
 
-    public void createIndexes() throws SQLException {
-        execute("CREATE INDEX idx_customer_name ON customer ((c_w_id,c_d_id) HASH,c_last,c_first)");
-        execute("CREATE UNIQUE INDEX idx_order ON oorder ((o_w_id,o_d_id) HASH,o_c_id,o_id DESC)");
+    public void createIndexes(WorkloadConfiguration workConf) throws SQLException {
+        String idx_customer = "CREATE INDEX idx_customer_name ON customer (" +
+                (workConf.getDBType().equals("yugabyte")? "(c_w_id,c_d_id) HASH,c_last,c_first" :"c_w_id,c_d_id,c_last,c_first")
+                + ")";
+        String idx_oorder = "CREATE UNIQUE INDEX idx_order ON oorder (" +
+                (workConf.getDBType().equals("yugabyte") ? "(o_w_id,o_d_id) HASH,o_c_id,o_id DESC" :"o_w_id,o_d_id,o_c_id,o_id DESC")
+                + ")";
+        execute(idx_customer);
+        execute(idx_oorder);
     }
 
     public void dropForeignKeyConstraints() throws SQLException {

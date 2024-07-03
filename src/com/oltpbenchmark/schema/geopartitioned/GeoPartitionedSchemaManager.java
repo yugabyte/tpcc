@@ -6,6 +6,7 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.oltpbenchmark.schema.SchemaManager;
@@ -35,7 +36,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
     }
 
     @Override
-    public void create() throws SQLException {
+    public void create(WorkloadConfiguration workConf) throws SQLException {
         for (Table t : tables.values()) {
             execute(t.getDropDdl());
         }
@@ -46,7 +47,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
             execute(t.getCreateDdl());
         }
         // TODO -- can we defer this until after load as well?
-        createIndexes();
+        createIndexes(workConf);
 
         if (!db_connection.getAutoCommit()) {
             db_connection.commit();
@@ -54,7 +55,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
     }
 
     @Override
-    public void createIndexes() throws SQLException {
+    public void createIndexes(WorkloadConfiguration workConf) throws SQLException {
         for (int i = 1; i <= numPartitions(); ++i) {
             execute(String.format("CREATE INDEX idx_customer_name%d ON customer%d ((c_w_id,c_d_id) HASH,c_last,c_first) TABLESPACE %s",
                     i, i, geoPartitionPolicy.getTablespaceForPartition(i - 1)));

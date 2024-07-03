@@ -20,7 +20,7 @@ public class TPCCTableSchemas {
                 .column("ol_supply_w_id", "int ")
                 .column("ol_quantity", "decimal(2,0) ")
                 .column("ol_dist_info", "char(24) ")
-                .primaryKey("((ol_w_id,ol_d_id) HASH, ol_o_id,ol_number)")
+                .primaryKey("((ol_w_id,ol_d_id) HASH,ol_o_id,ol_number)")
                 .partitionKey("(ol_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_NEWORDER)

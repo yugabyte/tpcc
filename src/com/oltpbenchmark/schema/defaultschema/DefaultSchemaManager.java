@@ -16,7 +16,7 @@ public class DefaultSchemaManager extends SchemaManager {
 
     public DefaultSchemaManager(Connection db_connection, String dbType) {
         super(db_connection);
-        TPCCTableSchemas.dbType = dbType;
+        TPCCTableSchemas.updateTableSchema(dbType);
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
             tables.put(t.name(), new DefaultTable(t));
         }

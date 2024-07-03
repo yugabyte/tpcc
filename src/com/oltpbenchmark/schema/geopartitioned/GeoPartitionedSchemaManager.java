@@ -6,7 +6,6 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.oltpbenchmark.schema.SchemaManager;

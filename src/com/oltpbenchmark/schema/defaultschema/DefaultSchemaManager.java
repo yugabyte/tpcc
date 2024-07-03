@@ -1,6 +1,5 @@
 package com.oltpbenchmark.schema.defaultschema;
 
-import com.oltpbenchmark.WorkloadConfiguration;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.StockLevel;
 import com.oltpbenchmark.schema.SchemaManager;
 import com.oltpbenchmark.schema.TPCCTableSchemas;
@@ -17,12 +16,12 @@ public class DefaultSchemaManager extends SchemaManager {
 
     public DefaultSchemaManager(Connection db_connection) {
         super(db_connection);
-
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
             tables.put(t.name(), new DefaultTable(t));
         }
     }
 
+    @Override
     public void create(String dbType) throws SQLException {
         TPCCTableSchemas.updateTableSchema(dbType);
         for (Table t : tables.values()) {

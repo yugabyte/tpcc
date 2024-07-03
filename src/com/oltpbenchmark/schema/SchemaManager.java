@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Set;
 
-import com.oltpbenchmark.WorkloadConfiguration;
 import org.apache.log4j.Logger;
 
 public abstract class SchemaManager {

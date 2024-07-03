@@ -267,7 +267,6 @@ public class TPCCTableSchemas {
                         .partitionKey("(w_id)")
                         .build()
         ).collect(Collectors.toMap(TableSchema::name, e -> e)));
-
     }
     public static TableSchema getTableSchema(String tablename) {
         return tables.get(tablename);

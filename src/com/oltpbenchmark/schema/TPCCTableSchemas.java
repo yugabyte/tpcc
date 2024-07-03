@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 
 public class TPCCTableSchemas {
+    public static String dbType;
     public static final Map<String, TableSchema> tables = Collections.unmodifiableMap(Stream.of(
             new TableSchemaBuilder(TPCCConstants.TABLENAME_ORDERLINE)
                 .column("ol_w_id", "int ")
@@ -20,14 +21,14 @@ public class TPCCTableSchemas {
                 .column("ol_supply_w_id", "int ")
                 .column("ol_quantity", "decimal(2,0) ")
                 .column("ol_dist_info", "char(24) ")
-                .primaryKey("((ol_w_id,ol_d_id) HASH,ol_o_id,ol_number)")
+                .primaryKey(dbType.equals("yugabyte") ? "((ol_w_id,ol_d_id) HASH ol_o_id,ol_number)" : "(ol_w_id,ol_d_id,ol_o_id,ol_number)")
                 .partitionKey("(ol_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_NEWORDER)
                 .column("no_w_id", "int ")
                 .column("no_d_id", "int ")
                 .column("no_o_id", "int ")
-                .primaryKey("((no_w_id,no_d_id) HASH,no_o_id)")
+                .primaryKey(dbType.equals("yugabyte") ? "((no_w_id,no_d_id) HASH,no_o_id)": "(no_w_id,no_d_id,no_o_id)" )
                 .partitionKey("(no_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_STOCK)
@@ -48,7 +49,7 @@ public class TPCCTableSchemas {
                 .column("s_dist_08", "char(24) ")
                 .column("s_dist_09", "char(24) ")
                 .column("s_dist_10", "char(24) ")
-                .primaryKey("(s_w_id HASH, s_i_id ASC)")
+                .primaryKey(dbType.equals("yugabyte") ? "(s_w_id HASH, s_i_id ASC)" : "(s_w_id,s_i_id)")
                 .partitionKey("(s_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_OPENORDER)
@@ -60,7 +61,7 @@ public class TPCCTableSchemas {
                 .column("o_ol_cnt", "decimal(2,0) ")
                 .column("o_all_local", "decimal(1,0) ")
                 .column("o_entry_d", "timestamp  DEFAULT CURRENT_TIMESTAMP")
-                .primaryKey("((o_w_id,o_d_id) HASH,o_id)")
+                .primaryKey(dbType.equals("yugabyte") ? "((o_w_id,o_d_id) HASH,o_id)" : "(o_w_id,o_d_id,o_id)" )
                 .partitionKey("(o_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_HISTORY)
@@ -96,7 +97,7 @@ public class TPCCTableSchemas {
                 .column("c_since", "timestamp  DEFAULT CURRENT_TIMESTAMP")
                 .column("c_middle", "char(2) ")
                 .column("c_data", "varchar(500) ")
-                .primaryKey("((c_w_id,c_d_id) HASH,c_id)")
+                .primaryKey(dbType.equals("yugabyte") ? "((c_w_id,c_d_id) HASH,c_id)" : "(c_w_id,c_d_id,c_id)")
                 .partitionKey("(c_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_DISTRICT)
@@ -111,7 +112,7 @@ public class TPCCTableSchemas {
                 .column("d_city", "varchar(20) ")
                 .column("d_state", "char(2) ")
                 .column("d_zip", "char(9) ")
-                .primaryKey("((d_w_id,d_id) HASH)")
+                .primaryKey(dbType.equals("yugabyte") ?"((d_w_id,d_id) HASH)" : "(d_w_id,d_id)" )
                 .partitionKey("(d_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_ITEM)

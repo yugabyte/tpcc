@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <parameters>
-    <dbtype>postgres</dbtype>
+    <dbtype>yugabyte</dbtype>
     <driver>com.yugabyte.Driver</driver>
     <port>5433</port>
     <username>yugabyte</username>

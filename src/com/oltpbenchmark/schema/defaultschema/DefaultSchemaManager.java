@@ -14,8 +14,9 @@ import java.util.*;
 public class DefaultSchemaManager extends SchemaManager {
     private final Map<String, Table> tables = new HashMap<String, Table>();
 
-    public DefaultSchemaManager(Connection db_connection) {
+    public DefaultSchemaManager(Connection db_connection, String dbType) {
         super(db_connection);
+        TPCCTableSchemas.dbType = dbType;
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
             tables.put(t.name(), new DefaultTable(t));
         }

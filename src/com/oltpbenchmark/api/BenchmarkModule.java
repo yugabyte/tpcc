@@ -230,7 +230,7 @@ public class BenchmarkModule {
         try {
             Connection conn = makeConnection();
             SchemaManager schemaManager = SchemaManagerFactory.getSchemaManager(workConf, conn);
-            schemaManager.create(workConf);
+            schemaManager.create(workConf.getDBType());
             conn.close();
         } catch (SQLException ex) {
             throw new RuntimeException(String.format("Unexpected error when trying to create the %s database", this.benchmarkName), ex);

@@ -16,12 +16,12 @@ public abstract class SchemaManager {
         this.db_connection = db_connection;
     }
 
-    public abstract void create(WorkloadConfiguration workConf) throws SQLException;
+    public abstract void create(String dbType) throws SQLException;
     public abstract void enableForeignKeyConstraints() throws SQLException;
 
     public abstract void dropForeignKeyConstraints() throws SQLException;
 
-    protected abstract void createIndexes(WorkloadConfiguration workConf) throws SQLException;
+    protected abstract void createIndexes(String dbType) throws SQLException;
     
     public static Set<String> getTableNames() {
         return TPCCTableSchemas.tables.keySet();

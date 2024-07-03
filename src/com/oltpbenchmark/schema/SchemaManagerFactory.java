@@ -10,6 +10,6 @@ public class SchemaManagerFactory {
     public static SchemaManager getSchemaManager(WorkloadConfiguration workConf, Connection conn) {
         return workConf.getGeoPartitioningEnabled()
                 ? new GeoPartitionedSchemaManager(workConf.getGeoPartitioningPolicy(), conn)
-                : new DefaultSchemaManager(conn, workConf.getDBType());
+                : new DefaultSchemaManager(conn);
     }
 }

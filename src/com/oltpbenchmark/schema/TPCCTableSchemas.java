@@ -20,7 +20,7 @@ public class TPCCTableSchemas {
                 .column("ol_supply_w_id", "int ")
                 .column("ol_quantity", "decimal(2,0) ")
                 .column("ol_dist_info", "char(24) ")
-                .primaryKey("((ol_w_id,ol_d_id) HASH ol_o_id,ol_number)")
+                .primaryKey("((ol_w_id,ol_d_id) HASH, ol_o_id,ol_number)")
                 .partitionKey("(ol_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_NEWORDER)
@@ -111,7 +111,7 @@ public class TPCCTableSchemas {
                 .column("d_city", "varchar(20) ")
                 .column("d_state", "char(2) ")
                 .column("d_zip", "char(9) ")
-                .primaryKey("((d_w_id,d_id) HASH)" )
+                .primaryKey("((d_w_id,d_id) HASH)")
                 .partitionKey("(d_w_id)")
                 .build(),
             new TableSchemaBuilder(TPCCConstants.TABLENAME_ITEM)
@@ -151,7 +151,7 @@ public class TPCCTableSchemas {
                         .column("ol_supply_w_id", "int ")
                         .column("ol_quantity", "decimal(2,0) ")
                         .column("ol_dist_info", "char(24) ")
-                        .primaryKey(dbType.equals("yugabyte") ? "((ol_w_id,ol_d_id) HASH ol_o_id,ol_number)" : "(ol_w_id,ol_d_id,ol_o_id,ol_number)")
+                        .primaryKey(dbType.equals("yugabyte") ? "((ol_w_id,ol_d_id) HASH, ol_o_id,ol_number)" : "(ol_w_id,ol_d_id,ol_o_id,ol_number)")
                         .partitionKey("(ol_w_id)")
                         .build(),
                 new TableSchemaBuilder(TPCCConstants.TABLENAME_NEWORDER)

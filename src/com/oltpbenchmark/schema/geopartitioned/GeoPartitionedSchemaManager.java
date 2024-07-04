@@ -23,6 +23,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
     public GeoPartitionedSchemaManager(GeoPartitionPolicy geoPartitioningPolicy, Connection conn) {
         super(conn);
         this.geoPartitionPolicy = geoPartitioningPolicy;
+        TPCCTableSchemas.updateTableSchema("yugabyte");
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
             tables.put(t.name(),
                        t.name().equals(TPCCConstants.TABLENAME_ITEM) ? new DefaultTable(t, geoPartitioningPolicy.getTablespaceForItemTable())

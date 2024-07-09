@@ -52,6 +52,7 @@ public class DBWorkload {
   private static final Map<Integer, String> transactionTypes = new HashMap<>();
   private static JsonMetricsHelper jsonMetricsHelper = new JsonMetricsHelper();
 
+  public static String dbtype = "";
   /**
    * Returns true if asserts are enabled. This assumes that
    * we're always using the default system ClassLoader
@@ -159,6 +160,8 @@ public class DBWorkload {
       wrkld.setNodes(nodes);
 
       wrkld.setDBName(configOptions.getDbName());
+      wrkld.setDBType(configOptions.getDbType());
+      DBWorkload.dbtype = configOptions.getDbType();
       wrkld.setDBUsername(configOptions.getDbUsername());
       wrkld.setDBPassword(configOptions.getDbPassword());
 

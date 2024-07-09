@@ -14,31 +14,37 @@ import java.util.*;
 public class DefaultSchemaManager extends SchemaManager {
     private final Map<String, Table> tables = new HashMap<String, Table>();
 
-    public DefaultSchemaManager(Connection db_connection) {
+    public DefaultSchemaManager(Connection db_connection, String dbType) {
         super(db_connection);
+        TPCCTableSchemas.updateTableSchema(dbType);
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
             tables.put(t.name(), new DefaultTable(t));
         }
     }
 
     @Override
-    public void create() throws SQLException {
+    public void create(String dbType) throws SQLException {
         for (Table t : tables.values()) {
             execute(t.getDropDdl());
             execute(t.getCreateDdl());
         }
         // TODO -- can we defer this until after load as well?
-        execute("CREATE INDEX idx_customer_name ON customer ((c_w_id,c_d_id) HASH,c_last,c_first)");
-        execute("CREATE UNIQUE INDEX idx_order ON oorder ((o_w_id,o_d_id) HASH,o_c_id,o_id DESC)");
+        createIndexes(dbType);
 
         if (!db_connection.getAutoCommit()) {
             db_connection.commit();
         }
     }
 
-    public void createIndexes() throws SQLException {
-        execute("CREATE INDEX idx_customer_name ON customer ((c_w_id,c_d_id) HASH,c_last,c_first)");
-        execute("CREATE UNIQUE INDEX idx_order ON oorder ((o_w_id,o_d_id) HASH,o_c_id,o_id DESC)");
+    public void createIndexes(String dbType) throws SQLException {
+        String idx_customer = "CREATE INDEX idx_customer_name ON customer (" +
+                (dbType.equals("yugabyte")? "(c_w_id,c_d_id) HASH,c_last,c_first" :"c_w_id,c_d_id,c_last,c_first")
+                + ")";
+        String idx_oorder = "CREATE UNIQUE INDEX idx_order ON oorder (" +
+                (dbType.equals("yugabyte") ? "(o_w_id,o_d_id) HASH,o_c_id,o_id DESC" :"o_w_id,o_d_id,o_c_id,o_id DESC")
+                + ")";
+        execute(idx_customer);
+        execute(idx_oorder);
     }
 
     public void dropForeignKeyConstraints() throws SQLException {

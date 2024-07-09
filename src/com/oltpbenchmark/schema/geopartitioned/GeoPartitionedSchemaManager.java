@@ -23,6 +23,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
     public GeoPartitionedSchemaManager(GeoPartitionPolicy geoPartitioningPolicy, Connection conn) {
         super(conn);
         this.geoPartitionPolicy = geoPartitioningPolicy;
+        TPCCTableSchemas.updateTableSchema("yugabyte");
         for (TableSchema t : TPCCTableSchemas.tables.values()) {
             tables.put(t.name(),
                        t.name().equals(TPCCConstants.TABLENAME_ITEM) ? new DefaultTable(t, geoPartitioningPolicy.getTablespaceForItemTable())
@@ -35,7 +36,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
     }
 
     @Override
-    public void create() throws SQLException {
+    public void create(String dbType) throws SQLException {
         for (Table t : tables.values()) {
             execute(t.getDropDdl());
         }
@@ -46,7 +47,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
             execute(t.getCreateDdl());
         }
         // TODO -- can we defer this until after load as well?
-        createIndexes();
+        createIndexes(dbType);
 
         if (!db_connection.getAutoCommit()) {
             db_connection.commit();
@@ -54,7 +55,7 @@ public class GeoPartitionedSchemaManager extends SchemaManager {
     }
 
     @Override
-    public void createIndexes() throws SQLException {
+    public void createIndexes(String dbType) throws SQLException {
         for (int i = 1; i <= numPartitions(); ++i) {
             execute(String.format("CREATE INDEX idx_customer_name%d ON customer%d ((c_w_id,c_d_id) HASH,c_last,c_first) TABLESPACE %s",
                     i, i, geoPartitionPolicy.getTablespaceForPartition(i - 1)));

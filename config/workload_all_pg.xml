@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <parameters>
-    <dbtype>yugabyte</dbtype>
-    <driver>com.yugabyte.Driver</driver>
-    <port>5433</port>
-    <username>yugabyte</username>
-    <DBName>yugabyte</DBName>
-    <password></password>
+    <dbtype>postgres</dbtype>
+    <driver>org.postgresql.Driver</driver>
+    <port>5432</port>
+    <username>postgres</username>
+    <DBName>postgres</DBName>
+    <password>Password321</password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
     <sslCert></sslCert>

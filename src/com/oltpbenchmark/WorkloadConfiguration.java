@@ -41,6 +41,7 @@ public void setBenchmarkName(String benchmarkName) {
   }
 
   private List<String> nodes;
+  private String db_type;
   private String db_name;
   private String db_username;
   private String db_password;
@@ -117,6 +118,10 @@ public void setBenchmarkName(String benchmarkName) {
     this.db_name = dbname;
   }
 
+  public void setDBType(String dbtype) {
+    this.db_type = dbtype;
+  }
+
   public void setLoaderThreads(int loaderThreads) {
     this.loaderThreads = loaderThreads;
   }
@@ -140,6 +145,9 @@ public void setBenchmarkName(String benchmarkName) {
     return db_name;
   }
 
+  public String getDBType() {
+    return db_type;
+  }
   public void setDBUsername(String username) {
     this.db_username = username;
   }

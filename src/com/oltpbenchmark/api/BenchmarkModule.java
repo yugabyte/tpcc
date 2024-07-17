@@ -129,6 +129,7 @@ public class BenchmarkModule {
             ds.setProperty("user", workConf.getDBUsername());
             ds.setProperty("password", workConf.getDBPassword());
             ds.setProperty("reWriteBatchedInserts", "true");
+            ds.setLoadBalanceHosts(workConf.getLoad_balance());
 
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
                 assert (workConf.getSslKey().length() > 0) : "The SSL key is empty.";

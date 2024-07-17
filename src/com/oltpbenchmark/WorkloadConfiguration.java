@@ -49,6 +49,8 @@ public void setBenchmarkName(String benchmarkName) {
   private String sslCert;
   private String sslKey;
   private String jdbcURL;
+
+  private boolean load_balance=true;
   private int numWarehouses = -1;
   private int startWarehouseIdForShard = -1;
   private int totalWarehousesAcrossShards = -1;
@@ -121,6 +123,9 @@ public void setBenchmarkName(String benchmarkName) {
   public void setDBType(String dbtype) {
     this.db_type = dbtype;
   }
+  public void setLoad_balance(boolean load_balance) {
+    this.load_balance = load_balance;
+  }
 
   public void setLoaderThreads(int loaderThreads) {
     this.loaderThreads = loaderThreads;
@@ -148,6 +153,11 @@ public void setBenchmarkName(String benchmarkName) {
   public String getDBType() {
     return db_type;
   }
+
+  public boolean getLoad_balance() {
+    return load_balance;
+  }
+
   public void setDBUsername(String username) {
     this.db_username = username;
   }

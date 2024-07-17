@@ -161,6 +161,7 @@ public class DBWorkload {
 
       wrkld.setDBName(configOptions.getDbName());
       wrkld.setDBType(configOptions.getDbType());
+      configOptions.getLoadBalance().ifPresent(wrkld::setLoad_balance);
       DBWorkload.dbtype = configOptions.getDbType();
       wrkld.setDBUsername(configOptions.getDbUsername());
       wrkld.setDBPassword(configOptions.getDbPassword());

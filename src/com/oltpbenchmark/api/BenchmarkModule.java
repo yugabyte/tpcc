@@ -105,7 +105,6 @@ public class BenchmarkModule {
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
             props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
-            props.setProperty("dataSource.loadBalance", Boolean.toString(workConf.getLoad_balance()));
 
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
               assert(workConf.getSslKey().length() > 0) : "The SSL key is empty.";
@@ -129,7 +128,6 @@ public class BenchmarkModule {
             ds.setProperty("user", workConf.getDBUsername());
             ds.setProperty("password", workConf.getDBPassword());
             ds.setProperty("reWriteBatchedInserts", "true");
-            ds.setProperty("load-balance", Boolean.toString(workConf.getLoad_balance()));
 
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
                 assert (workConf.getSslKey().length() > 0) : "The SSL key is empty.";

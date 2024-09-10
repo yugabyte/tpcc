@@ -146,7 +146,30 @@ public class Delivery extends Procedure {
       int retries = 0;
 
       while (retries < 5 && result != 1){
-        int result = delivDeleteNewOrder.executeUpdate();
+        delivGetOrderId.setInt(1, d_id);
+        delivGetOrderId.setInt(2, w_id);
+        //conn.createStatement().execute("begin transaction");
+        if (trace) LOG.trace("delivGetOrderId START");
+        rs = delivGetOrderId.executeQuery();
+        if (trace) LOG.trace("delivGetOrderId END");
+        if (!rs.next()) {
+          // This district has no new orders
+          // This can happen but should be rare
+          if (trace) LOG.warn(String.format("District has no new orders [W_ID=%d, D_ID=%d]", w_id, d_id));
+          continue;
+        }
+
+        no_o_id = rs.getInt("NO_O_ID");
+        orderIDs[d_id - 1] = no_o_id;
+        rs.close();
+
+        delivDeleteNewOrder.setInt(1, no_o_id);
+        delivDeleteNewOrder.setInt(2, d_id);
+        delivDeleteNewOrder.setInt(3, w_id);
+        if (trace) LOG.trace("delivDeleteNewOrder START");
+        result = delivDeleteNewOrder.executeUpdate();
+        if (trace) LOG.trace("delivDeleteNewOrder END");
+
         retries += 1;
       }
 

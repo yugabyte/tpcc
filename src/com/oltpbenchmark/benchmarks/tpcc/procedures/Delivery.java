@@ -140,7 +140,6 @@ public class Delivery extends Procedure {
       if (trace) LOG.trace("delivDeleteNewOrder START");
       int result = delivDeleteNewOrder.executeUpdate();
       if (trace) LOG.trace("delivDeleteNewOrder END");
-
       if (result != 1) {
         // This code used to run in a loop in an attempt to make this work
         // with MySQL's default weird consistency level. We just always run

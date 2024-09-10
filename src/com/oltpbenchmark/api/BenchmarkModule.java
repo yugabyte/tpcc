@@ -111,6 +111,7 @@ public class BenchmarkModule {
               props.put("dataSource.sslmode", "require");
               props.put("dataSource.sslcert", workConf.getSslCert());
               props.put("dataSource.sslkey", workConf.getSslKey());
+
             }
             HikariConfig config = new HikariConfig(props);
             if (workConf.getJdbcURL() != null && workConf.getJdbcURL().length()>0) {

@@ -570,6 +570,7 @@ public class Worker implements Runnable {
                         LOG.error("Fatal error when invoking :" + ex.getMessage() + ". Retrying...");
                     }
                     status = TransactionStatus.RETRY;
+
                 } finally {
                     LOG.debug(String.format("%s %s Result: %s", this, next, status));
                     endOperation = System.nanoTime();

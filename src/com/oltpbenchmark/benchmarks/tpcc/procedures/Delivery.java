@@ -140,6 +140,16 @@ public class Delivery extends Procedure {
       if (trace) LOG.trace("delivDeleteNewOrder START");
       int result = delivDeleteNewOrder.executeUpdate();
       if (trace) LOG.trace("delivDeleteNewOrder END");
+
+      // Implement retry logic
+
+      int retries = 0;
+
+      while (retries < 5 && result != 1){
+        int result = delivDeleteNewOrder.executeUpdate();
+        retries += 1;
+      }
+
       if (result != 1) {
         // This code used to run in a loop in an attempt to make this work
         // with MySQL's default weird consistency level. We just always run
@@ -158,6 +168,8 @@ public class Delivery extends Procedure {
       if (trace) LOG.trace("delivUpdateCarrierId START");
       rs = delivUpdateCarrierId.executeQuery();
       if (trace) LOG.trace("delivUpdateCarrierId END");
+
+
 
       if (!rs.next()) {
         String msg = String.format("Failed to update ORDER record [W_ID=%d, D_ID=%d, O_ID=%d]",

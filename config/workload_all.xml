@@ -6,7 +6,7 @@
     <username>yugabyte</username>
     <DBName>yugabyte</DBName>
     <password></password>
-    <isolation>TRANSACTION_READ_COMMITTED</isolation>
+    <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
     <sslCert></sslCert>
     <sslKey></sslKey>

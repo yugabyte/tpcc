@@ -148,7 +148,6 @@ public void setBenchmarkName(String benchmarkName) {
   public String getDBType() {
     return db_type;
   }
-
   public void setDBUsername(String username) {
     this.db_username = username;
   }

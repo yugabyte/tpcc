@@ -20,9 +20,6 @@ public class ConfigFileOptions extends ConfigFileOptionsBase {
     public String getDbName() {
         return xmlConfig.getString("DBName");
     }
-    public Optional<Boolean> getLoadBalance() {
-        return getBoolOpt("load-balance");
-    }
 
     public String getDbUsername() {
         return xmlConfig.getString("username");

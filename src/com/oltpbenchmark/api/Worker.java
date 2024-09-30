@@ -545,9 +545,9 @@ public class Worker implements Runnable {
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
                             if(attempt == totalAttemptsPerTransaction) {
-                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getStackTrace());
+                                LOG.error("The DBMS rejected the transaction without an error code and max retry attempts reached : " +  ex.getStackTrace());
                             } else {
-                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage());
+                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
                             }
                             // FIXME Disable this for now
                             // throw ex;
@@ -559,15 +559,15 @@ public class Worker implements Runnable {
                     if (attempt == totalAttemptsPerTransaction) {
                         LOG.error("Fatal error when invoking :" + ex.getStackTrace());
                     } else {
-                        LOG.error("Fatal error when invoking :" + ex.getMessage());
+                        LOG.warn("Fatal error when invoking :" + ex.getMessage() + ". Retrying...");
                     }
                     status = TransactionStatus.RETRY;
                  // Random Error
                 } catch (Exception ex) {
                     if (attempt == totalAttemptsPerTransaction) {
-                        LOG.error("Fatal error when invoking :" + ex.getStackTrace());
+                        LOG.error("Fatal error when invoking and max retry attempts reached : " + ex.getStackTrace());
                     } else {
-                        LOG.error("Fatal error when invoking :" + ex.getMessage());
+                        LOG.warn("Fatal error when invoking :" + ex.getMessage() + ". Retrying...");
                     }
                     status = TransactionStatus.RETRY;
 

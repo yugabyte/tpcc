@@ -20,7 +20,7 @@
 	</publications>
 	<dependencies>
       <!-- JDBC Drivers -->
-		<dependency org="com.yugabyte" name="jdbc-yugabytedb" rev="42.3.5-yb-3" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
+		<dependency org="com.yugabyte" name="jdbc-yugabytedb" rev="42.3.5-yb-4" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<dependency org="org.hsqldb" name="hsqldb" rev="2.4.1" force="true" conf="compile->compile(*),master(*);runtime->runtime(*)"/>
 		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency org="org.postgresql" name="postgresql" rev="42.4.5"/>

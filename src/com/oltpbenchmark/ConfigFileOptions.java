@@ -53,6 +53,14 @@ public class ConfigFileOptions extends ConfigFileOptionsBase {
         return getBoolOpt("useThinkTime");
     }
 
+    public Optional<Boolean> getUseConnMngr() {
+        return getBoolOpt("useConnMngr");
+    }
+
+    public Optional<Boolean> getUseShortLivedConn() {
+        return getBoolOpt("useShortLivedConn");
+    }
+
     public Optional<Boolean> getEnableForeignKeysAfterLoad() {
         return getBoolOpt("enableForeignKeysAfterLoad");
     }

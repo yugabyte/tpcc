@@ -188,6 +188,8 @@ public class DBWorkload {
           wrkld.setShouldEnableForeignKeys(false);
       }
 
+      configOptions.getUseConnMngr().ifPresent(wrkld::setUseConnMngr);
+      configOptions.getUseShortLivedConn().ifPresent(wrkld::setUseShortLivedConn);
       configOptions.getBatchSize().ifPresent(wrkld::setBatchSize);
       configOptions.getMaxRetriesPerTransaction().ifPresent(wrkld::setMaxRetriesPerTransaction);
       configOptions.getMaxLoaderRetries().ifPresent(wrkld::setMaxLoaderRetries);

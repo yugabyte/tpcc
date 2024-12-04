@@ -68,6 +68,8 @@ public void setBenchmarkName(String benchmarkName) {
   private boolean useStoredProcedures = true;
   private int maxRetriesPerTransaction = 0;
   private int maxLoaderRetries = 0;
+  private boolean useConnMngr;
+  private boolean useShortLivedConn;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -360,6 +362,16 @@ public void setBenchmarkName(String benchmarkName) {
   public void setMaxRetriesPerTransaction(int maxRetriesPerTransaction) {
     this.maxRetriesPerTransaction = maxRetriesPerTransaction;
   }
+
+  public void setUseConnMngr(boolean useConnMngr) {
+    this.useConnMngr = useConnMngr;
+  }
+  public boolean getUseConnMngr() { return this.useConnMngr; }
+
+  public void setUseShortLivedConn(boolean useShortLivedConn) {
+    this.useShortLivedConn = useShortLivedConn;
+  }
+  public boolean getUseShortLivedConn() { return this.useShortLivedConn; }
 
   public int getMaxRetriesPerTransaction() {
     return maxRetriesPerTransaction;

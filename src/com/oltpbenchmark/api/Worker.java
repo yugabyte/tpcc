@@ -17,6 +17,7 @@
 package com.oltpbenchmark.api;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.*;
@@ -51,12 +52,11 @@ public class Worker implements Runnable {
     private TransactionLatencyRecord latencies;
     private TransactionLatencyRecord failureLatencies;
     private WorkerTaskLatencyRecord workerTaskLatencyRecord;
-
     private final Statement currStatement;
 
     // Interval requests used by the monitor
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
-
+    private Connection ll_conn;
     private final int id;
     private final BenchmarkModule benchmarkModule;
     protected final HikariDataSource dataSource;
@@ -81,7 +81,14 @@ public class Worker implements Runnable {
 
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
         try {
-            this.dataSource = this.benchmarkModule.getDataSource();
+            if(wrkld.getUseConnMngr() && !wrkld.getUseShortLivedConn()) {
+                this.dataSource = null;
+                ll_conn = benchmarkModule.makeConnection();
+                System.out.println("Using connection manager without HikariPool");
+            }
+            else {
+                this.dataSource = this.benchmarkModule.getDataSource();
+            }
         } catch (Exception ex) {
             throw new RuntimeException("Failed to connect to database", ex);
         }
@@ -479,8 +486,14 @@ public class Worker implements Runnable {
                 next = transactionTypes.getType(pieceOfWork.getType());
             }
             startConnection = System.nanoTime();
-
-            conn = dataSource.getConnection();
+            if(wrkld.getUseConnMngr()){
+                if(wrkld.getUseShortLivedConn())
+                    conn = benchmarkModule.makeConnection();
+                else
+                    System.out.println("Using Long live connections...");
+            } else {
+                conn = dataSource.getConnection();
+            }
             try {
                 if(wrkld.getDBType().equals("yugabyte"))
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
@@ -490,7 +503,7 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-
+                System.out.println("Error in enabling expression_pushdown or setting auto_commit to false ");
             }
 
             endConnection = System.nanoTime();
@@ -592,7 +605,13 @@ public class Worker implements Runnable {
                     break;
                 }
             } // WHILE
-            conn.close();
+            if(wrkld.getUseConnMngr()) {
+                if (wrkld.getUseShortLivedConn())
+                    conn.close();
+                else
+                    System.out.println("Using Long live connections...");
+            } else
+                conn.close();
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
                                        this, next);

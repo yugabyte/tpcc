@@ -480,7 +480,7 @@ public class Worker implements Runnable {
 
         TransactionStatus status = TransactionStatus.RETRY;
 
-        Connection conn;
+        Connection conn = ll_conn;
         try {
             if (next == null) {
                 next = transactionTypes.getType(pieceOfWork.getType());

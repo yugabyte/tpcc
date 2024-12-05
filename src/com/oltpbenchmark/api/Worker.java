@@ -609,7 +609,7 @@ public class Worker implements Runnable {
                 if (wrkld.getUseShortLivedConn())
                     conn.close();
                 else
-                    System.out.println("Using Long live connections...");
+                    System.out.println("Not closing long live connections...");
             } else
                 conn.close();
         } catch (SQLException ex) {

@@ -11,7 +11,7 @@
     <sslCert></sslCert>
     <sslKey></sslKey>
     <jdbcURL></jdbcURL>
-    <useConnMngr>false</useConnMngr>
+    <useConnMngr>true</useConnMngr>
     <useShortLivedConn>false</useShortLivedConn>
 
     <batchSize>128</batchSize>

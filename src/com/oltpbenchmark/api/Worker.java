@@ -81,12 +81,13 @@ public class Worker implements Runnable {
 
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
         try {
-            if(wrkld.getUseConnMngr() && !wrkld.getUseShortLivedConn()) {
-                this.dataSource = null;
-                ll_conn = benchmarkModule.makeConnection();
-                System.out.println("Using connection manager without HikariPool");
-            }
-            else {
+            if(wrkld.getUseConnMngr()) {
+                if(!wrkld.getUseShortLivedConn()) {
+                    this.dataSource = null;
+                    ll_conn = benchmarkModule.makeConnection();
+                    System.out.println("Using connection manager for long lived connection without HikariPool");
+                }
+            } else {
                 this.dataSource = this.benchmarkModule.getDataSource();
             }
         } catch (Exception ex) {
@@ -489,8 +490,6 @@ public class Worker implements Runnable {
             if(wrkld.getUseConnMngr()){
                 if(wrkld.getUseShortLivedConn())
                     conn = benchmarkModule.makeConnection();
-                else
-                    System.out.println("Using Long live connections...");
             } else {
                 conn = dataSource.getConnection();
             }
@@ -608,8 +607,6 @@ public class Worker implements Runnable {
             if(wrkld.getUseConnMngr()) {
                 if (wrkld.getUseShortLivedConn())
                     conn.close();
-                else
-                    System.out.println("Not closing long live connections...");
             } else
                 conn.close();
         } catch (SQLException ex) {

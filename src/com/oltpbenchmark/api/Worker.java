@@ -82,8 +82,8 @@ public class Worker implements Runnable {
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
         try {
             if(wrkld.getUseConnMngr()) {
+                this.dataSource = null;
                 if(!wrkld.getUseShortLivedConn()) {
-                    this.dataSource = null;
                     ll_conn = benchmarkModule.makeConnection();
                     System.out.println("Using connection manager for long lived connection without HikariPool");
                 }

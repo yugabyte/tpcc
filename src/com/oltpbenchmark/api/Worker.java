@@ -497,7 +497,7 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-                System.out.println("Error in enabling expression_pushdown or setting auto_commit to false ");
+                LOG.info("Error in enabling expression_pushdown or setting auto_commit to false ");
             }
 
             endConnection = System.nanoTime();

@@ -8,6 +8,9 @@
     <password>Password321</password>
     <isolation>TRANSACTION_REPEATABLE_READ</isolation>
 
+    <useHikariPool>true</useHikariPool>
+    <createConnForEveryTx>false</createConnForEveryTx>
+
     <sslCert></sslCert>
     <sslKey></sslKey>
     <jdbcURL></jdbcURL>

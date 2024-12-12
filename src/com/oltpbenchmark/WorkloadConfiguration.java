@@ -68,8 +68,8 @@ public void setBenchmarkName(String benchmarkName) {
   private boolean useStoredProcedures = true;
   private int maxRetriesPerTransaction = 0;
   private int maxLoaderRetries = 0;
-  private boolean useHikariPool;
-  private boolean useCreateConnForEveryTx;
+  private boolean useHikariPool = true;
+  private boolean useCreateConnForEveryTx = false;
 
   public TraceReader getTraceReader() {
     return traceReader;

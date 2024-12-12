@@ -68,8 +68,8 @@ public void setBenchmarkName(String benchmarkName) {
   private boolean useStoredProcedures = true;
   private int maxRetriesPerTransaction = 0;
   private int maxLoaderRetries = 0;
-  private boolean useConnMngr;
-  private boolean useShortLivedConn;
+  private boolean useHikariPool;
+  private boolean useCreateConnForEveryTx;
 
   public TraceReader getTraceReader() {
     return traceReader;
@@ -363,15 +363,15 @@ public void setBenchmarkName(String benchmarkName) {
     this.maxRetriesPerTransaction = maxRetriesPerTransaction;
   }
 
-  public void setUseConnMngr(boolean useConnMngr) {
-    this.useConnMngr = useConnMngr;
+  public void setUseHikariPool(boolean useHikariPool) {
+    this.useHikariPool = useHikariPool;
   }
-  public boolean getUseConnMngr() { return this.useConnMngr; }
+  public boolean getUseHikariPool() { return this.useHikariPool; }
 
-  public void setUseShortLivedConn(boolean useShortLivedConn) {
-    this.useShortLivedConn = useShortLivedConn;
+  public void setUseCreateConnForEveryTx(boolean useCreateConnForEveryTx) {
+    this.useCreateConnForEveryTx = useCreateConnForEveryTx;
   }
-  public boolean getUseShortLivedConn() { return this.useShortLivedConn; }
+  public boolean getUseCreateConnForEveryTx() { return this.useCreateConnForEveryTx; }
 
   public int getMaxRetriesPerTransaction() {
     return maxRetriesPerTransaction;

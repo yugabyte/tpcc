@@ -11,8 +11,8 @@
     <sslCert></sslCert>
     <sslKey></sslKey>
     <jdbcURL></jdbcURL>
-    <useConnMngr>false</useConnMngr>
-    <useShortLivedConn>false</useShortLivedConn>
+    <useHikariPool>false</useHikariPool>
+    <createConnForEveryTx>false</createConnForEveryTx>
 
     <batchSize>128</batchSize>
     <useKeyingTime>true</useKeyingTime>

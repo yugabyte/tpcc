@@ -71,11 +71,10 @@ public class BenchmarkModule {
         this.workConf = workConf;
         if (workConf.getNeedsExecution()) {
             try {
-                if(!workConf.getUseConnMngr())
+                if(workConf.getUseHikariPool())
                     createDataSource();
-                else {
-                    System.out.println("Using connection manager without HikariPool");
-                }
+                else
+                    LOG.info("Hikari Connection Pool is disabled");
             } catch (Exception e) {
                 LOG.error("Failed to create Data source", e);
                 throw e;

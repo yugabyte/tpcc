@@ -17,7 +17,6 @@
 package com.oltpbenchmark.api;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.*;
@@ -56,7 +55,7 @@ public class Worker implements Runnable {
 
     // Interval requests used by the monitor
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
-    private Connection ll_conn;
+    private final Connection ll_conn;
     private final int id;
     private final BenchmarkModule benchmarkModule;
     protected final HikariDataSource dataSource;
@@ -81,13 +80,11 @@ public class Worker implements Runnable {
 
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
         try {
-            if(wrkld.getUseConnMngr()) {
+            if(!wrkld.getUseHikariPool()) {
                 this.dataSource = null;
-                if(!wrkld.getUseShortLivedConn()) {
-                    ll_conn = benchmarkModule.makeConnection();
-                    System.out.println("Using connection manager for long lived connection without HikariPool");
-                }
-            } else {
+                ll_conn = wrkld.getUseCreateConnForEveryTx() ? null : benchmarkModule.makeConnection();
+            } else {   //use Hikari Pool
+                ll_conn = null;
                 this.dataSource = this.benchmarkModule.getDataSource();
             }
         } catch (Exception ex) {
@@ -481,18 +478,16 @@ public class Worker implements Runnable {
 
         TransactionStatus status = TransactionStatus.RETRY;
 
-        Connection conn = ll_conn;
+        Connection conn;
         try {
             if (next == null) {
                 next = transactionTypes.getType(pieceOfWork.getType());
             }
             startConnection = System.nanoTime();
-            if(wrkld.getUseConnMngr()){
-                if(wrkld.getUseShortLivedConn())
-                    conn = benchmarkModule.makeConnection();
-            } else {
+            if( !wrkld.getUseHikariPool()) {
+                conn = wrkld.getUseCreateConnForEveryTx() ? benchmarkModule.makeConnection() : ll_conn;
+            } else  //use Hikari connection Pool
                 conn = dataSource.getConnection();
-            }
             try {
                 if(wrkld.getDBType().equals("yugabyte"))
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
@@ -604,8 +599,8 @@ public class Worker implements Runnable {
                     break;
                 }
             } // WHILE
-            if(wrkld.getUseConnMngr()) {
-                if (wrkld.getUseShortLivedConn())
+            if(wrkld.getUseHikariPool()) {
+                if (wrkld.getUseCreateConnForEveryTx())
                     conn.close();
             } else
                 conn.close();

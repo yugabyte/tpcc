@@ -599,7 +599,7 @@ public class Worker implements Runnable {
                     break;
                 }
             } // WHILE
-            if(wrkld.getUseHikariPool()) {
+            if(!wrkld.getUseHikariPool()) {
                 if (wrkld.getUseCreateConnForEveryTx())
                     conn.close();
             } else

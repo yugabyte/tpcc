@@ -219,6 +219,14 @@ public class Worker implements Runnable {
             LOG.error("Failed to cancel statement: " + e.getMessage());
         }
     }
+    
+    public void closeConnection() {
+        try {
+            ll_conn.close();
+        } catch (SQLException e) {
+            LOG.error("Failed to close connection: " + e.getMessage());
+        }
+    }
 
     public void test(Connection conn) throws Exception {
       Procedure proc = this.getProcedure(

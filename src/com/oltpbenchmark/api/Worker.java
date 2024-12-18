@@ -219,10 +219,13 @@ public class Worker implements Runnable {
             LOG.error("Failed to cancel statement: " + e.getMessage());
         }
     }
-    
+
     public void closeConnection() {
         try {
-            ll_conn.close();
+            if(ll_conn != null) {
+                ll_conn.close();
+                LOG.info("Closing Persistent connections");
+            }
         } catch (SQLException e) {
             LOG.error("Failed to close connection: " + e.getMessage());
         }

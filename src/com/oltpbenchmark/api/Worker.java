@@ -222,10 +222,8 @@ public class Worker implements Runnable {
 
     public void closeConnection() {
         try {
-            if(ll_conn != null) {
+            if(ll_conn != null)
                 ll_conn.close();
-                LOG.info("Closing Persistent connections");
-            }
         } catch (SQLException e) {
             LOG.error("Failed to close connection: " + e.getMessage());
         }

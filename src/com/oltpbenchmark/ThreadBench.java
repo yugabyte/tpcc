@@ -33,7 +33,6 @@ import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.util.StringUtil;
-import org.hsqldb.persist.Log;
 
 public class ThreadBench implements Thread.UncaughtExceptionHandler {
   private static final Logger LOG = Logger.getLogger(ThreadBench.class);

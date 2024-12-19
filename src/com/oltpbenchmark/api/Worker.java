@@ -220,6 +220,15 @@ public class Worker implements Runnable {
         }
     }
 
+    public void closeConnection() {
+        try {
+            if(ll_conn != null)
+                ll_conn.close();
+        } catch (SQLException e) {
+            LOG.error("Failed to close connection: " + e.getMessage());
+        }
+    }
+
     public void test(Connection conn) throws Exception {
       Procedure proc = this.getProcedure(
           this.transactionTypes.getType("NewOrder").getProcedureClass());

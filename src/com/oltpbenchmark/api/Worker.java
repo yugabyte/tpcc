@@ -82,7 +82,12 @@ public class Worker implements Runnable {
         try {
             if(!wrkld.getUseHikariPool()) {
                 this.dataSource = null;
-                ll_conn = wrkld.getUseCreateConnForEveryTx() ? null : benchmarkModule.makeConnection();
+                if(wrkld.getUseCreateConnForEveryTx())
+                    ll_conn =  null;
+                else {
+                    ll_conn = benchmarkModule.makeConnection();
+                    ll_conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+                    }
             } else {   //use Hikari Pool
                 ll_conn = null;
                 this.dataSource = this.benchmarkModule.getDataSource();
@@ -498,15 +503,17 @@ public class Worker implements Runnable {
             } else  //use Hikari connection Pool
                 conn = dataSource.getConnection();
             try {
-                if(wrkld.getDBType().equals("yugabyte"))
-                    conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+                if(wrkld.getDBType().equals("yugabyte")) {
+                    if(ll_conn == null)
+                        conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+                }
                 if (next.getProcedureClass() != StockLevel.class) {
                     // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
                     // Isolation.
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-                LOG.info("Error in enabling expression_pushdown or setting auto_commit to false ");
+                LOG.info("Error in enabling expression_pushdown or setting auto_commit to false");
             }
 
             endConnection = System.nanoTime();

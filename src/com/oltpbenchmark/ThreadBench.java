@@ -33,6 +33,7 @@ import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
 import com.oltpbenchmark.util.StringUtil;
+import org.hsqldb.persist.Log;
 
 public class ThreadBench implements Thread.UncaughtExceptionHandler {
   private static final Logger LOG = Logger.getLogger(ThreadBench.class);
@@ -411,6 +412,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
                 // Last phase
                 lastEntry = true;
                 testState.startCoolDown();
+                LOG.info("Threads cooled down...");
                 measureEnd = now;
                 LOG.info(StringUtil.bold("TERMINATE") + " :: Waiting for all terminals to finish ..");
               } else if (phase != null) {
@@ -468,6 +470,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
         // All threads have noticed the done, meaning all measured
         // requests have definitely finished.
         // Time to quit.
+          LOG.info("Thread state found EXIT...");
         break;
       }
     } // WHILE (main loop)

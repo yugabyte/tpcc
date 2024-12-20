@@ -82,7 +82,12 @@ public class Worker implements Runnable {
         try {
             if(!wrkld.getUseHikariPool()) {
                 this.dataSource = null;
-                ll_conn = wrkld.getUseCreateConnForEveryTx() ? null : benchmarkModule.makeConnection();
+                if(wrkld.getUseCreateConnForEveryTx())
+                    ll_conn =  null;
+                else {
+                    ll_conn = benchmarkModule.makeConnection();
+                    ll_conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+                }
             } else {   //use Hikari Pool
                 ll_conn = null;
                 this.dataSource = this.benchmarkModule.getDataSource();

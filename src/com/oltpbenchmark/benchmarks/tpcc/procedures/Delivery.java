@@ -138,9 +138,16 @@ public class Delivery extends Procedure {
       delivDeleteNewOrder.setInt(2, d_id);
       delivDeleteNewOrder.setInt(3, w_id);
       if (trace) LOG.trace("delivDeleteNewOrder START");
-      int result = delivDeleteNewOrder.executeUpdate();
+      int result = -1;
+      try {
+        result = delivDeleteNewOrder.executeUpdate();
+      } catch (SQLException se) {
+        System.out.println("Exception is ::" + se.getSQLState() + " :: " + se.getMessage());
+      }
+
       if (trace) LOG.trace("delivDeleteNewOrder END");
       if (result != 1) {
+        System.out.println("result is :: " + result);
         // This code used to run in a loop in an attempt to make this work
         // with MySQL's default weird consistency level. We just always run
         // this as SERIALIZABLE instead. I don't *think* that fixing this one

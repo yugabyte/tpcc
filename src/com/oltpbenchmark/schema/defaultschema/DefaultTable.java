@@ -3,6 +3,8 @@ package com.oltpbenchmark.schema.defaultschema;
 import com.oltpbenchmark.schema.Table;
 import com.oltpbenchmark.schema.TableSchema;
 
+import java.util.List;
+
 public class DefaultTable extends Table {
     
     private final String tablespace;
@@ -27,6 +29,11 @@ public class DefaultTable extends Table {
             sb.append(",\n PRIMARY KEY ").append(schema.getPrimaryKey());
         }
         sb.append("\n)");
+
+        if (List.of("WAREHOUSE", "ITEM", "DISTRICT").contains(schema.name())) {
+            System.out.println("Add manual splitting");
+            sb.append(" SPLIT INTO 3 TABLETS");
+        }
 
         if (tablespace != null) {
             sb.append(" TABLESPACE ").append(tablespace);

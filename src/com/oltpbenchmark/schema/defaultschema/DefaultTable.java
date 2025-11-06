@@ -32,7 +32,7 @@ public class DefaultTable extends Table {
 
         if (List.of("WAREHOUSE", "ITEM", "DISTRICT").contains(schema.name())) {
             System.out.println("Add manual splitting");
-            sb.append(" SPLIT INTO 3 TABLETS");
+            sb.append(" SPLIT INTO 56 TABLETS");
         }
 
         if (tablespace != null) {

@@ -208,6 +208,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
            */
 
           requests += w.getRequests();
+          LOG.info("Closing the persistent connection..");
           w.closeConnection();
       }
       testState = null;

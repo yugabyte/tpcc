@@ -101,7 +101,6 @@ public final class BenchmarkState {
 
   public void startCoolDown() {
     assert state == State.MEASURE;
-    LOG.info("In startCoolDown...");
     state = State.DONE;
     // The master thread must also signal that it is done
     signalDone();
@@ -118,7 +117,6 @@ public final class BenchmarkState {
       // We are the last thread to notice that we are done: wake any
       // blocked workers
       this.state = State.EXIT;
-      LOG.info("Thread state is set to EXIT");
     }
     return current;
   }

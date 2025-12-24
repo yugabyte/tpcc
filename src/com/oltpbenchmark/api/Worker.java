@@ -51,10 +51,12 @@ public class Worker implements Runnable {
     private TransactionLatencyRecord latencies;
     private TransactionLatencyRecord failureLatencies;
     private WorkerTaskLatencyRecord workerTaskLatencyRecord;
+
     private final Statement currStatement;
 
     // Interval requests used by the monitor
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
+
     private final Connection ll_conn;
     private final int id;
     private final BenchmarkModule benchmarkModule;
@@ -493,6 +495,7 @@ public class Worker implements Runnable {
                 next = transactionTypes.getType(pieceOfWork.getType());
             }
             startConnection = System.nanoTime();
+            
             if( !wrkld.getUseHikariPool()) {
                 conn = wrkld.getUseCreateConnForEveryTx() ? benchmarkModule.makeConnection() : ll_conn;
             } else  //use Hikari connection Pool
@@ -507,7 +510,7 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-                LOG.info("Error in enabling expression_pushdown or setting auto_commit to false");
+                LOG.info("Error in enabling expression_pushdown or setting auto_commit to false" + e.getMessage());
             }
 
             endConnection = System.nanoTime();

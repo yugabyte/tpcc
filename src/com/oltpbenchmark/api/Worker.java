@@ -495,7 +495,7 @@ public class Worker implements Runnable {
                 next = transactionTypes.getType(pieceOfWork.getType());
             }
             startConnection = System.nanoTime();
-            
+
             if( !wrkld.getUseHikariPool()) {
                 conn = wrkld.getUseCreateConnForEveryTx() ? benchmarkModule.makeConnection() : ll_conn;
             } else  //use Hikari connection Pool
@@ -508,7 +508,7 @@ public class Worker implements Runnable {
                     // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
                     // Isolation.
                     conn.setAutoCommit(false);
-                }
+                } else conn.setAutoCommit(true);
             } catch (Throwable e) {
                 LOG.info("Error in enabling expression_pushdown or setting auto_commit to false" + e.getMessage());
             }

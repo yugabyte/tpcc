@@ -506,11 +506,10 @@ public class Worker implements Runnable {
                 if(wrkld.getDBType().equals("yugabyte"))
                     if(ll_conn == null)
                         conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
-                if (next.getProcedureClass() != StockLevel.class) {
-                    // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
-                    // Isolation.
-                    conn.setAutoCommit(false);
-                }
+                // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
+                // Isolation.
+                conn.setAutoCommit(next.getProcedureClass() == StockLevel.class);
+
             } catch (Throwable e) {
                 LOG.info("Error in enabling expression_pushdown or setting auto_commit to false" + e.getMessage());
             }

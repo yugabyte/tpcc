@@ -467,7 +467,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       } else if (state == State.EXIT) {
         // All threads have noticed the done, meaning all measured
         // requests have definitely finished.
-        // Time to quit
+        // Time to quit.
         break;
       }
     } // WHILE (main loop)

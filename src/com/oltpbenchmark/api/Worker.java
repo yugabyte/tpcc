@@ -506,7 +506,7 @@ public class Worker implements Runnable {
             } else  //use Hikari connection Pool
                 conn = dataSource.getConnection();
             try {
-                if(wrkld.getDBType().equals("yugabyte")) {
+                if(wrkld.getDBType().equals("yugabyte") && ll_conn == null) {
                     conn.setAutoCommit(true);
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
                 }

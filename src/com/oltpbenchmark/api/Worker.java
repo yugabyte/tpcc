@@ -501,18 +501,16 @@ public class Worker implements Runnable {
             } else  //use Hikari connection Pool
                 conn = dataSource.getConnection();
             try {
-                conn.setAutoCommit(true);
                 if(wrkld.getDBType().equals("yugabyte")) {
+                    conn.setAutoCommit(true);
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
                 }
                 // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
                 // Isolation.
                 conn.setAutoCommit(next.getProcedureClass() == StockLevel.class);
-
             } catch (Throwable e) {
                 LOG.info("Error in enabling expression_pushdown or setting auto_commit to false" + e.getMessage());
             }
-
             endConnection = System.nanoTime();
             int attempt = 0;
 

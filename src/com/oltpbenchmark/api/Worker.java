@@ -51,10 +51,12 @@ public class Worker implements Runnable {
     private TransactionLatencyRecord latencies;
     private TransactionLatencyRecord failureLatencies;
     private WorkerTaskLatencyRecord workerTaskLatencyRecord;
+
     private final Statement currStatement;
 
     // Interval requests used by the monitor
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
+
     private final Connection ll_conn;
     private final int id;
     private final BenchmarkModule benchmarkModule;
@@ -498,22 +500,22 @@ public class Worker implements Runnable {
                 next = transactionTypes.getType(pieceOfWork.getType());
             }
             startConnection = System.nanoTime();
+
             if( !wrkld.getUseHikariPool()) {
                 conn = wrkld.getUseCreateConnForEveryTx() ? benchmarkModule.makeConnection() : ll_conn;
             } else  //use Hikari connection Pool
                 conn = dataSource.getConnection();
             try {
-                if(wrkld.getDBType().equals("yugabyte"))
-                    if(ll_conn == null)
-                        conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+                if(wrkld.getDBType().equals("yugabyte")) {
+                    conn.setAutoCommit(true);
+                    conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
+                }
                 // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
                 // Isolation.
                 conn.setAutoCommit(next.getProcedureClass() == StockLevel.class);
-
             } catch (Throwable e) {
                 LOG.info("Error in enabling expression_pushdown or setting auto_commit to false" + e.getMessage());
             }
-
             endConnection = System.nanoTime();
             int attempt = 0;
 

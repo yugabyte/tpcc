@@ -102,6 +102,7 @@ public final class BenchmarkState {
   public void startCoolDown() {
     assert state == State.MEASURE;
     state = State.DONE;
+
     // The master thread must also signal that it is done
     signalDone();
   }

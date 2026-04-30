@@ -208,7 +208,6 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
            */
 
           requests += w.getRequests();
-          w.closeConnection();
       }
       testState = null;
       return requests;

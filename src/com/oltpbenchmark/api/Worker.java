@@ -317,6 +317,7 @@ public class Worker implements Runnable {
                 // continue applying load
                 seenDone = true;
                 Worker.wrkldState.signalDone();
+                closeConnection();
                 break;
             }
 
@@ -502,7 +503,6 @@ public class Worker implements Runnable {
                 conn = dataSource.getConnection();
             try {
                 if(wrkld.getDBType().equals("yugabyte")) {
-                    conn.setAutoCommit(true);
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
                 }
                 // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot

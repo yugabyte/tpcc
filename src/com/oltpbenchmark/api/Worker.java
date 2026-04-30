@@ -322,6 +322,7 @@ public class Worker implements Runnable {
                 // continue applying load
                 seenDone = true;
                 Worker.wrkldState.signalDone();
+                closeConnection();
                 break;
             }
 

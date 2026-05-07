@@ -608,6 +608,10 @@ public class Worker implements Runnable {
       try {
         Procedure proc = this.getProcedure(nextTransaction.getProcedureClass());
 
+        if (wrkld.getDBType().equals("yugabyte")) {
+          applyYbDistTraceContext(conn);
+        }
+
         // The districts should be chosen randomly from [1,10] for the following transactions:
         // 1. NewOrder    TPC-C 2.4.1.2
         // 2. Payment     TPC-C 2.5.1.2
@@ -637,5 +641,48 @@ public class Worker implements Runnable {
     public void initializeState() {
         assert (Worker.wrkldState == null);
         Worker.wrkldState = Worker.wrkld.getWorkloadState();
+    }
+
+    /**
+     * Sets {@code yb_dist_tracecontext} to a W3C traceparent string with random trace and span ids.
+     * No-op if not a Yugabyte workload.
+     */
+    private void applyYbDistTraceContext(Connection conn) throws SQLException {
+        if (!wrkld.getDBType().equals("yugabyte")) {
+            return;
+        }
+        String traceId = randomNonZeroHex(gen, 32);
+        String parentId = randomNonZeroHex(gen, 16);
+        String value = "traceparent='00-" + traceId + "-" + parentId + "-01'";
+        String escaped = value.replace("'", "''");
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("SET yb_dist_tracecontext TO '" + escaped + "'");
+        }
+    }
+
+    private static String randomNonZeroHex(Random r, int numChars) {
+        String value;
+        do {
+            value = randomHex(r, numChars);
+        } while (isAllZero(value));
+        return value;
+    }
+
+    private static String randomHex(Random r, int numChars) {
+        final char[] hex = "0123456789abcdef".toCharArray();
+        StringBuilder sb = new StringBuilder(numChars);
+        for (int i = 0; i < numChars; i++) {
+            sb.append(hex[r.nextInt(16)]);
+        }
+        return sb.toString();
+    }
+
+    private static boolean isAllZero(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) != '0') {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -2,11 +2,11 @@
 <project name="oltpbench" default="build" xmlns:ivy="antlib:org.apache.ivy.ant">
     <property environment="env"/>
     <property name="debuglevel" value="source,lines,vars"/>
-<!--     <property name="javac.target" value="1.10"/> -->
-<!--     <property name="javac.source" value="1.10"/> -->
+    <!--     <property name="javac.target" value="1.10"/> -->
+    <!--     <property name="javac.source" value="1.10"/> -->
 
     <!-- *************************************** CONFIGURATION *************************************** -->
-    
+
     <property name="src.dir"                    location="src" />
     <property name="lib.dir"                    location="lib" />
     <property name="build.dir"                  location="build" />
@@ -23,13 +23,13 @@
         </fileset>
         <pathelement path="${java.class.path}"/>
     </path>
-    
+
     <taskdef resource="net/sf/antcontrib/antcontrib.properties">
         <classpath>
             <pathelement location="${lib.dir}/ant-contrib.jar"/>
         </classpath>
     </taskdef>
-    
+
     <!-- EXEC ASSERTS -->
     <condition property="assertions" value="false">
         <not><isset property="assertions"/></not>
@@ -51,22 +51,24 @@
     <target name="bootstrap" description="Used to install the ivy task jar">
         <mkdir dir="${user.home}/.ant/lib"/>
         <get dest="${user.home}/.ant/lib/ivy.jar"
-             src="http://search.maven.org/remotecontent?filepath=org/apache/ivy/ivy/2.2.0/ivy-2.2.0.jar"/>
+             src="https://repo.maven.apache.org/maven2/org/apache/ivy/ivy/2.5.2/ivy-2.5.2.jar"/>
     </target>
 
     <!-- ************************************* DEPENDENCIES ************************************* -->
 
-    <target name="resolve" description="Retrieve dependencies with ivy">
-        <ivy:retrieve />
+    <target name="resolve" description="Retrieve dependencies">
+        <exec executable="bash" dir="${basedir}" failonerror="true">
+            <arg value="download-deps.sh"/>
+        </exec>
     </target>
 
     <!-- *************************************** BUILDING *************************************** -->
-    
+
     <target name="build"
             description="Build the entire framework">
         <fileset dir="${src.dir}" excludes="**/*.launch, **/*.java"/>
         <!-- <echo message="${ant.project.name}: ${ant.file}"/> -->
-        
+
         <mkdir dir="${build.dir}/META-INF"/>
         <copy file="${src.dir}/META-INF/persistence.xml" todir="${build.dir}/META-INF"/>
         <javac debug="true" debuglevel="${debuglevel}" includeantruntime="false"
@@ -74,7 +76,7 @@
             <src path="${src.dir}"/>
             <classpath refid="project.classpath" />
         </javac>
-        
+
         <!-- Copy Files -->
         <copy todir="${build.dir}">
             <fileset dir="${src.dir}">
@@ -85,7 +87,7 @@
                 <include name="**/table.*.gz"/>
             </fileset>
         </copy>
-        
+
     </target>
 
     <target name="clean" description="Destroys all generated files and dirs.">
@@ -93,7 +95,7 @@
     </target>
 
     <!-- *************************************** EXECUTING *************************************** -->
-    
+
     <target name="execute" description="Execute a benchmark">
         <condition property="benchmark" value="">
             <not><isset property="benchmark"/></not>
@@ -104,7 +106,7 @@
         <condition property="create" value="false">
             <not><isset property="create"/></not>
         </condition>
-    	<condition property="clear" value="false">
+        <condition property="clear" value="false">
             <not><isset property="clear"/></not>
         </condition>
         <condition property="load" value="false">
@@ -113,7 +115,7 @@
         <condition property="extra" value="">
             <not><isset property="extra"/></not>
         </condition>
-        
+
         <java fork="yes" failonerror="true" classname="com.oltpbenchmark.DBWorkload">
             <jvmarg value="-Xmx2048m" />
             <jvmarg value="-Dlog4j.configuration=${basedir}/log4j.properties"/>
@@ -126,11 +128,11 @@
             <arg line="--execute ${execute}" />
             <arg line="${extra}" />
             <classpath refid='project.classpath' />
-            
+
             <assertions refid="assertions"/>
         </java>
     </target>
-    
+
     <!-- *************************************** UTILITY *************************************** -->
 
     <target name="dialects-export"
@@ -141,7 +143,7 @@
         <condition property="config" value="">
             <not><isset property="config"/></not>
         </condition>
-        
+
         <java fork="yes" failonerror="true" classname="com.oltpbenchmark.DBWorkload">
             <jvmarg value="-Xmx1024m" />
             <jvmarg value="-Dlog4j.configuration=${basedir}/log4j.properties"/>
@@ -153,6 +155,6 @@
             <assertions><enable/></assertions>
         </java>
     </target>
-    
-    
+
+
 </project>

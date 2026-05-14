@@ -512,6 +512,7 @@ public class Worker implements Runnable {
                     if (!conn.getAutoCommit()) {
                         conn.rollback();
                     }
+                    resetYbDistTraceContext(conn);
                     status = TransactionStatus.USER_ABORTED;
                     // Operation is considered ended once we've successfully rolled back the expected failure in
                     // NewOrder
@@ -530,6 +531,7 @@ public class Worker implements Runnable {
                     } catch (Throwable t) {
                         // ignore if we are not able to rollback the transaction
                     }
+                    resetYbDistTraceContext(conn);
 
                     if (ex.getSQLState() != null) {
                         if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
@@ -635,6 +637,7 @@ public class Worker implements Runnable {
       if (!conn.getAutoCommit()) {
         conn.commit();
       }
+      resetYbDistTraceContext(conn);
       return (TransactionStatus.SUCCESS);
     }
 
@@ -657,6 +660,47 @@ public class Worker implements Runnable {
         String escaped = value.replace("'", "''");
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("SET yb_dist_tracecontext TO '" + escaped + "'");
+        }
+    }
+
+    /**
+     * Clears {@code yb_dist_tracecontext} so that statements emitted between txns
+     * (driver/pool resets, the next BEGIN, etc.) are not attributed to the previous
+     * txn's traceparent. Plain SET persists past COMMIT, so an explicit RESET is
+     * required to scope the GUC to a single txn.
+     *
+     * The RESET is sent with autoCommit temporarily flipped on so that the GUC
+     * change is not stuck inside an implicit txn that Hikari will roll back when
+     * the connection is returned to the pool.
+     */
+    private void resetYbDistTraceContext(Connection conn) {
+        if (!wrkld.getDBType().equals("yugabyte")) {
+            return;
+        }
+        boolean prevAutoCommit;
+        try {
+            prevAutoCommit = conn.getAutoCommit();
+        } catch (SQLException ex) {
+            LOG.debug("Failed to read autoCommit for RESET yb_dist_tracecontext", ex);
+            return;
+        }
+        try {
+            if (!prevAutoCommit) {
+                conn.setAutoCommit(true);
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("RESET yb_dist_tracecontext");
+            }
+        } catch (SQLException ex) {
+            LOG.debug("Failed to RESET yb_dist_tracecontext", ex);
+        } finally {
+            if (!prevAutoCommit) {
+                try {
+                    conn.setAutoCommit(false);
+                } catch (SQLException ex) {
+                    LOG.debug("Failed to restore autoCommit after RESET yb_dist_tracecontext", ex);
+                }
+            }
         }
     }
 

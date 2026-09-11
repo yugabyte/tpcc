@@ -92,6 +92,15 @@ public class BenchmarkModule {
             Properties props = new Properties();
             if(workConf.getDBType().equals("yugabyte")){
                 props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
+                // Cluster topology is only discovered once a connection succeeds, so a single
+                // unreachable contact point leaves the driver with nowhere else to try.
+                String additionalEndpoints = workConf.getNodes().stream()
+                        .filter(node -> !node.equals(ip))
+                        .map(node -> node + ":" + workConf.getPort())
+                        .collect(Collectors.joining(","));
+                if (!additionalEndpoints.isEmpty()) {
+                    props.setProperty("dataSource.additionalEndpoints", additionalEndpoints);
+                }
             } else {
                 props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
             }
@@ -103,6 +112,9 @@ public class BenchmarkModule {
             props.setProperty("dataSource.databaseName", workConf.getDBName());
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
+            // Start the pool even if no node answers yet. Zero still fails fast on a connection
+            // that opens but does not validate, so bad credentials are still caught here.
+            props.setProperty("initializationFailTimeout", "0");
             props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
 
@@ -118,7 +130,32 @@ public class BenchmarkModule {
               config.setJdbcUrl(workConf.getJdbcURL());
             }
             config.setTransactionIsolation(workConf.getIsolationString());
-            listDataSource.add(new HikariDataSource(config));
+
+            LOG.info(String.format("Creating pool %d/%d, contact point %s:%d",
+                    listDataSource.size() + 1, workConf.getNodes().size(), ip, workConf.getPort()));
+            long poolStartMs = System.currentTimeMillis();
+            HikariDataSource ds;
+            try {
+                ds = new HikariDataSource(config);
+            } catch (RuntimeException e) {
+                LOG.error(String.format("Pool for %s FAILED after %d ms: %s",
+                        ip, System.currentTimeMillis() - poolStartMs, e.toString()));
+                throw e;
+            }
+            listDataSource.add(ds);
+            LOG.info(String.format("Pool for %s created in %d ms",
+                    ip, System.currentTimeMillis() - poolStartMs));
+
+            try (Connection probe = ds.getConnection();
+                 Statement st = probe.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT inet_server_addr(), inet_server_port()")) {
+                if (rs.next()) {
+                    LOG.info(String.format("Pool for %s actually connected to %s:%s",
+                            ip, rs.getString(1), rs.getString(2)));
+                }
+            } catch (SQLException e) {
+                LOG.warn(String.format("Pool for %s: probe query failed: %s", ip, e.toString()));
+            }
         }
     }
 

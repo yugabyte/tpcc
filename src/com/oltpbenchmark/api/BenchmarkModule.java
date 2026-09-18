@@ -80,7 +80,10 @@ public class BenchmarkModule {
     }
 
     private final List<HikariDataSource> listDataSource = new ArrayList<>();
-
+    /**
+     * Creates a data source for the benchmark.
+     * @throws RuntimeException if the pool creation fails 
+     */
     public void createDataSource() {
         int numConnections =
             (workConf.getNumDBConnections() + workConf.getNodes().size() - 1) / workConf.getNodes().size();
@@ -112,8 +115,7 @@ public class BenchmarkModule {
             props.setProperty("dataSource.databaseName", workConf.getDBName());
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
-            // Start the pool even if no node answers yet. Zero still fails fast on a connection
-            // that opens but does not validate, so bad credentials are still caught here.
+            // InitializationFailTimeoutis :0 means start even if no node is reachable but will still fail if a connection open but auth fails. 
             props.setProperty("initializationFailTimeout", "0");
             props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
@@ -130,7 +132,20 @@ public class BenchmarkModule {
               config.setJdbcUrl(workConf.getJdbcURL());
             }
             config.setTransactionIsolation(workConf.getIsolationString());
-            listDataSource.add(new HikariDataSource(config));
+            LOG.info(String.format("Creating pool %d/%d, contact point %s:%d",
+                    listDataSource.size() + 1, workConf.getNodes().size(), ip, workConf.getPort()));
+            long poolStartMs = System.currentTimeMillis();
+            HikariDataSource ds;
+            try {
+                ds = new HikariDataSource(config);
+            } 
+           catch (RuntimeException e) {
+                LOG.error(String.format("Pool for %s FAILED after %d ms",ip, System.currentTimeMillis() - poolStartMs), e);
+                throw e;
+            }
+            listDataSource.add(ds);
+            LOG.info(String.format("Pool for %s created in %d ms",ip, System.currentTimeMillis() - poolStartMs));
+
         }
     }
 

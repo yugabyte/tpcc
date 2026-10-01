@@ -19,6 +19,7 @@ package com.oltpbenchmark.api;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.SQLException;
+import java.sql.SQLTransientConnectionException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -480,7 +481,10 @@ public class Worker implements Runnable {
             }
             startConnection = System.nanoTime();
 
-            conn = dataSource.getConnection();
+            conn = getConnectionWithRetry(next);
+            if (conn == null) {
+                return listExecutionStates;
+            }
             try {
                 if(wrkld.getDBType().equals("yugabyte"))
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
@@ -490,7 +494,7 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-
+                LOG.error("Failed to configure connection", e);
             }
 
             endConnection = System.nanoTime();
@@ -509,9 +513,7 @@ public class Worker implements Runnable {
                     // UserAbortException should represent an expected NewOrder failure and will be recorded as a
                     // success. No other procedure class should hit this branch.
                     assert(next.getProcedureClass() == NewOrder.class);
-                    if (!conn.getAutoCommit()) {
-                        conn.rollback();
-                    }
+                    rollbackOrEvict(conn, next);
                     status = TransactionStatus.USER_ABORTED;
                     // Operation is considered ended once we've successfully rolled back the expected failure in
                     // NewOrder
@@ -523,13 +525,7 @@ public class Worker implements Runnable {
                                            "[Message='%s', ErrorCode='%d', SQLState='%s']",
                                            ex.getClass().getSimpleName(), next, this.toString(),
                                            ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
-                    try {
-                        if (!conn.getAutoCommit()) {
-                            conn.rollback();
-                        }
-                    } catch (Throwable t) {
-                        // ignore if we are not able to rollback the transaction
-                    }
+                    boolean rolledBack = rollbackOrEvict(conn, next);
 
                     if (ex.getSQLState() != null) {
                         if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
@@ -553,6 +549,10 @@ public class Worker implements Runnable {
                             // throw ex;
                             status = TransactionStatus.RETRY;
                         }
+                    }
+                    if (!rolledBack) {
+                        // The connection was evicted, so further attempts on it cannot succeed.
+                        break;
                     }
                 // Assertion Error
                 } catch (Error ex) {
@@ -592,13 +592,70 @@ public class Worker implements Runnable {
                     break;
                 }
             } // WHILE
-            conn.close();
+            try {
+                conn.close();
+            } catch (SQLException closeEx) {
+                LOG.warn(String.format("%s failed to close connection after '%s': %s",
+                                       this, next, closeEx.getMessage()));
+            }
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
                                        this, next);
             throw new RuntimeException(msg, ex);
         }
         return listExecutionStates;
+    }
+
+    /**
+     * Rolls back the open transaction on conn. If the rollback fails the connection's state is unknown (it may be
+     * dead, or alive with the transaction still open), so it is evicted from the pool rather than reused.
+     *
+     * @return true if the rollback succeeded or there was nothing to roll back, false if the connection was evicted
+     */
+    private boolean rollbackOrEvict(Connection conn, TransactionType next) {
+        try {
+            if (!conn.getAutoCommit()) {
+                conn.rollback();
+            }
+            return true;
+        } catch (Exception ex) {
+            LOG.warn(String.format("%s failed to roll back '%s', evicting connection [SQLState='%s']: %s",
+                                   this, next,
+                                   ex instanceof SQLException ? ((SQLException) ex).getSQLState() : null,
+                                   ex.getMessage()));
+            dataSource.evictConnection(conn);
+            return false;
+        }
+    }
+
+    /**
+     * Keeps waiting for a pooled connection while the benchmark is running, so a temporary cluster outage
+     * does not kill the whole run. Each wait is bounded by hikariConnectionTimeoutMs.
+     *
+     * @return a connection, or null if the benchmark reached DONE/EXIT before one became available
+     */
+    private Connection getConnectionWithRetry(TransactionType next) throws SQLException {
+        int failedAttempts = 0;
+        while (true) {
+            try {
+                return dataSource.getConnection();
+            } catch (SQLTransientConnectionException ex) {
+                failedAttempts++;
+                State state = wrkldState.getGlobalState();
+                if (state == State.DONE || state == State.EXIT) {
+                    LOG.error(String.format("%s gave up getting a connection for '%s' from %s after %d attempt(s): benchmark is %s",
+                                            this, next, dataSource.getPoolName(), failedAttempts, state));
+                    return null;
+                }
+                String msg = String.format("%s could not get a connection for '%s' from %s (attempt %d), retrying",
+                                           this, next, dataSource.getPoolName(), failedAttempts);
+                if (failedAttempts == 1) {
+                    LOG.error(msg, ex);
+                } else {
+                    LOG.error(msg + ": " + ex.getMessage());
+                }
+            }
+        }
     }
 
     /**

@@ -494,7 +494,7 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-                LOG.error("Failed to configure connection", e);
+                LOG.warn("Failed to configure connection");
             }
 
             endConnection = System.nanoTime();

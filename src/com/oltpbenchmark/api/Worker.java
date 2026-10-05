@@ -649,11 +649,7 @@ public class Worker implements Runnable {
                 }
                 String msg = String.format("%s could not get a connection for '%s' from %s (attempt %d), retrying",
                                            this, next, dataSource.getPoolName(), failedAttempts);
-                if (failedAttempts == 1) {
-                    LOG.error(msg, ex);
-                } else {
-                    LOG.error(msg + ": " + ex.getMessage());
-                }
+                LOG.error(msg + ": " + ex.getMessage());
             }
         }
     }

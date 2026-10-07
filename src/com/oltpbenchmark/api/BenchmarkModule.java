@@ -80,7 +80,10 @@ public class BenchmarkModule {
     }
 
     private final List<HikariDataSource> listDataSource = new ArrayList<>();
-
+    /**
+     * Creates a data source for the benchmark.
+     * @throws RuntimeException if the pool creation fails
+     */
     public void createDataSource() {
         int numConnections =
             (workConf.getNumDBConnections() + workConf.getNodes().size() - 1) / workConf.getNodes().size();
@@ -92,11 +95,20 @@ public class BenchmarkModule {
             Properties props = new Properties();
             if(workConf.getDBType().equals("yugabyte")){
                 props.setProperty("dataSourceClassName", "com.yugabyte.ysql.YBClusterAwareDataSource");
+                // Cluster topology is only discovered once a connection succeeds, so a single
+                // unreachable contact point leaves the driver with nowhere else to try.
+                String additionalEndpoints = workConf.getNodes().stream()
+                        .filter(node -> !node.equals(ip))
+                        .map(node -> node + ":" + workConf.getPort())
+                        .collect(Collectors.joining(","));
+                if (!additionalEndpoints.isEmpty()) {
+                    props.setProperty("dataSource.additionalEndpoints", additionalEndpoints);
+                }
             } else {
                 props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
             }
-	        //props.setProperty("dataSource.serverNames", ip);
-	        props.setProperty("dataSource.serverName", ip);
+            //props.setProperty("dataSource.serverNames", ip);
+            props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
             props.setProperty("dataSource.user", workConf.getDBUsername());
             props.setProperty("dataSource.password", workConf.getDBPassword());
@@ -118,7 +130,14 @@ public class BenchmarkModule {
               config.setJdbcUrl(workConf.getJdbcURL());
             }
             config.setTransactionIsolation(workConf.getIsolationString());
-            listDataSource.add(new HikariDataSource(config));
+            LOG.info(String.format("Creating pool %d/%d, contact point %s:%d",
+                    listDataSource.size() + 1, workConf.getNodes().size(), ip, workConf.getPort()));
+            long poolStartMs = System.currentTimeMillis();
+            // Failures are logged once by the constructor that calls this method.
+            HikariDataSource ds = new HikariDataSource(config);
+            listDataSource.add(ds);
+            LOG.info(String.format("Pool for %s created in %d ms", ip, System.currentTimeMillis() - poolStartMs));
+
         }
     }
 

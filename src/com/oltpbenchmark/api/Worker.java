@@ -452,6 +452,36 @@ public class Worker implements Runnable {
                     if (preState == State.COLD_QUERY)
                         Worker.wrkldState.startHotQuery();
                     break;
+                case DONE:
+                case EXIT:
+                    // getConnectionWithRetry returns null only after the run is already
+                    // DONE/EXIT, so the MEASURE branch above never sees that wait.
+                    if (executionStates != null &&
+                        (preState == State.MEASURE || preState == State.WARMUP) &&
+                        Worker.wrkldState.getCurrentPhase() != null &&
+                        Worker.wrkldState.getCurrentPhase().id == phase.id) {
+                        int attempt = 0;
+                        for (Pair<TransactionExecutionState, TransactionStatus> executionState : executionStates) {
+                            if (executionState.first.getTransactionType() != null) {
+                                switch (executionState.second) {
+                                    case RETRY:
+                                    case UNKNOWN:
+                                        ++totalFailedTries[pieceOfWork.getType() - 1][attempt];
+                                        failureLatencies.addLatency(
+                                                executionState.first.getTransactionType().getId(),
+                                                executionState.first.getStartConnection(),
+                                                executionState.first.getEndConnection(),
+                                                executionState.first.getStartOperation(),
+                                                executionState.first.getEndOperation());
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            attempt++;
+                        }
+                    }
+                    break;
                 default:
                     // Do nothing
             }
@@ -483,6 +513,13 @@ public class Worker implements Runnable {
 
             conn = getConnectionWithRetry(next);
             if (conn == null) {
+                // The run ended while we were still waiting. Record the wait as a
+                // failed try so connectionAcqLatency includes it.
+                endConnection = System.nanoTime();
+                listExecutionStates.add(Pair.of(
+                        new TransactionExecutionState(0, 0,
+                                                      startConnection, endConnection, next),
+                        TransactionStatus.RETRY));
                 return listExecutionStates;
             }
             try {
@@ -597,6 +634,7 @@ public class Worker implements Runnable {
             } catch (SQLException closeEx) {
                 LOG.warn(String.format("%s failed to close connection after '%s': %s",
                                        this, next, closeEx.getMessage()));
+                dataSource.evictConnection(conn);
             }
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
@@ -631,6 +669,7 @@ public class Worker implements Runnable {
     /**
      * Keeps waiting for a pooled connection while the benchmark is running, so a temporary cluster outage
      * does not kill the whole run. Each wait is bounded by hikariConnectionTimeoutMs.
+     * Permanent failures (bad password, unknown database) are thrown so the process still exits.
      *
      * @return a connection, or null if the benchmark reached DONE/EXIT before one became available
      */
@@ -640,6 +679,9 @@ public class Worker implements Runnable {
             try {
                 return dataSource.getConnection();
             } catch (SQLTransientConnectionException ex) {
+                if (!isRetryableAcquireFailure(ex)) {
+                    throw ex;
+                }
                 failedAttempts++;
                 State state = wrkldState.getGlobalState();
                 if (state == State.DONE || state == State.EXIT) {
@@ -647,11 +689,33 @@ public class Worker implements Runnable {
                                             this, next, dataSource.getPoolName(), failedAttempts, state));
                     return null;
                 }
-                String msg = String.format("%s could not get a connection for '%s' from %s (attempt %d), retrying",
-                                           this, next, dataSource.getPoolName(), failedAttempts);
-                LOG.error(msg + ": " + ex.getMessage());
+                String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+                LOG.warn(String.format("%s could not get a connection for '%s' from %s (attempt %d, SQLState='%s'): %s",
+                                       this, next, dataSource.getPoolName(), failedAttempts, ex.getSQLState(), cause));
             }
         }
+    }
+
+    /**
+     * Hikari wraps every acquire timeout as SQLTransientConnectionException and copies the last
+     * connect SQLState onto it. Retry only connection-class failures that a node stop produces.
+     */
+    private static boolean isRetryableAcquireFailure(SQLException ex) {
+        String sqlState = ex.getSQLState();
+        if (sqlState == null && ex.getCause() instanceof SQLException) {
+            sqlState = ((SQLException) ex.getCause()).getSQLState();
+        }
+        return isRetryableSqlState(sqlState);
+    }
+
+    private static boolean isRetryableSqlState(String sqlState) {
+        if (sqlState == null) {
+            return true;
+        }
+        if (sqlState.startsWith("08")) {
+            return true;
+        }
+        return "57P01".equals(sqlState) || "57P03".equals(sqlState) || "53300".equals(sqlState);
     }
 
     /**

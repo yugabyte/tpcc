@@ -53,6 +53,14 @@ public class ConfigFileOptions extends ConfigFileOptionsBase {
         return getBoolOpt("useThinkTime");
     }
 
+    public Optional<Boolean> getUseHikariPool() {
+        return getBoolOpt("useHikariPool");
+    }
+
+    public Optional<Boolean> getCreateConnForEveryTx() {
+        return getBoolOpt("createConnForEveryTx");
+    }
+
     public Optional<Boolean> getEnableForeignKeysAfterLoad() {
         return getBoolOpt("enableForeignKeysAfterLoad");
     }

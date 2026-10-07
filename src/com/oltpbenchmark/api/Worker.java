@@ -57,6 +57,7 @@ public class Worker implements Runnable {
     // Interval requests used by the monitor
     private final AtomicInteger intervalRequests = new AtomicInteger(0);
 
+    private final Connection ll_conn;
     private final int id;
     private final BenchmarkModule benchmarkModule;
     protected final HikariDataSource dataSource;
@@ -81,7 +82,13 @@ public class Worker implements Runnable {
 
         assert (this.transactionTypes != null) : "The TransactionTypes from the WorkloadConfiguration is null!";
         try {
-            this.dataSource = this.benchmarkModule.getDataSource();
+            if(!wrkld.getUseHikariPool()) {
+                this.dataSource = null;
+                ll_conn = wrkld.getUseCreateConnForEveryTx() ? null : benchmarkModule.makeConnection();
+            } else {   //use Hikari Pool
+                ll_conn = null;
+                this.dataSource = this.benchmarkModule.getDataSource();
+            }
         } catch (Exception ex) {
             throw new RuntimeException("Failed to connect to database", ex);
         }
@@ -215,6 +222,15 @@ public class Worker implements Runnable {
         }
     }
 
+    public void closeConnection() {
+        try {
+            if(ll_conn != null)
+                ll_conn.close();
+        } catch (SQLException e) {
+            LOG.error("Failed to close connection: " + e.getMessage());
+        }
+    }
+
     public void test(Connection conn) throws Exception {
       Procedure proc = this.getProcedure(
           this.transactionTypes.getType("NewOrder").getProcedureClass());
@@ -301,6 +317,7 @@ public class Worker implements Runnable {
                 // continue applying load
                 seenDone = true;
                 Worker.wrkldState.signalDone();
+                closeConnection();
                 break;
             }
 
@@ -480,19 +497,20 @@ public class Worker implements Runnable {
             }
             startConnection = System.nanoTime();
 
-            conn = dataSource.getConnection();
+            if( !wrkld.getUseHikariPool()) {
+                conn = wrkld.getUseCreateConnForEveryTx() ? benchmarkModule.makeConnection() : ll_conn;
+            } else  //use Hikari connection Pool
+                conn = dataSource.getConnection();
             try {
-                if(wrkld.getDBType().equals("yugabyte"))
+                if(wrkld.getDBType().equals("yugabyte")) {
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
-                if (next.getProcedureClass() != StockLevel.class) {
-                    // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
-                    // Isolation.
-                    conn.setAutoCommit(false);
                 }
+                // In accordance with 2.8.2.3 of the TPCC spec, StockLevel should execute each query in its own Snapshot
+                // Isolation.
+                conn.setAutoCommit(next.getProcedureClass() == StockLevel.class);
             } catch (Throwable e) {
-
+                LOG.info("Error in enabling expression_pushdown or setting auto_commit to false" + e.getMessage());
             }
-
             endConnection = System.nanoTime();
             int attempt = 0;
 
@@ -592,7 +610,11 @@ public class Worker implements Runnable {
                     break;
                 }
             } // WHILE
-            conn.close();
+            if(!wrkld.getUseHikariPool()) {
+                if (wrkld.getUseCreateConnForEveryTx())
+                    conn.close();
+            } else
+                conn.close();
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
                                        this, next);

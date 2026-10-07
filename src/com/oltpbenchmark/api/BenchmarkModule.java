@@ -82,7 +82,7 @@ public class BenchmarkModule {
     private final List<HikariDataSource> listDataSource = new ArrayList<>();
     /**
      * Creates a data source for the benchmark.
-     * @throws RuntimeException if the pool creation fails 
+     * @throws RuntimeException if the pool creation fails
      */
     public void createDataSource() {
         int numConnections =
@@ -107,16 +107,14 @@ public class BenchmarkModule {
             } else {
                 props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
             }
-	        //props.setProperty("dataSource.serverNames", ip);
-	        props.setProperty("dataSource.serverName", ip);
+            //props.setProperty("dataSource.serverNames", ip);
+            props.setProperty("dataSource.serverName", ip);
             props.setProperty("dataSource.portNumber", Integer.toString(workConf.getPort()));
             props.setProperty("dataSource.user", workConf.getDBUsername());
             props.setProperty("dataSource.password", workConf.getDBPassword());
             props.setProperty("dataSource.databaseName", workConf.getDBName());
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
-            // InitializationFailTimeoutis :0 means start even if no node is reachable but will still fail if a connection open but auth fails. 
-            props.setProperty("initializationFailTimeout", "0");
             props.setProperty("maxLifetime", "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
 
@@ -135,16 +133,10 @@ public class BenchmarkModule {
             LOG.info(String.format("Creating pool %d/%d, contact point %s:%d",
                     listDataSource.size() + 1, workConf.getNodes().size(), ip, workConf.getPort()));
             long poolStartMs = System.currentTimeMillis();
-            HikariDataSource ds;
-            try {
-                ds = new HikariDataSource(config);
-            } 
-           catch (RuntimeException e) {
-                LOG.error(String.format("Pool for %s FAILED after %d ms",ip, System.currentTimeMillis() - poolStartMs), e);
-                throw e;
-            }
+            // Failures are logged once by the constructor that calls this method.
+            HikariDataSource ds = new HikariDataSource(config);
             listDataSource.add(ds);
-            LOG.info(String.format("Pool for %s created in %d ms",ip, System.currentTimeMillis() - poolStartMs));
+            LOG.info(String.format("Pool for %s created in %d ms", ip, System.currentTimeMillis() - poolStartMs));
 
         }
     }

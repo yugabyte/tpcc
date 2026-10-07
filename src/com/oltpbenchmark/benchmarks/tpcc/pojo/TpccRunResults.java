@@ -1,6 +1,5 @@
 package com.oltpbenchmark.benchmarks.tpcc.pojo;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,19 +10,19 @@ public class TpccRunResults {
 
     public RunResults Results = new RunResults();
 
-    public List<LatencyList> Latencies = new ArrayList<>();
+    public Map<String, LatencyList> Latencies = new LinkedHashMap<>();
 
-    public List<LatencyList> FailureLatencies = new ArrayList<>();
+    public Map<String, LatencyList> FailureLatencies = new LinkedHashMap<>();
 
     public Map<String, List<LatencyList>> WorkerTaskLatency = new LinkedHashMap<>();
 
     public Map<String, RetryAttemptsData> RetryAttempts = new LinkedHashMap<>();
 
     public class LatencyList {
-        public String Transaction;
+        public String WorkerTask;
         public int Count;
-        public Double minLatency;
         public Double avgLatency;
+        public Double minLatency;
         public Double maxLatency;
         public Double P99Latency;
         public Double connectionAcqLatency;

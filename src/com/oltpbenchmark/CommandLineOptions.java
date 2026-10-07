@@ -44,7 +44,7 @@ public class CommandLineOptions {
                 "gpc",
                 "geopartitioned-config",
                 true,
-                "GeoPartitioning configuration file [default: config/geopartitioned_workload.xml]");
+                "GeoPartitioning configuration file");
 
         COMMAND_LINE_OPTS.addOption("im", "interval-monitor", true,
                 "Throughput Monitoring Interval in milliseconds");

@@ -228,6 +228,7 @@ public class Worker implements Runnable {
       private final long startConnection;
       private long endConnection;
       private final TransactionType type;
+      private final boolean acquireFailed;
 
       public TransactionExecutionState() {
         this.startOperation = 0;
@@ -235,16 +236,24 @@ public class Worker implements Runnable {
         this.startConnection = 0;
         this.endConnection = 0;
         this.type = TransactionType.INVALID;
+        this.acquireFailed = false;
       }
 
       public TransactionExecutionState(long startOperation, long endOperation,
                                        long startConnection, long endConnection,
                                        TransactionType type) {
+        this(startOperation, endOperation, startConnection, endConnection, type, false);
+      }
+
+      public TransactionExecutionState(long startOperation, long endOperation,
+                                       long startConnection, long endConnection,
+                                       TransactionType type, boolean acquireFailed) {
         this.startOperation = startOperation;
         this.endOperation = endOperation;
         this.startConnection = startConnection;
         this.endConnection = endConnection;
         this.type = type;
+        this.acquireFailed = acquireFailed;
       }
 
       public long getStartOperation() {
@@ -265,6 +274,10 @@ public class Worker implements Runnable {
 
       public TransactionType getTransactionType() {
         return type;
+      }
+
+      public boolean isAcquireFailed() {
+        return acquireFailed;
       }
 
       public void setEndOperation(long endOperation) {
@@ -454,29 +467,24 @@ public class Worker implements Runnable {
                     break;
                 case DONE:
                 case EXIT:
-                    // getConnectionWithRetry returns null only after the run is already
-                    // DONE/EXIT, so the MEASURE branch above never sees that wait.
+                    // ThreadBench nulls currentPhase before setting DONE, so do not
+                    // read wrkldState.getCurrentPhase() here. Only the sample for a
+                    // wait that never got a connection is recorded; in-flight SQL
+                    // retries at the window edge stay dropped.
                     if (executionStates != null &&
                         (preState == State.MEASURE || preState == State.WARMUP) &&
-                        Worker.wrkldState.getCurrentPhase() != null &&
-                        Worker.wrkldState.getCurrentPhase().id == phase.id) {
+                        phase != null) {
                         int attempt = 0;
                         for (Pair<TransactionExecutionState, TransactionStatus> executionState : executionStates) {
-                            if (executionState.first.getTransactionType() != null) {
-                                switch (executionState.second) {
-                                    case RETRY:
-                                    case UNKNOWN:
-                                        ++totalFailedTries[pieceOfWork.getType() - 1][attempt];
-                                        failureLatencies.addLatency(
-                                                executionState.first.getTransactionType().getId(),
-                                                executionState.first.getStartConnection(),
-                                                executionState.first.getEndConnection(),
-                                                executionState.first.getStartOperation(),
-                                                executionState.first.getEndOperation());
-                                        break;
-                                    default:
-                                        break;
-                                }
+                            if (executionState.first.getTransactionType() != null &&
+                                executionState.first.isAcquireFailed()) {
+                                ++totalFailedTries[pieceOfWork.getType() - 1][attempt];
+                                failureLatencies.addLatency(
+                                        executionState.first.getTransactionType().getId(),
+                                        executionState.first.getStartConnection(),
+                                        executionState.first.getEndConnection(),
+                                        executionState.first.getStartOperation(),
+                                        executionState.first.getEndOperation());
                             }
                             attempt++;
                         }
@@ -518,7 +526,7 @@ public class Worker implements Runnable {
                 endConnection = System.nanoTime();
                 listExecutionStates.add(Pair.of(
                         new TransactionExecutionState(0, 0,
-                                                      startConnection, endConnection, next),
+                                                      startConnection, endConnection, next, true),
                         TransactionStatus.RETRY));
                 return listExecutionStates;
             }
@@ -531,7 +539,9 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-                LOG.warn("Failed to configure connection");
+                String sqlState = e instanceof SQLException ? ((SQLException) e).getSQLState() : null;
+                LOG.warn(String.format("Failed to configure connection [SQLState='%s']: %s",
+                                       sqlState, e.getMessage()));
             }
 
             endConnection = System.nanoTime();
@@ -552,8 +562,9 @@ public class Worker implements Runnable {
                     assert(next.getProcedureClass() == NewOrder.class);
                     rollbackOrEvict(conn, next);
                     status = TransactionStatus.USER_ABORTED;
-                    // Operation is considered ended once we've successfully rolled back the expected failure in
-                    // NewOrder
+                    // Spec abort: the invalid NewOrder is not committed. If rollback
+                    // fails because the connection is already dead, the server aborted
+                    // the open transaction.
                     endOperation = System.nanoTime();
                     break;
                 // Database System Specific Exception Handling
@@ -698,24 +709,20 @@ public class Worker implements Runnable {
 
     /**
      * Hikari wraps every acquire timeout as SQLTransientConnectionException and copies the last
-     * connect SQLState onto it. Retry only connection-class failures that a node stop produces.
+     * connect SQLState onto it. Pool start already failed fast on a bad password or missing
+     * database, so by the time a terminal is here a mid-run failure is almost always transient.
+     * Throw only on known-permanent states; retry everything else (including XX000).
      */
     private static boolean isRetryableAcquireFailure(SQLException ex) {
         String sqlState = ex.getSQLState();
         if (sqlState == null && ex.getCause() instanceof SQLException) {
             sqlState = ((SQLException) ex.getCause()).getSQLState();
         }
-        return isRetryableSqlState(sqlState);
+        return !isPermanentSqlState(sqlState);
     }
 
-    private static boolean isRetryableSqlState(String sqlState) {
-        if (sqlState == null) {
-            return true;
-        }
-        if (sqlState.startsWith("08")) {
-            return true;
-        }
-        return "57P01".equals(sqlState) || "57P03".equals(sqlState) || "53300".equals(sqlState);
+    private static boolean isPermanentSqlState(String sqlState) {
+        return "28P01".equals(sqlState) || "28000".equals(sqlState) || "3D000".equals(sqlState);
     }
 
     /**

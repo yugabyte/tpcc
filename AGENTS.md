@@ -97,7 +97,9 @@ Full file-by-file map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 - Code defaults differ from the sample XML (isolation `SERIALIZABLE` vs `REPEATABLE_READ`; retries
   0 vs 2; `trackPerSQLStmtLatencies` true vs false). See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 - Loader exceptions are swallowed, so check row counts. A connection-acquire failure during
-  execute calls `System.exit(-1)`.
+  execute is retried until DONE/EXIT, except a bad password (`28P01`/`28000`) or unknown
+  database (`3D000`), which still throw and the JVM exits. A wait that never gets a
+  connection is recorded on FAILURE LATENCIES (Connection Acq Latency).
 - JVM assertions must stay **off**. Some asserts are stale (e.g. in `Procedure.getPreparedStatement`).
 - `useStoredProcedures=false` uses a buggy stock-update path (swapped binds).
 - Known bugs and tech debt are listed in

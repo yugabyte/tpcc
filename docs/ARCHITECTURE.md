@@ -120,18 +120,20 @@ loop:
 ### 4.5 One transaction (`Worker.doWork` → `executeWork`)
 
 ```text
-conn = pool.getConnection()
+conn = getConnectionWithRetry()   # retries until DONE/EXIT; throws on 28P01/28000/3D000
+                                  # if the run ends first, record the wait on FAILURE LATENCIES
 if dbtype == yugabyte: SET yb_enable_expression_pushdown to on   # errors swallowed
 if type != StockLevel: conn.setAutoCommit(false)                 # errors swallowed
 for attempt in 1..(1 + maxRetriesPerTransaction), while state != DONE:
     status = UNKNOWN
     try:   proc.run(conn, ...); if !autocommit: conn.commit()    -> SUCCESS
-    catch UserAbortException: rollback                           -> USER_ABORTED (success), stop
-    catch SQLException: rollback (errors ignored)
-                        -> RETRY if SQLState != null, else stays UNKNOWN (loop exits, no retry)
+    catch UserAbortException: rollbackOrEvict                    -> USER_ABORTED (success), stop
+    catch SQLException: rollbackOrEvict (evict if rollback fails)
+                        -> RETRY if SQLState != null, else stays UNKNOWN
+                        -> break if the connection was evicted (no retry on a dead session)
     catch Error | Exception:                                     -> RETRY, *no rollback* (K20)
     if type != NewOrder: stop                                    # only NewOrder retries
-conn.close()
+conn.close()   # evict on close failure
 ```
 
 The district range is passed to `proc.run` like this: 1..10 for NewOrder, Payment and

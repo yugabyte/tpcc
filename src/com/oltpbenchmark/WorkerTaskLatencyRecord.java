@@ -14,17 +14,10 @@ public class WorkerTaskLatencyRecord extends LatencyRecord {
             allocateChunk();
         }
         Sample[] chunk = (Sample[]) values.get(values.size() - 1);
-        int fetchWorkLatencyUs = (int) ((fetchWorkNs - startNs + 500) / 1000);
-        assert fetchWorkLatencyUs >= 0;
-
-        int keyingLatencyUs = (int)((keyingTimeNs - fetchWorkNs + 500) / 1000);
-        assert keyingLatencyUs >= 0;
-
-        int aggregateExecuteUs = (int)((executeWorkNs - keyingTimeNs + 500) / 1000);
-        assert aggregateExecuteUs >= 0;
-
-        int thinkTimeUs = (int)((thinkTimeNs - executeWorkNs + 500) / 1000);
-        assert thinkTimeUs >= 0;
+        int fetchWorkLatencyUs = toIntMicros(fetchWorkNs - startNs);
+        int keyingLatencyUs = toIntMicros(keyingTimeNs - fetchWorkNs);
+        int aggregateExecuteUs = toIntMicros(executeWorkNs - keyingTimeNs);
+        int thinkTimeUs = toIntMicros(thinkTimeNs - executeWorkNs);
 
         chunk[nextIndex] = new Sample(transType, startNs, fetchWorkLatencyUs,
                 keyingLatencyUs, aggregateExecuteUs, thinkTimeUs);
@@ -33,6 +26,17 @@ public class WorkerTaskLatencyRecord extends LatencyRecord {
 
     protected LatencyRecord.Sample[] getNewLatencyRecord() {
         return new WorkerTaskLatencyRecord.Sample[ALLOC_SIZE];
+    }
+
+    private static int toIntMicros(long durationNs) {
+        long us = (durationNs + 500) / 1000;
+        if (us < 0) {
+            return 0;
+        }
+        if (us > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) us;
     }
 
     /** Stores the start time and latencies (for a single worker task) for a single sample. Immutable. */

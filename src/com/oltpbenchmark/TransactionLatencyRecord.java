@@ -14,11 +14,8 @@ public class TransactionLatencyRecord extends LatencyRecord {
             allocateChunk();
         }
         Sample[] chunk = (Sample[]) values.get(values.size() - 1);
-        int connlatencyUs = (int) ((endConnectionNs - startNs + 500) / 1000);
-        assert connlatencyUs >= 0;
-
-        int operationLatencyUs = (int)((operationEndNs - operationStartNs + 500) / 1000);
-        assert operationLatencyUs >= 0;
+        int connlatencyUs = toIntMicros(endConnectionNs - startNs);
+        int operationLatencyUs = toIntMicros(operationEndNs - operationStartNs);
 
         chunk[nextIndex] = new Sample(transType, startNs, connlatencyUs, operationLatencyUs);
         ++nextIndex;
@@ -26,6 +23,17 @@ public class TransactionLatencyRecord extends LatencyRecord {
 
     protected LatencyRecord.Sample[] getNewLatencyRecord() {
         return new TransactionLatencyRecord.Sample[ALLOC_SIZE];
+    }
+
+    private static int toIntMicros(long durationNs) {
+        long us = (durationNs + 500) / 1000;
+        if (us < 0) {
+            return 0;
+        }
+        if (us > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) us;
     }
 
     /** Stores the start time and connection and operation latency for a

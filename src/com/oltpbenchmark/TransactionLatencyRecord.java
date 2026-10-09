@@ -25,17 +25,6 @@ public class TransactionLatencyRecord extends LatencyRecord {
         return new TransactionLatencyRecord.Sample[ALLOC_SIZE];
     }
 
-    private static int toIntMicros(long durationNs) {
-        long us = (durationNs + 500) / 1000;
-        if (us < 0) {
-            return 0;
-        }
-        if (us > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-        return (int) us;
-    }
-
     /** Stores the start time and connection and operation latency for a
      * single sample. Immutable. */
     public static final class Sample extends LatencyRecord.Sample {

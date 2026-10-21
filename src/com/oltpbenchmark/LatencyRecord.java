@@ -51,6 +51,10 @@ public class LatencyRecord implements Iterable<LatencyRecord.Sample> {
   /** Convert a nanosecond duration to int microseconds, clamped to [0, Integer.MAX_VALUE]. */
   protected static int toIntMicros(long durationNs) {
     long us = (durationNs + 500) / 1000;
+    // Same check as the old `assert thinkTimeUs >= 0`: timestamps are taken in
+    // order, so a negative duration is a bug. Assertions stay off in benchmark
+    // runs, so still store 0 instead of a negative sample.
+    assert us >= 0;
     if (us < 0) {
       return 0;
     }

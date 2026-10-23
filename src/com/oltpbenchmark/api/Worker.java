@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -43,6 +44,10 @@ public class Worker implements Runnable {
     private static final Logger LOG = Logger.getLogger(Worker.class);
 
     private static WorkloadState wrkldState;
+    // One WARN for the process (node loss and full outage both stampede this). After the first
+    // WARN, later failures only read the flag; they do not CAS and do not build log strings.
+    private static final AtomicBoolean loggedAcquireFailure = new AtomicBoolean();
+    private static final AtomicBoolean loggedUnexpectedSqlFailure = new AtomicBoolean();
     // This is the warehouse that is a constant for this terminal.
     private final int terminalWarehouseID;
     // This is the district ID used for StockLevel transactions.
@@ -569,15 +574,12 @@ public class Worker implements Runnable {
                     break;
                 // Database System Specific Exception Handling
                 } catch (SQLException ex) {
-                    LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
-                                           "[Message='%s', ErrorCode='%d', SQLState='%s']",
-                                           ex.getClass().getSimpleName(), next, this.toString(),
-                                           ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
                     boolean rolledBack = rollbackOrEvict(conn, next);
 
                     if (ex.getSQLState() != null) {
                         if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
                             // Postgres serialization
+                            logSqlExceptionDebug(ex, next);
                             status = TransactionStatus.RETRY;
                         } else if (
                                 ex.getErrorCode() == 0 &&
@@ -585,13 +587,16 @@ public class Worker implements Runnable {
                                 Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
                             // 53200 - Postgres OOM error
                             // XX000 - Postgres no pinned buffers available
+                            logSqlExceptionDebug(ex, next);
                             status = TransactionStatus.RETRY;
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
+                            if (firstTime(loggedUnexpectedSqlFailure)) {
+                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
+                                logSqlExceptionDebug(ex, next);
+                            }
                             if(attempt == totalAttemptsPerTransaction) {
                                 LOG.error("The DBMS rejected the transaction without an error code and max retry attempts reached : " +  ex.getStackTrace());
-                            } else {
-                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
                             }
                             // FIXME Disable this for now
                             // throw ex;
@@ -642,9 +647,11 @@ public class Worker implements Runnable {
             } // WHILE
             try {
                 conn.close();
-            } catch (SQLException closeEx) {
-                LOG.warn(String.format("%s failed to close connection after '%s': %s",
-                                       this, next, closeEx.getMessage()));
+            }             catch (SQLException closeEx) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(String.format("%s failed to close connection after '%s': %s",
+                                           this, next, closeEx.getMessage()));
+                }
                 dataSource.evictConnection(conn);
             }
         } catch (SQLException ex) {
@@ -653,6 +660,20 @@ public class Worker implements Runnable {
             throw new RuntimeException(msg, ex);
         }
         return listExecutionStates;
+    }
+
+    private static boolean firstTime(AtomicBoolean flag) {
+        return !flag.get() && flag.compareAndSet(false, true);
+    }
+
+    private void logSqlExceptionDebug(SQLException ex, TransactionType next) {
+        if (!LOG.isDebugEnabled()) {
+            return;
+        }
+        LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
+                               "[Message='%s', ErrorCode='%d', SQLState='%s']",
+                               ex.getClass().getSimpleName(), next, this.toString(),
+                               ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
     }
 
     /**
@@ -668,10 +689,12 @@ public class Worker implements Runnable {
             }
             return true;
         } catch (Exception ex) {
-            LOG.warn(String.format("%s failed to roll back '%s', evicting connection [SQLState='%s']: %s",
-                                   this, next,
-                                   ex instanceof SQLException ? ((SQLException) ex).getSQLState() : null,
-                                   ex.getMessage()));
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("%s failed to roll back '%s', evicting connection [SQLState='%s']: %s",
+                                       this, next,
+                                       ex instanceof SQLException ? ((SQLException) ex).getSQLState() : null,
+                                       ex.getMessage()));
+            }
             dataSource.evictConnection(conn);
             return false;
         }
@@ -685,7 +708,6 @@ public class Worker implements Runnable {
      * @return a connection, or null if the benchmark reached DONE/EXIT before one became available
      */
     private Connection getConnectionWithRetry(TransactionType next) throws SQLException {
-        int failedAttempts = 0;
         while (true) {
             try {
                 return dataSource.getConnection();
@@ -693,16 +715,23 @@ public class Worker implements Runnable {
                 if (!isRetryableAcquireFailure(ex)) {
                     throw ex;
                 }
-                failedAttempts++;
+                if (firstTime(loggedAcquireFailure)) {
+                    String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+                    LOG.warn(String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
+                                           dataSource.getPoolName(), next, ex.getSQLState(), cause));
+                } else if (LOG.isDebugEnabled()) {
+                    String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+                    LOG.debug(String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
+                                           dataSource.getPoolName(), next, ex.getSQLState(), cause));
+                }
                 State state = wrkldState.getGlobalState();
                 if (state == State.DONE || state == State.EXIT) {
-                    LOG.error(String.format("%s gave up getting a connection for '%s' from %s after %d attempt(s): benchmark is %s",
-                                            this, next, dataSource.getPoolName(), failedAttempts, state));
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(String.format("%s gave up getting a connection for '%s' from %s: benchmark is %s",
+                                                this, next, dataSource.getPoolName(), state));
+                    }
                     return null;
                 }
-                String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
-                LOG.warn(String.format("%s could not get a connection for '%s' from %s (attempt %d, SQLState='%s'): %s",
-                                       this, next, dataSource.getPoolName(), failedAttempts, ex.getSQLState(), cause));
             }
         }
     }

@@ -93,10 +93,11 @@ with that in mind.
       NewOrder rollback.
 - [ ] Rollback happens before a retry, and rollback errors are tolerated (the node may be down).
       Today only the `SQLException` path rolls back (K20). Don't widen that gap.
-- [ ] Logging: expected contention errors (`40001` etc.) stay at DEBUG. Other errors log `WARN` for
-      intermediate attempts and `ERROR` for the final one (#154). No full stack traces on every
-      retry. If you need a trace, pass the exception to the logger instead of concatenating
-      `getStackTrace()` (K22).
+- [ ] Logging: per-attempt retries, dead-session rollback/close, and connection-acquire timeouts
+      stay at DEBUG or are omitted. One process-wide WARN on the first acquire failure is enough.
+      `ERROR` only on the last SQL attempt (#154). No full stack traces on every retry. If you
+      need a trace, pass the exception to the logger instead of concatenating `getStackTrace()`
+      (K22). The Yugabyte JDBC driver uses JUL, not log4j; leave it at SEVERE unless `--debug=true`.
 
 ### Measurement
 
@@ -180,7 +181,7 @@ before/after results.
 | K3 | `GeoPartitionedSchemaManager.createSqlProcedures` | Loops `partition < numPartitions`, so the **last partition** gets no `updatestockN_<p>`, and the routing `updatestockN` has no branch for its warehouses. *Suspected:* stock updates there are silently skipped. | Geo runs under-report write work in the last partition. |
 | K4 | `NewOrder.getItemsAndStock` | Iterates the ITEM and STOCK `IN (...)` result sets **in lockstep**, assuming the same row order. Item price/data comes from the ITEM row, the key from the STOCK row. The asserts that would catch a mismatch are disabled. | Possible wrong `ol_amount`/brand-generic attribution. Throughput is unaffected. |
 | K5 | `Loader.load*` | Every exception is caught, logged (`Failed to load data for TPC-C`) and swallowed; the load still reports success. | Partially loaded databases go unnoticed. Always check row counts. |
-| K6 | `Worker.getConnectionWithRetry` | Addressed in PR #162 (pool contact points in #161). Transient acquire failures are retried until DONE/EXIT. Permanent states (`28P01`, `28000`, `3D000`) still throw and the JVM exits. A wait that never gets a connection is recorded on FAILURE LATENCIES. | Node outage no longer kills `--execute`. Misconfigured credentials still fail at pool start or on the first acquire. |
+| K6 | `Worker.getConnectionWithRetry` | Addressed in PR #162 (pool contact points in #161). Transient acquire failures are retried until DONE/EXIT. Permanent states (`28P01`, `28000`, `3D000`) still throw and the JVM exits. A wait that never gets a connection is recorded on FAILURE LATENCIES. The first acquire failure logs one WARN; later attempts are not logged. | Node outage no longer kills `--execute`. Misconfigured credentials still fail at pool start or on the first acquire. |
 | K7 | `CommandLineOptions` `--histograms`; `Results.txn*` | The option takes no argument but is read as `=true`, so it can never be enabled. The histograms it would print are never incremented. | Dead feature. |
 | K8 | `StockLevel` | `printLatencyStats` reports `stockGetCountStockSQL`'s histogram, but the callable records into `stockGetCountStockFuncLatency`. | The GetCountStock per-statement line is always empty. |
 | K9 | `DBWorkload.PrintLatencies` | The JSON `FailureLatencies` "All" row passes the *success* connection latencies. | Wrong `connectionAcqLatency` in that row. |

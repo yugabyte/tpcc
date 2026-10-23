@@ -74,6 +74,7 @@ Run `./tpccbenchmark --help` for the full list of options. The most common ones 
    --num-connections <arg>     Number of DB connections used during execute
    --warmup-time-secs <arg>    Warmup time before measurement starts
    --vv                        Output verbose execute results (retries, failure latencies)
+   --debug=true                Enable debug logging (Worker DEBUG, JDBC connect warnings)
 ```
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for every flag and XML option, with defaults.

@@ -54,6 +54,7 @@ Scale and topology:
 | `--initial-delay-secs=<s>` | none | Sleep before starting (staggers multi-client runs). |
 | `-im`, `--interval-monitor=<ms>` | `0` (off) | Print instantaneous throughput every `<ms>` milliseconds. |
 | `--vv` | off | Also print the FAILURE LATENCIES and RETRY ATTEMPTS tables. |
+| `--debug=true` | off | Worker log4j DEBUG and Yugabyte JDBC JUL WARNING. Prints every acquire retry and driver connect failure. **Do not set this on pipelines that store full stderr** (it can exceed 10 MiB on a cluster outage). Use `--vv` for retry counts instead. |
 | `--histograms` | — | Currently a no-op (see known issues). |
 | `--output-raw`, `--output-samples` | — | Declared but unused. |
 
@@ -92,7 +93,7 @@ The flags `-o`, `-s`, `-v` and `--runscript` that older README text mentions **d
 | `isolation` | `TRANSACTION_SERIALIZABLE` | `TRANSACTION_REPEATABLE_READ` | Also `TRANSACTION_READ_COMMITTED` and `TRANSACTION_READ_UNCOMMITTED`. Set on the Hikari pool. Unknown values print a warning and keep the default. |
 | `sslCert` / `sslKey` | empty | empty | A non-empty `sslCert` means `sslmode=require` plus the cert and key. |
 | `jdbcURL` | empty | empty | Replaces the generated URL **only for the un-pooled connections** used by create, load, FK and procedure steps. Every such connection then uses this URL, with no round-robin over `--nodes`. **The execute/clear Hikari pools ignore it**: they set `dataSourceClassName`, and Hikari logs "using dataSourceClassName and ignoring jdbcUrl". They always connect to each `--nodes` host. See K19. |
-| `hikariConnectionTimeoutMs` | `60000` | `180000` | How long **one** pooled-connection wait lasts. Transient acquire failures retry until DONE/EXIT, one timeout at a time. Permanent failures (bad password, unknown database) still fail the process. |
+| `hikariConnectionTimeoutMs` | `60000` | `180000` | How long **one** pooled-connection wait lasts. Transient acquire failures retry until DONE/EXIT, one timeout at a time. The first failure logs one WARN; later attempts are not logged. Permanent failures (bad password, unknown database) still fail the process. |
 
 ### Workload shape
 

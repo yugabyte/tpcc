@@ -32,7 +32,9 @@ the trace/serial machinery are mostly gone. Some dead remnants are listed in §9
 
 ## 2. Entry point & modes (`DBWorkload.main`)
 
-1. Configure log4j from `-Dlog4j.configuration` (required, or the program throws).
+1. Configure log4j from `-Dlog4j.configuration` (required, or the program throws). Also set the
+   Yugabyte JDBC `java.util.logging` logger (`com.yugabyte`) to SEVERE so failed connects do not
+   fill stderr. `--debug=true` then raises Worker to DEBUG and that JUL logger to WARNING.
 2. Parse CLI flags, then **always** parse the workload XML (it needs `<runtime>`, even for `--help`).
 3. If the mode is merge or merge-json, merge and exit.
 4. Build the `WorkloadConfiguration`:
@@ -120,18 +122,21 @@ loop:
 ### 4.5 One transaction (`Worker.doWork` → `executeWork`)
 
 ```text
-conn = pool.getConnection()
+conn = getConnectionWithRetry()   # retries until DONE/EXIT; throws on 28P01/28000/3D000
+                                  # one WARN on the first acquire failure; if the run ends first,
+                                  # record the wait on FAILURE LATENCIES
 if dbtype == yugabyte: SET yb_enable_expression_pushdown to on   # errors swallowed
 if type != StockLevel: conn.setAutoCommit(false)                 # errors swallowed
 for attempt in 1..(1 + maxRetriesPerTransaction), while state != DONE:
     status = UNKNOWN
     try:   proc.run(conn, ...); if !autocommit: conn.commit()    -> SUCCESS
-    catch UserAbortException: rollback                           -> USER_ABORTED (success), stop
-    catch SQLException: rollback (errors ignored)
-                        -> RETRY if SQLState != null, else stays UNKNOWN (loop exits, no retry)
+    catch UserAbortException: rollbackOrEvict                    -> USER_ABORTED (success), stop
+    catch SQLException: rollbackOrEvict (evict if rollback fails)
+                        -> RETRY if SQLState != null, else stays UNKNOWN
+                        -> break if the connection was evicted (no retry on a dead session)
     catch Error | Exception:                                     -> RETRY, *no rollback* (K20)
     if type != NewOrder: stop                                    # only NewOrder retries
-conn.close()
+conn.close()   # evict on close failure
 ```
 
 The district range is passed to `proc.run` like this: 1..10 for NewOrder, Payment and

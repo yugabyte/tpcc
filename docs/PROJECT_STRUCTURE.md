@@ -14,7 +14,7 @@ tpcc/
 ├── download-deps.sh             The real dependency resolver: curls jars from Maven Central into lib/
 ├── ivy.xml, ivysettings.xml     Dependency manifest (kept in sync; no longer used by `ant resolve`)
 ├── pom.xml                      Maven manifest, mainly for IDE import; not the official build
-├── log4j.properties             Console logging config (INFO); passed via -Dlog4j.configuration
+├── log4j.properties             Console logging config (INFO); passed via -Dlog4j.configuration. The Yugabyte JDBC driver uses JUL, muted to SEVERE in DBWorkload.main.
 ├── manifest.mf, src/manifest.mf (legacy) jar manifests
 ├── LICENSE                      Apache 2.0 (inherited from OLTPBench)
 ├── config/

@@ -79,9 +79,11 @@ Full file-by-file map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
    defaults silently: perf pipelines depend on them.
 8. **Dependencies:** bump `download-deps.sh` (what the build uses), `ivy.xml` and `pom.xml`
    together.
-9. **Logging:** nothing per-transaction above DEBUG on the success path. Expected contention errors
-   (`40001` etc.) stay at DEBUG; other failures log WARN while attempts remain and ERROR on the
-   final one.
+9. **Logging:** nothing per-transaction above DEBUG. Expected failures (contention `40001`, dead
+   session `57P01`, acquire timeouts) stay at DEBUG. One WARN for the first connection-acquire
+   failure in the run is enough; ERROR only on the last SQL attempt. Counts belong in the `--vv`
+   retry/failure tables. `--debug=true` turns Worker DEBUG and JDBC connect warnings on; do not
+   use it in pipelines that store full stderr.
 10. Match the surrounding style: 2- or 4-space indentation as in the file you edit, the existing
     OLTPBench license headers, and short comments that explain *why*. Don't reformat files you
     aren't changing.
@@ -97,7 +99,9 @@ Full file-by-file map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 - Code defaults differ from the sample XML (isolation `SERIALIZABLE` vs `REPEATABLE_READ`; retries
   0 vs 2; `trackPerSQLStmtLatencies` true vs false). See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 - Loader exceptions are swallowed, so check row counts. A connection-acquire failure during
-  execute calls `System.exit(-1)`.
+  execute is retried until DONE/EXIT, except a bad password (`28P01`/`28000`) or unknown
+  database (`3D000`), which still throw and the JVM exits. A wait that never gets a
+  connection is recorded on FAILURE LATENCIES (Connection Acq Latency).
 - JVM assertions must stay **off**. Some asserts are stale (e.g. in `Procedure.getPreparedStatement`).
 - `useStoredProcedures=false` uses a buggy stock-update path (swapped binds).
 - Known bugs and tech debt are listed in

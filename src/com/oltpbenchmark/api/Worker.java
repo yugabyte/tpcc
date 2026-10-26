@@ -647,11 +647,9 @@ public class Worker implements Runnable {
             } // WHILE
             try {
                 conn.close();
-            }             catch (SQLException closeEx) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug(String.format("%s failed to close connection after '%s': %s",
-                                           this, next, closeEx.getMessage()));
-                }
+            } catch (SQLException closeEx) {
+                LOG.debug(String.format("%s failed to close connection after '%s': %s",
+                                       this, next, closeEx.getMessage()));
                 dataSource.evictConnection(conn);
             }
         } catch (SQLException ex) {
@@ -667,13 +665,10 @@ public class Worker implements Runnable {
     }
 
     private void logSqlExceptionDebug(SQLException ex, TransactionType next) {
-        if (!LOG.isDebugEnabled()) {
-            return;
-        }
         LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
                                "[Message='%s', ErrorCode='%d', SQLState='%s']",
                                ex.getClass().getSimpleName(), next, this.toString(),
-                               ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
+                               ex.getMessage(), ex.getErrorCode(), ex.getSQLState()));
     }
 
     /**
@@ -689,12 +684,10 @@ public class Worker implements Runnable {
             }
             return true;
         } catch (Exception ex) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("%s failed to roll back '%s', evicting connection [SQLState='%s']: %s",
-                                       this, next,
-                                       ex instanceof SQLException ? ((SQLException) ex).getSQLState() : null,
-                                       ex.getMessage()));
-            }
+            LOG.debug(String.format("%s failed to roll back '%s', evicting connection [SQLState='%s']: %s",
+                                   this, next,
+                                   ex instanceof SQLException ? ((SQLException) ex).getSQLState() : null,
+                                   ex.getMessage()));
             dataSource.evictConnection(conn);
             return false;
         }
@@ -715,21 +708,18 @@ public class Worker implements Runnable {
                 if (!isRetryableAcquireFailure(ex)) {
                     throw ex;
                 }
+                String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+                String msg = String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
+                                           dataSource.getPoolName(), next, ex.getSQLState(), cause);
                 if (firstTime(loggedAcquireFailure)) {
-                    String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
-                    LOG.warn(String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
-                                           dataSource.getPoolName(), next, ex.getSQLState(), cause));
-                } else if (LOG.isDebugEnabled()) {
-                    String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
-                    LOG.debug(String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
-                                           dataSource.getPoolName(), next, ex.getSQLState(), cause));
+                    LOG.warn(msg);
+                } else {
+                    LOG.debug(msg);
                 }
                 State state = wrkldState.getGlobalState();
                 if (state == State.DONE || state == State.EXIT) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(String.format("%s gave up getting a connection for '%s' from %s: benchmark is %s",
-                                                this, next, dataSource.getPoolName(), state));
-                    }
+                    LOG.debug(String.format("%s gave up getting a connection for '%s' from %s: benchmark is %s",
+                                            this, next, dataSource.getPoolName(), state));
                     return null;
                 }
             }

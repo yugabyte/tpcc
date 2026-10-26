@@ -54,7 +54,6 @@ Scale and topology:
 | `--initial-delay-secs=<s>` | none | Sleep before starting (staggers multi-client runs). |
 | `-im`, `--interval-monitor=<ms>` | `0` (off) | Print instantaneous throughput every `<ms>` milliseconds. |
 | `--vv` | off | Also print the FAILURE LATENCIES and RETRY ATTEMPTS tables. |
-| `--debug=true` | off | Worker log4j DEBUG and Yugabyte JDBC JUL WARNING. Prints every acquire retry and driver connect failure. **Do not set this on pipelines that store full stderr** (it can exceed 10 MiB on a cluster outage). Use `--vv` for retry counts instead. |
 | `--histograms` | — | Currently a no-op (see known issues). |
 | `--output-raw`, `--output-samples` | — | Declared but unused. |
 

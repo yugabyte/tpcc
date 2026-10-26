@@ -82,8 +82,7 @@ Full file-by-file map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 9. **Logging:** nothing per-transaction above DEBUG. Expected failures (contention `40001`, dead
    session `57P01`, acquire timeouts) stay at DEBUG. One WARN for the first connection-acquire
    failure in the run is enough; ERROR only on the last SQL attempt. Counts belong in the `--vv`
-   retry/failure tables. `--debug=true` turns Worker DEBUG and JDBC connect warnings on; do not
-   use it in pipelines that store full stderr.
+   retry/failure tables.
 10. Match the surrounding style: 2- or 4-space indentation as in the file you edit, the existing
     OLTPBench license headers, and short comments that explain *why*. Don't reformat files you
     aren't changing.

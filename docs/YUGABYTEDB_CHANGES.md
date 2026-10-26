@@ -71,7 +71,7 @@ treat these errors as a normal part of the workload.
 | **TLS** (#66, #68) | `BenchmarkModule` | `<sslCert>`/`<sslKey>` mean `sslmode=require` plus the client cert and key. |
 | **Full JDBC URL override** (#67) | `<jdbcURL>` | For URL-only options. Today it applies only to the un-pooled create/load/FK/procedure connections. The execute pools ignore it (K19). |
 | **Removed `conn.getTransactionIsolation()` call** (#138) | `Worker` | It threw with the driver in debug logging mode and had no value. |
-| **Quiet outage logs** | `DBWorkload.main`, `Worker.getConnectionWithRetry` | The Yugabyte driver logs every failed connect at JUL WARNING (bypasses log4j). That is set to SEVERE at startup. Connection-acquire retries log one WARN for the run; later attempts are DEBUG. Rollback/close on a dead session is DEBUG. `--debug=true` raises Worker to DEBUG and JDBC JUL to WARNING. Failure counts stay in the `--vv` tables. |
+| **Quiet outage logs** | `DBWorkload.main`, `Worker.getConnectionWithRetry` | The Yugabyte driver logs every failed connect at JUL WARNING (bypasses log4j). That is set to SEVERE at startup. Connection-acquire retries log one WARN for the run; later attempts are DEBUG. Rollback/close on a dead session is DEBUG. Failure counts stay in the `--vv` tables. |
 
 ## 5. Scale-out benchmarking (multiple client machines)
 

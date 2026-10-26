@@ -74,7 +74,6 @@ public class DBWorkload {
     } else {
       throw new RuntimeException("Missing log4j.properties file");
     }
-    java.util.logging.Logger.getLogger("com.yugabyte").setLevel(java.util.logging.Level.SEVERE);
 
     if (isAssertsEnabled()) {
       LOG.warn("\n" + getAssertWarning());

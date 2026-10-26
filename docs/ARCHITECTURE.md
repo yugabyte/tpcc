@@ -32,9 +32,7 @@ the trace/serial machinery are mostly gone. Some dead remnants are listed in §9
 
 ## 2. Entry point & modes (`DBWorkload.main`)
 
-1. Configure log4j from `-Dlog4j.configuration` (required, or the program throws). Also set the
-   Yugabyte JDBC `java.util.logging` logger (`com.yugabyte`) to SEVERE so failed connects do not
-   fill stderr.
+1. Configure log4j from `-Dlog4j.configuration` (required, or the program throws).
 2. Parse CLI flags, then **always** parse the workload XML (it needs `<runtime>`, even for `--help`).
 3. If the mode is merge or merge-json, merge and exit.
 4. Build the `WorkloadConfiguration`:

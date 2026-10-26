@@ -74,8 +74,6 @@ public class DBWorkload {
     } else {
       throw new RuntimeException("Missing log4j.properties file");
     }
-    // The Yugabyte JDBC driver logs every failed connect at JUL WARNING, which
-    // bypasses log4j and fills stderr during a cluster outage.
     java.util.logging.Logger.getLogger("com.yugabyte").setLevel(java.util.logging.Level.SEVERE);
 
     if (isAssertsEnabled()) {

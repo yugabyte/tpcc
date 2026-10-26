@@ -577,10 +577,10 @@ public class Worker implements Runnable {
                     boolean rolledBack = rollbackOrEvict(conn, next);
 
                     if (ex.getSQLState() != null) {
+                        status = TransactionStatus.RETRY;
                         if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
                             // Postgres serialization
                             logSqlExceptionDebug(ex, next);
-                            status = TransactionStatus.RETRY;
                         } else if (
                                 ex.getErrorCode() == 0 &&
                                 ex.getSQLState() != null &&
@@ -588,7 +588,6 @@ public class Worker implements Runnable {
                             // 53200 - Postgres OOM error
                             // XX000 - Postgres no pinned buffers available
                             logSqlExceptionDebug(ex, next);
-                            status = TransactionStatus.RETRY;
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
                             if (firstTime(loggedUnexpectedSqlFailure)) {
@@ -600,7 +599,6 @@ public class Worker implements Runnable {
                             }
                             // FIXME Disable this for now
                             // throw ex;
-                            status = TransactionStatus.RETRY;
                         }
                     }
                     if (!rolledBack) {

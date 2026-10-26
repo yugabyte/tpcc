@@ -97,7 +97,7 @@ with that in mind.
       stay at DEBUG or are omitted. One process-wide WARN on the first acquire failure is enough.
       `ERROR` only on the last SQL attempt (#154). No full stack traces on every retry. If you
       need a trace, pass the exception to the logger instead of concatenating `getStackTrace()`
-      (K22). The Yugabyte JDBC driver uses JUL, not log4j; leave it at SEVERE in `DBWorkload.main`.
+      (K22).
 
 ### Measurement
 

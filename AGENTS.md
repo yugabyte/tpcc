@@ -80,9 +80,10 @@ Full file-by-file map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 8. **Dependencies:** bump `download-deps.sh` (what the build uses), `ivy.xml` and `pom.xml`
    together.
 9. **Logging:** nothing per-transaction above DEBUG. Expected failures (contention `40001`, dead
-   session `57P01`, acquire timeouts) stay at DEBUG. One WARN for the first connection-acquire
-   failure in the run is enough; ERROR only on the last SQL attempt. Counts belong in the `--vv`
-   retry/failure tables.
+   session `57P01`, acquire timeouts) stay at DEBUG. Repeated connection-acquire and unexpected SQL
+   failures go through `FailureLogReporter`: one WARN for the first failure of each SQLState, then
+   one summary WARN per SQLState every 30s. ERROR only on the last SQL attempt. Exact counts
+   belong in the `--vv` retry/failure tables.
 10. Match the surrounding style: 2- or 4-space indentation as in the file you edit, the existing
     OLTPBench license headers, and short comments that explain *why*. Don't reformat files you
     aren't changing.

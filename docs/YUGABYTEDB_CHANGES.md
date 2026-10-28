@@ -52,7 +52,7 @@ treat these errors as a normal part of the workload.
 |--------|-------|-----|
 | **Transaction retries** (#72, then #134, #148) | `Worker.doWork` | Failed transactions used to be counted as successes (#72 fixed this). Now an `SQLException` with a SQLState, and any other `Exception` or `Error`, is classified `RETRY`, and NewOrder is re-attempted up to `<maxRetriesPerTransaction>` times (only the `SQLException` path rolls back first, see K20). #134: rollback failures are ignored (the node may be down during smart-driver failover tests), and internal errors (`XX000`) are retried too. #148: `Error`/`Exception` became retryable instead of fatal, the `SET`/`setAutoCommit` block was wrapped in `catch (Throwable)`, and intermediate attempts log only the message. The final-attempt log concatenates `ex.getStackTrace()`, which prints an array reference rather than a trace (K22). |
 | **Only NewOrder is retried** (e944a84, #111) | `Worker.doWork` | The other transactions record a failure and move on. |
-| **Warn vs error logging for retries** (#154) | `Worker.doWork` | Expected contention errors (`40001`, `53200`, `XX000`) are logged only at DEBUG. Other SQL errors (`57P01`, …) log one WARN plus one DEBUG for the whole run, then stay silent; `ERROR` only on the last attempt. |
+| **Warn vs error logging for retries** (#154) | `Worker.doWork` | Expected contention errors (`40001`, `53200`, `XX000`) are logged only at DEBUG. Other SQL errors (`57P01`, …) log one WARN for the first failure of each SQLState, then one summary WARN per SQLState every 30s (`FailureLogReporter`); every occurrence is at DEBUG. `ERROR` only on the last attempt. |
 | **Delivery split into one transaction per district** (#106) | `Delivery.run` | Committing per district keeps each database transaction short, which shrinks the window for conflicts. |
 | **Isolation configured on the Hikari pool** (#98) | `BenchmarkModule.createDataSource` | Avoids a `SET TRANSACTION ISOLATION` round trip at the start of every transaction. |
 | **Default isolation `TRANSACTION_REPEATABLE_READ`** in the sample config | `config/workload_all.xml` | Snapshot isolation in YugabyteDB. If the XML omits `<isolation>`, the code falls back to `SERIALIZABLE`. |
@@ -71,7 +71,7 @@ treat these errors as a normal part of the workload.
 | **TLS** (#66, #68) | `BenchmarkModule` | `<sslCert>`/`<sslKey>` mean `sslmode=require` plus the client cert and key. |
 | **Full JDBC URL override** (#67) | `<jdbcURL>` | For URL-only options. Today it applies only to the un-pooled create/load/FK/procedure connections. The execute pools ignore it (K19). |
 | **Removed `conn.getTransactionIsolation()` call** (#138) | `Worker` | It threw with the driver in debug logging mode and had no value. |
-| **Quiet outage logs** | `Worker.getConnectionWithRetry` | Connection-acquire retries log one WARN for the run; later attempts are DEBUG. Rollback/close on a dead session is DEBUG. Failure counts stay in the `--vv` tables. |
+| **Quiet outage logs** | `Worker.getConnectionWithRetry` | Connection-acquire retries log one WARN for the first failure of each SQLState, then one summary WARN per SQLState every 30s with a count and a sample message (`FailureLogReporter`); every attempt is at DEBUG. Rollback/close on a dead session is DEBUG. Failure counts stay in the `--vv` tables. |
 
 ## 5. Scale-out benchmarking (multiple client machines)
 

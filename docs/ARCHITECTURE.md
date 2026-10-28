@@ -121,8 +121,9 @@ loop:
 
 ```text
 conn = getConnectionWithRetry()   # retries until DONE/EXIT; throws on 28P01/28000/3D000
-                                  # one WARN on the first acquire failure; if the run ends first,
-                                  # record the wait on FAILURE LATENCIES
+                                  # one WARN per SQLState on the first acquire failure, then a
+                                  # 30s summary; if the run ends first, record the wait on
+                                  # FAILURE LATENCIES
 if dbtype == yugabyte: SET yb_enable_expression_pushdown to on   # errors swallowed
 if type != StockLevel: conn.setAutoCommit(false)                 # errors swallowed
 for attempt in 1..(1 + maxRetriesPerTransaction), while state != DONE:

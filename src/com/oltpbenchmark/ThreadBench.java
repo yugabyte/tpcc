@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 
+import com.oltpbenchmark.api.FailureLogReporter;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
 import com.oltpbenchmark.types.State;
@@ -290,6 +291,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
       workStates.add(workState.initializeState(testState));
     }
 
+    FailureLogReporter.start();
     this.createWorkerThreads();
     testState.blockForStart();
 
@@ -474,6 +476,7 @@ public class ThreadBench implements Thread.UncaughtExceptionHandler {
 
     try {
       int requests = finalizeWorkers(this.workerThreads);
+      FailureLogReporter.stop();
 
       // Combine all the latencies together in the most disgusting way
       // possible: sorting!

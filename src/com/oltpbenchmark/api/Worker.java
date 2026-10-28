@@ -22,7 +22,6 @@ import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -44,10 +43,6 @@ public class Worker implements Runnable {
     private static final Logger LOG = Logger.getLogger(Worker.class);
 
     private static WorkloadState wrkldState;
-    // One WARN for the process (node loss and full outage both stampede this). After the first
-    // WARN, later failures only read the flag; they do not CAS and do not build log strings.
-    private static final AtomicBoolean loggedAcquireFailure = new AtomicBoolean();
-    private static final AtomicBoolean loggedUnexpectedSqlFailure = new AtomicBoolean();
     // This is the warehouse that is a constant for this terminal.
     private final int terminalWarehouseID;
     // This is the district ID used for StockLevel transactions.
@@ -590,10 +585,9 @@ public class Worker implements Runnable {
                             logSqlExceptionDebug(ex, next);
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
-                            if (firstTime(loggedUnexpectedSqlFailure)) {
-                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
-                                logSqlExceptionDebug(ex, next);
-                            }
+                            FailureLogReporter.record(FailureLogReporter.Category.UNEXPECTED_SQL, ex.getSQLState(),
+                                    () -> "The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
+                            logSqlExceptionDebug(ex, next);
                             if(attempt == totalAttemptsPerTransaction) {
                                 LOG.error("The DBMS rejected the transaction without an error code and max retry attempts reached : " +  ex.getStackTrace());
                             }
@@ -658,10 +652,6 @@ public class Worker implements Runnable {
         return listExecutionStates;
     }
 
-    private static boolean firstTime(AtomicBoolean flag) {
-        return !flag.get() && flag.compareAndSet(false, true);
-    }
-
     private void logSqlExceptionDebug(SQLException ex, TransactionType next) {
         LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
                                "[Message='%s', ErrorCode='%d', SQLState='%s']",
@@ -706,14 +696,10 @@ public class Worker implements Runnable {
                 if (!isRetryableAcquireFailure(ex)) {
                     throw ex;
                 }
-                String cause = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
-                String msg = String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
-                                           dataSource.getPoolName(), next, ex.getSQLState(), cause);
-                if (firstTime(loggedAcquireFailure)) {
-                    LOG.warn(msg);
-                } else {
-                    LOG.debug(msg);
-                }
+                FailureLogReporter.record(FailureLogReporter.Category.CONNECTION_ACQUIRE, ex.getSQLState(),
+                        () -> String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
+                                            dataSource.getPoolName(), next, ex.getSQLState(),
+                                            ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()));
                 State state = wrkldState.getGlobalState();
                 if (state == State.DONE || state == State.EXIT) {
                     LOG.debug(String.format("%s gave up getting a connection for '%s' from %s: benchmark is %s",

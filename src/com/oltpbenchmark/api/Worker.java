@@ -19,6 +19,7 @@ package com.oltpbenchmark.api;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.SQLException;
+import java.sql.SQLTransientConnectionException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -227,6 +228,7 @@ public class Worker implements Runnable {
       private final long startConnection;
       private long endConnection;
       private final TransactionType type;
+      private final boolean acquireFailed;
 
       public TransactionExecutionState() {
         this.startOperation = 0;
@@ -234,16 +236,24 @@ public class Worker implements Runnable {
         this.startConnection = 0;
         this.endConnection = 0;
         this.type = TransactionType.INVALID;
+        this.acquireFailed = false;
       }
 
       public TransactionExecutionState(long startOperation, long endOperation,
                                        long startConnection, long endConnection,
                                        TransactionType type) {
+        this(startOperation, endOperation, startConnection, endConnection, type, false);
+      }
+
+      public TransactionExecutionState(long startOperation, long endOperation,
+                                       long startConnection, long endConnection,
+                                       TransactionType type, boolean acquireFailed) {
         this.startOperation = startOperation;
         this.endOperation = endOperation;
         this.startConnection = startConnection;
         this.endConnection = endConnection;
         this.type = type;
+        this.acquireFailed = acquireFailed;
       }
 
       public long getStartOperation() {
@@ -264,6 +274,10 @@ public class Worker implements Runnable {
 
       public TransactionType getTransactionType() {
         return type;
+      }
+
+      public boolean isAcquireFailed() {
+        return acquireFailed;
       }
 
       public void setEndOperation(long endOperation) {
@@ -451,6 +465,31 @@ public class Worker implements Runnable {
                     if (preState == State.COLD_QUERY)
                         Worker.wrkldState.startHotQuery();
                     break;
+                case DONE:
+                case EXIT:
+                    // ThreadBench nulls currentPhase before setting DONE, so do not
+                    // read wrkldState.getCurrentPhase() here. Only the sample for a
+                    // wait that never got a connection is recorded; in-flight SQL
+                    // retries at the window edge stay dropped.
+                    if (executionStates != null &&
+                        (preState == State.MEASURE || preState == State.WARMUP) &&
+                        phase != null) {
+                        int attempt = 0;
+                        for (Pair<TransactionExecutionState, TransactionStatus> executionState : executionStates) {
+                            if (executionState.first.getTransactionType() != null &&
+                                executionState.first.isAcquireFailed()) {
+                                ++totalFailedTries[pieceOfWork.getType() - 1][attempt];
+                                failureLatencies.addLatency(
+                                        executionState.first.getTransactionType().getId(),
+                                        executionState.first.getStartConnection(),
+                                        executionState.first.getEndConnection(),
+                                        executionState.first.getStartOperation(),
+                                        executionState.first.getEndOperation());
+                            }
+                            attempt++;
+                        }
+                    }
+                    break;
                 default:
                     // Do nothing
             }
@@ -480,7 +519,17 @@ public class Worker implements Runnable {
             }
             startConnection = System.nanoTime();
 
-            conn = dataSource.getConnection();
+            conn = getConnectionWithRetry(next);
+            if (conn == null) {
+                // The run ended while we were still waiting. Record the wait as a
+                // failed try so connectionAcqLatency includes it.
+                endConnection = System.nanoTime();
+                listExecutionStates.add(Pair.of(
+                        new TransactionExecutionState(0, 0,
+                                                      startConnection, endConnection, next, true),
+                        TransactionStatus.RETRY));
+                return listExecutionStates;
+            }
             try {
                 if(wrkld.getDBType().equals("yugabyte"))
                     conn.createStatement().execute("SET yb_enable_expression_pushdown to on");
@@ -490,7 +539,11 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-
+                if (LOG.isDebugEnabled()) {
+                    String sqlState = e instanceof SQLException ? ((SQLException) e).getSQLState() : null;
+                    LOG.debug(String.format("Failed to configure connection [SQLState='%s']: %s",
+                                            sqlState, e.getMessage()));
+                }
             }
 
             endConnection = System.nanoTime();
@@ -509,50 +562,44 @@ public class Worker implements Runnable {
                     // UserAbortException should represent an expected NewOrder failure and will be recorded as a
                     // success. No other procedure class should hit this branch.
                     assert(next.getProcedureClass() == NewOrder.class);
-                    if (!conn.getAutoCommit()) {
-                        conn.rollback();
-                    }
+                    rollbackOrEvict(conn, next);
                     status = TransactionStatus.USER_ABORTED;
-                    // Operation is considered ended once we've successfully rolled back the expected failure in
-                    // NewOrder
+                    // Spec abort: the invalid NewOrder is not committed. If rollback
+                    // fails because the connection is already dead, the server aborted
+                    // the open transaction.
                     endOperation = System.nanoTime();
                     break;
                 // Database System Specific Exception Handling
                 } catch (SQLException ex) {
-                    LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
-                                           "[Message='%s', ErrorCode='%d', SQLState='%s']",
-                                           ex.getClass().getSimpleName(), next, this.toString(),
-                                           ex.getMessage(), ex.getErrorCode(), ex.getSQLState()), ex);
-                    try {
-                        if (!conn.getAutoCommit()) {
-                            conn.rollback();
-                        }
-                    } catch (Throwable t) {
-                        // ignore if we are not able to rollback the transaction
-                    }
+                    boolean rolledBack = rollbackOrEvict(conn, next);
 
                     if (ex.getSQLState() != null) {
+                        status = TransactionStatus.RETRY;
                         if (ex.getErrorCode() == 0 && ex.getSQLState() != null && ex.getSQLState().equals("40001")) {
                             // Postgres serialization
-                            status = TransactionStatus.RETRY;
+                            logSqlExceptionDebug(ex, next);
                         } else if (
                                 ex.getErrorCode() == 0 &&
                                 ex.getSQLState() != null &&
                                 Arrays.asList("53200", "XX000").contains(ex.getSQLState())) {
                             // 53200 - Postgres OOM error
                             // XX000 - Postgres no pinned buffers available
-                            status = TransactionStatus.RETRY;
+                            logSqlExceptionDebug(ex, next);
                         } else {
                             // UNKNOWN: In this case .. Retry as well!
+                            FailureLogReporter.record(FailureLogReporter.Category.UNEXPECTED_SQL, ex.getSQLState(),
+                                    () -> "The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
+                            logSqlExceptionDebug(ex, next);
                             if(attempt == totalAttemptsPerTransaction) {
                                 LOG.error("The DBMS rejected the transaction without an error code and max retry attempts reached : " +  ex.getStackTrace());
-                            } else {
-                                LOG.warn("The DBMS rejected the transaction without an error code:" +  ex.getMessage() + ". Retrying...");
                             }
                             // FIXME Disable this for now
                             // throw ex;
-                            status = TransactionStatus.RETRY;
                         }
+                    }
+                    if (!rolledBack) {
+                        // The connection was evicted, so further attempts on it cannot succeed.
+                        break;
                     }
                 // Assertion Error
                 } catch (Error ex) {
@@ -592,13 +639,95 @@ public class Worker implements Runnable {
                     break;
                 }
             } // WHILE
-            conn.close();
+            try {
+                conn.close();
+            } catch (SQLException closeEx) {
+                LOG.debug(String.format("%s failed to close connection after '%s': %s",
+                                       this, next, closeEx.getMessage()));
+                dataSource.evictConnection(conn);
+            }
         } catch (SQLException ex) {
             String msg = String.format("Unexpected fatal, error in '%s' when executing '%s'",
                                        this, next);
             throw new RuntimeException(msg, ex);
         }
         return listExecutionStates;
+    }
+
+    private void logSqlExceptionDebug(SQLException ex, TransactionType next) {
+        LOG.debug(String.format("%s thrown when executing '%s' on '%s' " +
+                               "[Message='%s', ErrorCode='%d', SQLState='%s']",
+                               ex.getClass().getSimpleName(), next, this.toString(),
+                               ex.getMessage(), ex.getErrorCode(), ex.getSQLState()));
+    }
+
+    /**
+     * Rolls back the open transaction on conn. If the rollback fails the connection's state is unknown (it may be
+     * dead, or alive with the transaction still open), so it is evicted from the pool rather than reused.
+     *
+     * @return true if the rollback succeeded or there was nothing to roll back, false if the connection was evicted
+     */
+    private boolean rollbackOrEvict(Connection conn, TransactionType next) {
+        try {
+            if (!conn.getAutoCommit()) {
+                conn.rollback();
+            }
+            return true;
+        } catch (Exception ex) {
+            LOG.debug(String.format("%s failed to roll back '%s', evicting connection [SQLState='%s']: %s",
+                                   this, next,
+                                   ex instanceof SQLException ? ((SQLException) ex).getSQLState() : null,
+                                   ex.getMessage()));
+            dataSource.evictConnection(conn);
+            return false;
+        }
+    }
+
+    /**
+     * Keeps waiting for a pooled connection while the benchmark is running, so a temporary cluster outage
+     * does not kill the whole run. Each wait is bounded by hikariConnectionTimeoutMs.
+     * Permanent failures (bad password, unknown database) are thrown so the process still exits.
+     *
+     * @return a connection, or null if the benchmark reached DONE/EXIT before one became available
+     */
+    private Connection getConnectionWithRetry(TransactionType next) throws SQLException {
+        while (true) {
+            try {
+                return dataSource.getConnection();
+            } catch (SQLTransientConnectionException ex) {
+                if (!isRetryableAcquireFailure(ex)) {
+                    throw ex;
+                }
+                FailureLogReporter.record(FailureLogReporter.Category.CONNECTION_ACQUIRE, ex.getSQLState(),
+                        () -> String.format("Failed to acquire a pooled connection from %s for '%s' [SQLState='%s']: %s",
+                                            dataSource.getPoolName(), next, ex.getSQLState(),
+                                            ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()));
+                State state = wrkldState.getGlobalState();
+                if (state == State.DONE || state == State.EXIT) {
+                    LOG.debug(String.format("%s gave up getting a connection for '%s' from %s: benchmark is %s",
+                                            this, next, dataSource.getPoolName(), state));
+                    return null;
+                }
+            }
+        }
+    }
+
+    /**
+     * Hikari wraps every acquire timeout as SQLTransientConnectionException and copies the last
+     * connect SQLState onto it. Pool start already failed fast on a bad password or missing
+     * database, so by the time a terminal is here a mid-run failure is almost always transient.
+     * Throw only on known-permanent states; retry everything else (including XX000).
+     */
+    private static boolean isRetryableAcquireFailure(SQLException ex) {
+        String sqlState = ex.getSQLState();
+        if (sqlState == null && ex.getCause() instanceof SQLException) {
+            sqlState = ((SQLException) ex.getCause()).getSQLState();
+        }
+        return !isPermanentSqlState(sqlState);
+    }
+
+    private static boolean isPermanentSqlState(String sqlState) {
+        return "28P01".equals(sqlState) || "28000".equals(sqlState) || "3D000".equals(sqlState);
     }
 
     /**

@@ -124,8 +124,8 @@ conn = getConnectionWithRetry()   # retries until DONE/EXIT; throws on 28P01/280
                                   # one WARN per SQLState on the first acquire failure, then a
                                   # 30s summary; if the run ends first, record the wait on
                                   # FAILURE LATENCIES
-if dbtype == yugabyte: SET yb_enable_expression_pushdown to on   # errors swallowed
-if type != StockLevel: conn.setAutoCommit(false)                 # errors swallowed
+if dbtype == yugabyte: SET yb_enable_expression_pushdown to on   # errors swallowed, logged at DEBUG
+if type != StockLevel: conn.setAutoCommit(false)                 # errors swallowed, logged at DEBUG
 for attempt in 1..(1 + maxRetriesPerTransaction), while state != DONE:
     status = UNKNOWN
     try:   proc.run(conn, ...); if !autocommit: conn.commit()    -> SUCCESS

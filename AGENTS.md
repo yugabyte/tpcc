@@ -80,7 +80,7 @@ Full file-by-file map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 8. **Dependencies:** bump `download-deps.sh` (what the build uses), `ivy.xml` and `pom.xml`
    together.
 9. **Logging:** nothing per-transaction above DEBUG. Expected failures (contention `40001`, dead
-   session `57P01`, acquire timeouts) stay at DEBUG. Repeated connection-acquire and unexpected SQL
+   session `57P01`, acquire timeouts, connection configure) stay at DEBUG. Repeated connection-acquire and unexpected SQL
    failures go through `FailureLogReporter`: one WARN for the first failure of each SQLState, then
    one summary WARN per SQLState every 30s. ERROR only on the last SQL attempt. Exact counts
    belong in the `--vv` retry/failure tables.

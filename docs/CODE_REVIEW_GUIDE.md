@@ -93,8 +93,9 @@ with that in mind.
       NewOrder rollback.
 - [ ] Rollback happens before a retry, and rollback errors are tolerated (the node may be down).
       Today only the `SQLException` path rolls back (K20). Don't widen that gap.
-- [ ] Logging: per-attempt retries, dead-session rollback/close, and connection-acquire timeouts
-      stay at DEBUG or are omitted. Repeated acquire and unexpected SQL failures go through
+- [ ] Logging: per-attempt retries, dead-session rollback/close, connection-acquire timeouts,
+      and connection-configure failures (`SET` / `setAutoCommit`) stay at DEBUG or are omitted.
+      Repeated acquire and unexpected SQL failures go through
       `FailureLogReporter` (first WARN per SQLState, then a 30s summary), not a WARN per failure.
       `ERROR` only on the last SQL attempt (#154). No full stack traces on every retry. If you
       need a trace, pass the exception to the logger instead of concatenating `getStackTrace()`
@@ -200,5 +201,5 @@ before/after results.
 | K21 | `TPCCUtil.randomStr` | Returns `n-1` characters (`astring(n-1, n-1)`). | All generated alpha strings are one character shorter than the spec (`i_data` 22–49, `s_dist_xx` 23, ...). Slightly smaller rows. |
 | K22 | `Worker.doWork` final-attempt logs | Concatenate `ex.getStackTrace()`, which prints `[Ljava.lang.StackTraceElement;@...`, not a trace. | Final-failure logs lose the stack trace. |
 | K23 | `Worker.doWork` after `rollbackOrEvict` returns false | The NewOrder retry loop `break`s instead of taking a fresh pooled connection and continuing. | That NewOrder is a failed try. The next piece of work reconnects. Re-acquiring mid-order would recover some chaos tpmC (follow-up). |
-| K24 | `Worker.doWork` configure catch | Logs a WARN (message + SQLState, no exception object) on every configure failure. | A YB build without `yb_enable_expression_pushdown` floods the log. Once-per-worker WARN is a follow-up. |
+| K24 | `Worker.doWork` configure catch | Addressed in PR #162. Configure failures (`SET yb_enable_expression_pushdown`, `setAutoCommit`) log at DEBUG, and only when debug is enabled. | A YB build without `yb_enable_expression_pushdown` no longer floods WARN. The error is still swallowed, so a failing `SET` still skips `setAutoCommit(false)` (K12). |
 | K25 | `Worker.doWork` `SET yb_enable_expression_pushdown` | Runs every time a connection is borrowed. Hikari `connectionInitSql` would run it once per physical connection. | Extra round trip on every NewOrder and Payment. Own PR with before/after results. |

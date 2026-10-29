@@ -72,14 +72,17 @@ public final class FailureLogReporter {
 
         String key = String.valueOf(sqlState);
         ConcurrentHashMap<String, Counter> byState = counters.get(category);
+        // Fast path once this SQLState has been seen. putIfAbsent only runs for the first failure.
         Counter counter = byState.get(key);
         if (counter == null) {
-            counter = byState.putIfAbsent(key, new Counter());
-            if (counter == null) {
-                LOG.warn(String.format("%s (further %s with SQLState '%s' are summarized every %ds)",
-                                       message.get(), category.description, key, REPORT_INTERVAL_SECS));
+            // null means this thread inserted the counter (first failure). Non-null means another
+            // thread won the race and we should count against that counter instead.
+            Counter existing = byState.putIfAbsent(key, new Counter());
+            if (existing == null) {
+                LOG.warn(String.format("%s (summarized every %ds)", message.get(), REPORT_INTERVAL_SECS));
                 return;
             }
+            counter = existing;
         }
 
         counter.count.increment();
@@ -142,9 +145,9 @@ public final class FailureLogReporter {
                     long count = counter.count.sumThenReset();
                     String sample = counter.sample.getAndSet(null);
                     if (count > 0) {
-                        LOG.warn(String.format("%d more %s since the last report [SQLState='%s']%s",
+                        LOG.warn(String.format("%d more %s [SQLState=%s]%s",
                                                count, byCategory.getKey().description, byState.getKey(),
-                                               sample != null ? ". Sample: " + sample : ""));
+                                               sample != null ? ": " + sample : ""));
                     }
                 }
             }

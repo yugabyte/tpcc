@@ -539,9 +539,11 @@ public class Worker implements Runnable {
                     conn.setAutoCommit(false);
                 }
             } catch (Throwable e) {
-                String sqlState = e instanceof SQLException ? ((SQLException) e).getSQLState() : null;
-                LOG.warn(String.format("Failed to configure connection [SQLState='%s']: %s",
-                                       sqlState, e.getMessage()));
+                if (LOG.isDebugEnabled()) {
+                    String sqlState = e instanceof SQLException ? ((SQLException) e).getSQLState() : null;
+                    LOG.debug(String.format("Failed to configure connection [SQLState='%s']: %s",
+                                            sqlState, e.getMessage()));
+                }
             }
 
             endConnection = System.nanoTime();

@@ -40,9 +40,9 @@ download_jar() {
 echo "Downloading dependencies to $LIB_DIR ..."
 
 # JDBC Drivers
-download_jar "com/yugabyte" "jdbc-yugabytedb" "42.3.5-yb-4"
+download_jar "com/yugabyte" "jdbc-yugabytedb" "42.7.3-yb-7"
 download_jar "org/hsqldb" "hsqldb" "2.4.1"
-download_jar "org/postgresql" "postgresql" "42.4.5"
+download_jar "org/postgresql" "postgresql" "42.7.14"
 download_jar "com/zaxxer" "HikariCP" "3.4.5"
 
 # Transitive deps (explicitly managed versions)

@@ -80,13 +80,13 @@
         <dependency>
             <groupId>com.yugabyte</groupId>
             <artifactId>jdbc-yugabytedb</artifactId>
-            <version>42.3.5-yb-4</version>
+            <version>42.7.3-yb-7</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.4.5</version>
+            <version>42.7.14</version>
         </dependency>
         <dependency>
             <groupId>org.hsqldb</groupId>

@@ -188,6 +188,8 @@ public class DBWorkload {
           wrkld.setShouldEnableForeignKeys(false);
       }
 
+      configOptions.getUseHikariPool().ifPresent(wrkld::setUseHikariPool);
+      configOptions.getCreateConnForEveryTx().ifPresent(wrkld::setUseCreateConnForEveryTx);
       configOptions.getBatchSize().ifPresent(wrkld::setBatchSize);
       configOptions.getMaxRetriesPerTransaction().ifPresent(wrkld::setMaxRetriesPerTransaction);
       configOptions.getMaxLoaderRetries().ifPresent(wrkld::setMaxLoaderRetries);

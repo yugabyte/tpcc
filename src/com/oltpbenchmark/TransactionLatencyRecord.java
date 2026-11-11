@@ -14,11 +14,8 @@ public class TransactionLatencyRecord extends LatencyRecord {
             allocateChunk();
         }
         Sample[] chunk = (Sample[]) values.get(values.size() - 1);
-        int connlatencyUs = (int) ((endConnectionNs - startNs + 500) / 1000);
-        assert connlatencyUs >= 0;
-
-        int operationLatencyUs = (int)((operationEndNs - operationStartNs + 500) / 1000);
-        assert operationLatencyUs >= 0;
+        int connlatencyUs = toIntMicros(endConnectionNs - startNs);
+        int operationLatencyUs = toIntMicros(operationEndNs - operationStartNs);
 
         chunk[nextIndex] = new Sample(transType, startNs, connlatencyUs, operationLatencyUs);
         ++nextIndex;

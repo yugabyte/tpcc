@@ -49,7 +49,7 @@ tpcc/
 | `GeoPartitionedConfigFileOptions.java` | Geo XML parsing and validation into a `GeoPartitionPolicy`. |
 | `WorkloadConfiguration.java` | The resolved configuration object (plus code defaults) handed to everything else. Holds the `Phase` list and the `WorkloadState`. |
 | `Phase.java` | One workload phase: duration, warmup, rate, weights; `chooseTransaction()` does the weighted pick. |
-| `ThreadBench.java` | Execution driver: starts workers, runs the rate/phase clock loop, switches states, joins workers, builds `Results`. Includes `MonitorThread` and `WatchDogThread`. |
+| `ThreadBench.java` | Execution driver: starts workers, runs the rate/phase clock loop, switches states, joins workers, builds `Results`. Includes `MonitorThread` and `WatchDogThread`, and starts/stops `api/FailureLogReporter` around the worker threads. |
 | `WorkloadState.java` | Shared work queue (capped at 10k) and phase pointer; `fetchWork()` blocks workers. |
 | `BenchmarkState.java` | Global state machine (WARMUP → MEASURE → DONE → EXIT) and the start barrier. |
 | `SubmittedProcedure.java` | A queued unit of work (just the transaction type id). |
@@ -66,6 +66,7 @@ tpcc/
 |------|----------------|
 | `BenchmarkModule.java` | The "tpcc" benchmark: Hikari pools per node (`createDataSource`), plain connections (`makeConnection`), schema create/clear, loader invocation, FK and procedure creation, **terminal creation** (`createTerminals`: 10 per warehouse, one district each). |
 | `Worker.java` | One terminal thread: `run()` loop (fetch → keying → `doWork` → think → record), `doWork()` retry loop and error classification, `executeWork()` district selection, keying/think time tables. |
+| `FailureLogReporter.java` | Keeps repeated worker failures from flooding the log: first WARN per SQLState, then one summary WARN per SQLState every 30s from a daemon thread that `ThreadBench` starts and stops. |
 | `Loader.java` | Initial data generation: `ITEM` thread, per-warehouse threads, FK thread; batched inserts with retries; `unload()` (drop tables). |
 | `Procedure.java` | Abstract transaction base; `getPreparedStatement`; `UserAbortException` (expected rollback). |
 | `SQLStmt.java` | SQL text wrapper (with OLTPBench's `??` expansion, unused here). |

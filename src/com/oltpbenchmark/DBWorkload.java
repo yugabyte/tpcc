@@ -212,6 +212,7 @@ public class DBWorkload {
       if (Arrays.asList(CommandLineOptions.Mode.CLEAR, CommandLineOptions.Mode.EXECUTE).contains(options.getMode())) {
         wrkld.setNeedsExecution(true);
       }
+      wrkld.setRebalanceConnections(options.getRebalanceConnections());
       configOptions.getUseStoredProcedures().ifPresent(wrkld::setUseStoredProcedures);
 
       LOG.info("Configuration -> nodes: " + wrkld.getNodes() +
@@ -221,7 +222,8 @@ public class DBWorkload {
                ", total warehouses across shards: " + wrkld.getTotalWarehousesAcrossShards() +
                ", terminals: " + wrkld.getTerminals() +
                ", dbConnections: " + wrkld.getNumDBConnections() +
-               ", loaderThreads: " + wrkld.getLoaderThreads() );
+               ", loaderThreads: " + wrkld.getLoaderThreads() +
+               ", rebalanceConnections: " + wrkld.getRebalanceConnections());
 
       options.getInitialDelaySeconds().ifPresent((initialDelay) -> {
         LOG.info("Delaying execution of workload for " + initialDelay + " seconds");

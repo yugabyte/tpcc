@@ -65,6 +65,7 @@ public void setBenchmarkName(String benchmarkName) {
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
+  private boolean rebalanceConnections = false;
   private boolean useStoredProcedures = true;
   private int maxRetriesPerTransaction = 0;
   private int maxLoaderRetries = 0;
@@ -351,6 +352,11 @@ public void setBenchmarkName(String benchmarkName) {
 
   public void setNeedsExecution(boolean needsExecution) { this.needsExecution = needsExecution; }
   public boolean getNeedsExecution() { return this.needsExecution; }
+
+  public void setRebalanceConnections(boolean rebalanceConnections) {
+    this.rebalanceConnections = rebalanceConnections;
+  }
+  public boolean getRebalanceConnections() { return this.rebalanceConnections; }
 
   public void setUseStoredProcedures(boolean useStoredProcedures) {
     this.useStoredProcedures = useStoredProcedures;

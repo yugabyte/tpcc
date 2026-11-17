@@ -55,8 +55,8 @@ There are two connection paths in `BenchmarkModule`:
 
 | Path | Used by | Implementation |
 |------|---------|----------------|
-| `makeConnection()` | create, load (each `LoaderThread`), FKs, procedures | A fresh, un-pooled connection, round-robin over `--nodes` (static counter). `yugabyte`: `YBClusterAwareDataSource` with `jdbc:yugabytedb://host:port/db`. Otherwise `DriverManager` with `jdbc:postgresql://...`. `reWriteBatchedInserts=true`. A non-empty `<jdbcURL>` replaces the URL for every connection, with no round-robin. |
-| `getDataSource()` | execute (`Worker`), clear | One `HikariDataSource` per node, each sized `ceil(numDBConnections / nodes)`. `maxLifetime=0`. Isolation set on the pool. `dataSourceClassName` is `YBClusterAwareDataSource` or `PGSimpleDataSource`. `<jdbcURL>` is set but **ignored** by Hikari when `dataSourceClassName` is present (K19). |
+| `makeConnection()` | create, load (each `LoaderThread`), FKs, procedures | A fresh, un-pooled connection, round-robin over `--nodes` (static counter). `yugabyte`: `YBClusterAwareDataSource` with `jdbc:yugabytedb://host:port/db`. With `--rebalance-connections=true`, also `yb-servers-refresh-interval=60` (driver default 300). Otherwise `DriverManager` with `jdbc:postgresql://...`. `reWriteBatchedInserts=true`. A non-empty `<jdbcURL>` replaces the URL for every connection, with no round-robin. |
+| `getDataSource()` | execute (`Worker`), clear | One `HikariDataSource` per node, each sized `ceil(numDBConnections / nodes)`. `maxLifetime=0`. Isolation set on the pool. `dataSourceClassName` is `YBClusterAwareDataSource` or `PGSimpleDataSource`. `--rebalance-connections=true` also sets `ybServersRefreshInterval=60` on Yugabyte pools. `<jdbcURL>` is set but **ignored** by Hikari when `dataSourceClassName` is present (K19). |
 
 Each `Worker` picks its pool once, in its constructor (round-robin), so terminals are spread
 evenly across the pools (one per `--nodes` entry) for the whole run. With `dbtype=yugabyte`,

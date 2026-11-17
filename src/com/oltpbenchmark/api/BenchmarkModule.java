@@ -44,6 +44,12 @@ public class BenchmarkModule {
     private static final Logger LOG = Logger.getLogger(BenchmarkModule.class);
 
     /**
+     * Applied only with {@code --rebalance-connections=true}. The driver default is 300s;
+     * 60s lets load balancing notice tserver membership changes without a 5-minute wait.
+     */
+    private static final String YB_SERVERS_REFRESH_INTERVAL_SECS = "60";
+
+    /**
      * Each benchmark must put their all of the DBMS-specific DDLs
      * in this directory.
      */
@@ -104,6 +110,9 @@ public class BenchmarkModule {
                 if (!additionalEndpoints.isEmpty()) {
                     props.setProperty("dataSource.additionalEndpoints", additionalEndpoints);
                 }
+                if (workConf.getRebalanceConnections()) {
+                    props.setProperty("dataSource.ybServersRefreshInterval", YB_SERVERS_REFRESH_INTERVAL_SECS);
+                }
             } else {
                 props.setProperty("dataSourceClassName", "org.postgresql.ds.PGSimpleDataSource");
             }
@@ -148,6 +157,9 @@ public class BenchmarkModule {
             ds.setProperty("user", workConf.getDBUsername());
             ds.setProperty("password", workConf.getDBPassword());
             ds.setProperty("reWriteBatchedInserts", "true");
+            if (workConf.getRebalanceConnections()) {
+                ds.setYbServersRefreshInterval(YB_SERVERS_REFRESH_INTERVAL_SECS);
+            }
 
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
                 assert (workConf.getSslKey().length() > 0) : "The SSL key is empty.";

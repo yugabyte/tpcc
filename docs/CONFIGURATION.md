@@ -54,6 +54,7 @@ Scale and topology:
 | `--initial-delay-secs=<s>` | none | Sleep before starting (staggers multi-client runs). |
 | `-im`, `--interval-monitor=<ms>` | `0` (off) | Print instantaneous throughput every `<ms>` milliseconds. |
 | `--vv` | off | Also print the FAILURE LATENCIES and RETRY ATTEMPTS tables. |
+| `--rebalance-connections=true` | off | YugabyteDB only. Set `yb-servers-refresh-interval` to 60s on both connection paths (driver default is 300s) so the smart driver picks up tserver membership changes sooner. Absent or `=false` leaves the driver default. |
 | `--histograms` | — | Currently a no-op (see known issues). |
 | `--output-raw`, `--output-samples` | — | Declared but unused. |
 

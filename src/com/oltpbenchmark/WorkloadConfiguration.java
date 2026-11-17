@@ -65,7 +65,7 @@ public void setBenchmarkName(String benchmarkName) {
   private int batchSize = 128;
   private int hikariConnectionTimeout = 60000;
   private boolean needsExecution = false;
-  private boolean rebalanceConnections = false;
+  private boolean rebalanceConnections = true;
   private boolean useStoredProcedures = true;
   private int maxRetriesPerTransaction = 0;
   private int maxLoaderRetries = 0;

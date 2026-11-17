@@ -192,6 +192,9 @@ public class CommandLineOptions {
     public boolean getShouldOutputVerboseExecuteResults() { return argsLine.hasOption("vv"); }
 
     public boolean getRebalanceConnections() {
+        if (!argsLine.hasOption("rebalance-connections")) {
+            return true;
+        }
         return isBooleanOptionSet("rebalance-connections");
     }
 }

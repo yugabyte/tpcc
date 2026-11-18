@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -41,6 +42,14 @@ import com.oltpbenchmark.types.TransactionStatus;
 
 public class Worker implements Runnable {
     private static final Logger LOG = Logger.getLogger(Worker.class);
+
+    /**
+     * With {@code --rebalance-connections=true}, one in this many finished transactions evicts its connection
+     * instead of returning it. The smart driver places a connection only when it is opened, and Hikari lends
+     * the oldest idle connection first, so without turnover a recovered tserver gets no connections and the
+     * oldest connections carry nearly all the load. 200 is about 2.3 reconnects/s at 1k warehouses.
+     */
+    private static final int REBALANCE_EVICT_ONE_IN_N = 200;
 
     private static WorkloadState wrkldState;
     // This is the warehouse that is a constant for this terminal.
@@ -640,7 +649,11 @@ public class Worker implements Runnable {
                 }
             } // WHILE
             try {
-                conn.close();
+                if (shouldEvictForRebalance() && !conn.isClosed()) {
+                    dataSource.evictConnection(conn);
+                } else {
+                    conn.close();
+                }
             } catch (SQLException closeEx) {
                 LOG.debug(String.format("%s failed to close connection after '%s': %s",
                                        this, next, closeEx.getMessage()));
@@ -652,6 +665,15 @@ public class Worker implements Runnable {
             throw new RuntimeException(msg, ex);
         }
         return listExecutionStates;
+    }
+
+    /**
+     * ThreadLocalRandom rather than {@link #gen} so the eviction draw does not shift the TPC-C input sequence.
+     */
+    private static boolean shouldEvictForRebalance() {
+        return wrkld.getRebalanceConnections() &&
+               wrkld.getDBType().equals("yugabyte") &&
+               ThreadLocalRandom.current().nextInt(REBALANCE_EVICT_ONE_IN_N) == 0;
     }
 
     private void logSqlExceptionDebug(SQLException ex, TransactionType next) {

@@ -51,6 +51,19 @@ public class Worker implements Runnable {
      */
     private static final int REBALANCE_EVICT_ONE_IN_N = 200;
 
+    /**
+     * A connection is not evicted until this long after a worker first returned it. Its first transactions
+     * are slow while the new backend loads the catalog, so evicting it early would pay that cost again.
+     */
+    private static final long REBALANCE_MIN_CONNECTION_AGE_MS = 60_000L;
+
+    /**
+     * First return time per physical connection. Hikari hides the creation time and hands out a new proxy on
+     * every borrow, so the key is the unwrapped driver connection. Weak keys drop connections Hikari closes.
+     */
+    private static final Map<Connection, Long> connectionFirstReturnMs =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
     private static WorkloadState wrkldState;
     // This is the warehouse that is a constant for this terminal.
     private final int terminalWarehouseID;
@@ -649,7 +662,7 @@ public class Worker implements Runnable {
                 }
             } // WHILE
             try {
-                if (shouldEvictForRebalance() && !conn.isClosed()) {
+                if (shouldEvictForRebalance(conn)) {
                     dataSource.evictConnection(conn);
                 } else {
                     conn.close();
@@ -670,10 +683,21 @@ public class Worker implements Runnable {
     /**
      * ThreadLocalRandom rather than {@link #gen} so the eviction draw does not shift the TPC-C input sequence.
      */
-    private static boolean shouldEvictForRebalance() {
-        return wrkld.getRebalanceConnections() &&
-               wrkld.getDBType().equals("yugabyte") &&
-               ThreadLocalRandom.current().nextInt(REBALANCE_EVICT_ONE_IN_N) == 0;
+    private static boolean shouldEvictForRebalance(Connection conn) throws SQLException {
+        if (!wrkld.getRebalanceConnections() || !wrkld.getDBType().equals("yugabyte") || conn.isClosed()) {
+            return false;
+        }
+        Connection physical = conn.unwrap(Connection.class);
+        long now = System.currentTimeMillis();
+        Long firstReturnMs = connectionFirstReturnMs.putIfAbsent(physical, now);
+        if (firstReturnMs == null || now - firstReturnMs < REBALANCE_MIN_CONNECTION_AGE_MS) {
+            return false;
+        }
+        if (ThreadLocalRandom.current().nextInt(REBALANCE_EVICT_ONE_IN_N) != 0) {
+            return false;
+        }
+        connectionFirstReturnMs.remove(physical);
+        return true;
     }
 
     private void logSqlExceptionDebug(SQLException ex, TransactionType next) {

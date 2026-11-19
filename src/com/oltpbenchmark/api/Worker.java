@@ -49,7 +49,7 @@ public class Worker implements Runnable {
      * the oldest idle connection first, so without turnover a recovered tserver gets no connections and the
      * oldest connections carry nearly all the load. 200 is about 2.3 reconnects/s at 1k warehouses.
      */
-    private static final int REBALANCE_EVICT_ONE_IN_N = 200;
+    private static final int REBALANCE_EVICT_ONE_IN_N = 500;
 
     /**
      * A connection is not evicted until this long after a worker first returned it. Its first transactions

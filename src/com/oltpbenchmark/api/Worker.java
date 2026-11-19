@@ -52,6 +52,11 @@ public class Worker implements Runnable {
     private static final int REBALANCE_EVICT_ONE_IN_N = 500;
 
     /**
+     * Off while Hikari's maxLifetime does the turnover instead, so the two mechanisms can be compared separately.
+     */
+    private static final boolean REBALANCE_RANDOM_EVICTION = false;
+
+    /**
      * A connection is not evicted until this long after a worker first returned it. Its first transactions
      * are slow while the new backend loads the catalog, so evicting it early would pay that cost again.
      */
@@ -684,7 +689,8 @@ public class Worker implements Runnable {
      * ThreadLocalRandom rather than {@link #gen} so the eviction draw does not shift the TPC-C input sequence.
      */
     private static boolean shouldEvictForRebalance(Connection conn) throws SQLException {
-        if (!wrkld.getRebalanceConnections() || !wrkld.getDBType().equals("yugabyte") || conn.isClosed()) {
+        if (!REBALANCE_RANDOM_EVICTION || !wrkld.getRebalanceConnections() || !wrkld.getDBType().equals("yugabyte")
+                || conn.isClosed()) {
             return false;
         }
         Connection physical = conn.unwrap(Connection.class);

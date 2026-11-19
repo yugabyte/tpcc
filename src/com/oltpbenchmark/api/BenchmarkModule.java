@@ -50,6 +50,13 @@ public class BenchmarkModule {
     private static final String YB_SERVERS_REFRESH_INTERVAL_SECS = "60";
 
     /**
+     * Applied only with {@code --rebalance-connections=true} on YugabyteDB; otherwise connections never expire.
+     * The smart driver places a connection only when it is opened, so connections must be replaced for a
+     * recovered tserver to get its share back. 300s lets that finish before the next node is stopped.
+     */
+    private static final String REBALANCE_MAX_LIFETIME_MS = "300000";
+
+    /**
      * Each benchmark must put their all of the DBMS-specific DDLs
      * in this directory.
      */
@@ -124,7 +131,8 @@ public class BenchmarkModule {
             props.setProperty("dataSource.databaseName", workConf.getDBName());
             props.setProperty("maximumPoolSize", Integer.toString(numConnections));
             props.setProperty("connectionTimeout", Integer.toString(workConf.getHikariConnectionTimeout()));
-            props.setProperty("maxLifetime", "0");
+            boolean expireConnections = workConf.getRebalanceConnections() && workConf.getDBType().equals("yugabyte");
+            props.setProperty("maxLifetime", expireConnections ? REBALANCE_MAX_LIFETIME_MS : "0");
             props.setProperty("dataSource.reWriteBatchedInserts", "true");
 
             if (workConf.getSslCert() != null && workConf.getSslCert().length() > 0) {
